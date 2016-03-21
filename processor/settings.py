@@ -16,12 +16,19 @@ VHOST = env('VHOST', '/')
 M2M_USER = env('M2M_USER', 'guest')
 M2M_PWD = env('M2M_PWD', 'guest')
 
-EXCHANGE = 'amq.topic'
+EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 # databases settings
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
 
 MYSQL_DATABASES = dj_database_url.parse(env("MYSQL_DATABASES", "mysql://root:root@localhost:3306/rules_engine"))
+
+# redis
+REDIS_HOST = env("REDIS_HOST", 'localhost')
+REDIS_PORT = env("REDIS_PORT", 6379)
+REDIS_DB = env("REDIS_DB", 0)
+REDIS_PWD = env("REDIS_PWD", '')
+REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
 
 # logging
 LOGGING = {
