@@ -12,8 +12,11 @@ from pika.exceptions import AMQPConnectionError
 import settings
 
 import logging
+import logging.config
 
-logger = logging.getLogger('pocessor')
+logging.config.dictConfig(settings.LOGGING)
+
+logger = logging.getLogger('processor')
 debug_logger = logging.getLogger('file')
 
 
@@ -43,14 +46,15 @@ class BaseRabbitmqConsumer(object):
         debug_logger.info(json.dumps(log))
 
     def process(self, body, log=None):
-        pass
+        print body
 
     def start(self):
         self.channel.queue_declare(queue=self.queue, durable=True)
+        print self.queue
         self.channel.queue_bind(
             exchange=settings.EXCHANGE,
             queue=self.queue,
-            routing_key=settings.ROUTING_KEY[self.queue].format(self.product_key))
+            routing_key=self.queue)
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(self.consume, queue=self.queue)
         self.channel.start_consuming()

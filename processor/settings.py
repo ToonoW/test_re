@@ -59,10 +59,9 @@ LOGGING = {
     },
     'loggers': {
         'file': {
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'level': 'INFO',
-            'when': 'D',
-            'filename': '/mnt/workspace/gw_re_pocessor/gizwits_data.log',
+            #'class': 'logging.handlers.TimedRotatingFileHandler',
+            'handlers': ['console'],
+            'filename': '/mnt/workspace/gw_re_pocessor/processor.log',
             'formatter': 'standard',
         },
         'processor': {
