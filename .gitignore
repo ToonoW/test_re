@@ -1,0 +1,27 @@
+# project
+__project__
+*.log
+CACHE
+/static
+
+# python
+*.pyc
+
+# system
+.DS_Store
+
+.vagrant
+.project
+.pydevproject
+.settings
+.idea
+*~
+.env
+
+*.log.*
+TAGS
+*.bak
+
+# docker
+Dockerfile
+supervisord.conf
