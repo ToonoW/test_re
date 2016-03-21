@@ -18,6 +18,19 @@ M2M_PWD = env('M2M_PWD', 'guest')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
+ROUTING_KEY = {
+    'enterprises': 'enterprises.{}.events',
+    'alert': 'products.{}.events.device.attr_fault',
+    'fault': 'products.{}.events.device.attr_alert',
+    'online': 'products.{}.events.device.online',
+    'offline': 'products.{}.events.device.offline',
+    'bind': 'products.{}.events.device.bind',
+    'unbind': 'products.{}.events.device.unbind',
+    'raw': 'products.{}.events.device.status.raw',
+    'data': 'products.{}.events.device.status.kv',
+    'changed': 'products.{}.events.datapoints.changed'
+}
+
 # databases settings
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
 
@@ -39,9 +52,6 @@ LOGGING = {
             'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
             'datefmt': "%d/%b/%Y %H:%M:%S"
         },
-        'biz_log': {
-            'format': ' %(message)s'
-        }
     },
     'handlers': {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
@@ -55,12 +65,11 @@ LOGGING = {
             'filename': '/mnt/workspace/gw_re_pocessor/gizwits_data.log',
             'formatter': 'standard',
         },
-        'pocessor': {
+        'processor': {
             'handlers': ['console'],
-            'propagate': True,
             'level': 'WARN',
         },
-        'pocessor_gray': {
+        'processor_gray': {
             #'handlers': ['graylog'],
             'handlers': ['console'],
             'level': 'INFO'
