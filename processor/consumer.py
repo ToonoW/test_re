@@ -10,14 +10,7 @@ from pika import (
 from pika.exceptions import AMQPConnectionError
 
 import settings
-
-import logging
-import logging.config
-
-logging.config.dictConfig(settings.LOGGING)
-
-logger = logging.getLogger('processor')
-debug_logger = logging.getLogger('file')
+from common import logger
 
 
 class BaseRabbitmqConsumer(object):
@@ -53,7 +46,7 @@ class BaseRabbitmqConsumer(object):
             log['exception'] = str(e)
         self.channel.basic_ack(delivery_tag=method.delivery_tag)
         log['proc_t'] = int((time.time() - log['ts']) * 1000)
-        debug_logger.info(json.dumps(log))
+        logger.info(json.dumps(log))
 
     def process(self, body, log=None):
         pass
@@ -64,12 +57,14 @@ class BaseRabbitmqConsumer(object):
         self.channel.start_consuming()
 
     def publish(self, routing_key, message, exchange=settings.EXCHANGE):
-        log = {'module': 're_processor',
-                   'action': 'pub',
-                   'ts': time.time(),
-                   'topic': routing_key}
+        log = {
+            'module': 're_processor',
+            'action': 'pub',
+            'ts': time.time(),
+            'topic': routing_key
+        }
         self.channel.basic_publish(exchange, routing_key,
                                    json.dumps(message),
                                    properties=BasicProperties(delivery_mode=2))
         log['proc_t'] = int((time.time() - log['ts']) * 1000)
-        debug_logger.info(json.dumps(log))
+        logger.info(json.dumps(log))

@@ -75,3 +75,20 @@ LOGGING = {
         }
     }
 }
+
+# task element index
+INDEX = {
+    'sel': {
+        'left': 1,
+        'opt': 2,
+        'right': 3
+    },
+    'cal': {
+        'exp': 1,
+        'name': 2
+    },
+    'que': {
+        'type': 1,
+        'target': 2
+    }
+}
