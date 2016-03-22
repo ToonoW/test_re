@@ -28,7 +28,6 @@ class ConsumeEvent(BaseRabbitmqConsumer):
             queue=queue,
             exchange=exchange,
             routing_key=routing_key)
-        self.channel.basic_cancel(nowait=False)
 
         # 消费清空队列
         self.channel.basic_consume(self.callback, queue=queue)
@@ -45,11 +44,5 @@ if '__main__' == __name__:
     #args = docopt(__doc__, version='Gizwits Data Recorder 0.0')
     #print args
     product_key = '8345956355714fe19e074a241837accd'
-    queue = settings.ROUTING_KEY['data'].format(product_key)
-    test_consumer = ConsumeEvent(queue, product_key)
-    test_consumer.subscribe_msg(queue, queue)
-    consumer = BaseRabbitmqConsumer(queue, product_key)
-    #consumer.publish(queue, '11111')
-    print test_consumer.fetch_publish_msg(queue)
-    print test_consumer.cancel_queue(queue, queue)
-    #consumer.start()
+    routing_key = settings.ROUTING_KEY['data'].format(product_key)
+    print settings.MYSQL_DATABASES

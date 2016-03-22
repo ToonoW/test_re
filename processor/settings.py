@@ -5,16 +5,10 @@ import dotenv
 dotenv.read_dotenv()
 
 from getenv import env
-import dj_database_url
 
 
 # M2M settings
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
-M2M_HOST = env('M2M_HOST', 'm2mprod.gwdev.com')
-M2M_PORT = env('M2M_PORT', 5672)
-VHOST = env('VHOST', '/')
-M2M_USER = env('M2M_USER', 'guest')
-M2M_PWD = env('M2M_PWD', 'guest')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
@@ -32,9 +26,15 @@ ROUTING_KEY = {
 }
 
 # databases settings
+# mongo
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
 
-MYSQL_DATABASES = dj_database_url.parse(env("MYSQL_DATABASES", "mysql://root:root@localhost:3306/rules_engine"))
+# mysql
+MYSQL_HOST = env("MYSQL_HOST", "localhost")
+MYSQL_PORT = env("MYSQL_PORT", 3306)
+MYSQL_USER = env("MYSQL_USER", "root")
+MYSQL_PWD = env("MYSQL_PWD", "root")
+MYSQL_DB = env("MYSQL_DB", "rules_engine")
 
 # redis
 REDIS_HOST = env("REDIS_HOST", 'localhost')

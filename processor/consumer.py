@@ -21,8 +21,11 @@ debug_logger = logging.getLogger('file')
 
 
 class BaseRabbitmqConsumer(object):
+    '''
+    Base class
+    '''
 
-    def __init__(self, queue, product_key):
+    def mq_initial(self, queue, product_key):
         # connect rabbitmq
         self.queue = queue
         self.product_key = product_key
@@ -33,6 +36,13 @@ class BaseRabbitmqConsumer(object):
             logger.exception(e)
             exit(1)
         self.channel = self.m2m_conn.channel()
+
+    def subcribe(self):
+        self.channel.queue_declare(queue=self.queue, durable=True)
+        self.channel.queue_bind(
+            exchange=settings.EXCHANGE,
+            queue=self.queue,
+            routing_key=settings.ROUTING_KEY[self.queue].format(self.product_key))
 
     def consume(self, ch, method, properties, body):
         log = {'ts': time.time()}
@@ -46,15 +56,9 @@ class BaseRabbitmqConsumer(object):
         debug_logger.info(json.dumps(log))
 
     def process(self, body, log=None):
-        print body
+        pass
 
     def start(self):
-        self.channel.queue_declare(queue=self.queue, durable=True)
-        print self.queue
-        self.channel.queue_bind(
-            exchange=settings.EXCHANGE,
-            queue=self.queue,
-            routing_key=self.queue)
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(self.consume, queue=self.queue)
         self.channel.start_consuming()
