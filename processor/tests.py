@@ -6,6 +6,7 @@ from docopt import docopt
 
 from consumer import BaseRabbitmqConsumer
 
+from connections import get_mongodb
 import settings
 
 
@@ -45,4 +46,15 @@ if '__main__' == __name__:
     #print args
     product_key = '8345956355714fe19e074a241837accd'
     routing_key = settings.ROUTING_KEY['data'].format(product_key)
-    print settings.MYSQL_DATABASES
+    did = 'xB6nh4FR5f25MaqdA7rTuU'
+
+    db = get_mongodb()
+    ds = db['device_status']
+
+    status = ds.find_one({'did': did})
+    result = status['attr']['0']
+    print '\n'
+    for key, val in status.items():
+        print key, val
+        print '\n'
+    print result

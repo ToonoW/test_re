@@ -5,7 +5,7 @@ import redis
 import MySQLdb
 
 from pymongo import MongoClient
-from django.conf import settings
+import settings
 
 
 redis_pool = redis.ConnectionPool(
@@ -17,9 +17,7 @@ redis_pool = redis.ConnectionPool(
 mongo_conn = MongoClient(settings.MONGO_DATABASES)
 
 def get_mongodb():
-    database_name = mongo_conn.get_default_database().name
-    db = mongo_conn[database_name]
-    return db
+    return mongo_conn.get_default_database()
 
 
 class MysqlConnection(object):
