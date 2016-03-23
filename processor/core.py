@@ -138,10 +138,6 @@ class QueryCore(BaseCore):
     '''
 
     core_name = 'que'
-    opt = {
-        'q': operator.__add__,
-        'f': operator.__sub__
-    }
     index = settings.INDEX['que']
     params = ['type', 'target']
 
