@@ -14,6 +14,11 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
+TOPIC_MAP = {
+    'attr_fault': 'fault',
+    'attr_alert': 'alert'
+}
+
 ROUTING_KEY = {
     'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
@@ -40,7 +45,6 @@ MYSQL_DB = env("MYSQL_DB", "rules_engine")
 MYSQL_TABLE = {
     'rule': {
         'table': 't_rulesengine_rule',
-        'field': 'id, rule_tree, custom_vars'
     },
     'action': {
         'table': 't_rulesengine_action'
