@@ -3,8 +3,8 @@
 
 import json, operator, re
 
-import settings
-from connections import get_mongodb
+from re_processor import settings
+from re_processor.connections import get_mongodb
 
 
 class BaseCore(object):

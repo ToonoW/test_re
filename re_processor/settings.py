@@ -6,6 +6,8 @@ dotenv.read_dotenv()
 
 from getenv import env
 
+# project path
+SYS_PATH = env('SYS_PATH', '.')
 
 # M2M settings
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')

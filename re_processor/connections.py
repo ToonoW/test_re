@@ -5,7 +5,7 @@ import redis
 import MySQLdb
 
 from pymongo import MongoClient
-import settings
+from re_processor import settings
 
 
 redis_pool = redis.ConnectionPool(

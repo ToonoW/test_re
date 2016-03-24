@@ -4,7 +4,7 @@
 import logging, json
 import logging.config
 
-import settings
+from re_processor import settings
 
 logging.config.dictConfig(settings.LOGGING)
 

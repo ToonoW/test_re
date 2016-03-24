@@ -4,10 +4,10 @@
 import json
 from docopt import docopt
 
-from consumer import BaseRabbitmqConsumer
+from re_processor.mixins.consumer import BaseRabbitmqConsumer
 
-from connections import get_mongodb
-import settings
+from re_processor.connections import get_mongodb
+from re_processor import settings
 
 
 class ConsumeEvent(BaseRabbitmqConsumer):
