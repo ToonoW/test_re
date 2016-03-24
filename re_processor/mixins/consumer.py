@@ -9,8 +9,8 @@ from pika import (
     BasicProperties)
 from pika.exceptions import AMQPConnectionError
 
-import settings
-from common import logger
+from processor import settings
+from processor.common import logger
 
 
 class BaseRabbitmqConsumer(object):
