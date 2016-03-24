@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import sys
+sys.path.append('/mnt/workspace/gw_re_pocessor')
+
 import json
 from docopt import docopt
 
-from re_processor.mixins.consumer import BaseRabbitmqConsumer
-
-from re_processor.connections import get_mongodb
+from re_processor.connections import get_mongodb, BaseRabbitmqConsumer
 from re_processor import settings
 
 

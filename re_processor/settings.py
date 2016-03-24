@@ -37,6 +37,15 @@ MYSQL_PORT = env("MYSQL_PORT", 3306)
 MYSQL_USER = env("MYSQL_USER", "root")
 MYSQL_PWD = env("MYSQL_PWD", "root")
 MYSQL_DB = env("MYSQL_DB", "rules_engine")
+MYSQL_TABLE_NAME = {
+    'rule': {
+        'table': 't_rulesengine_rule',
+        'field': 'id, rule_tree, custom_vars'
+    },
+    'action': {
+        'table': 't_rulesengine_action'
+    }
+}
 
 # redis
 REDIS_HOST = env("REDIS_HOST", 'localhost')

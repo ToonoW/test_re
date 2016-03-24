@@ -87,10 +87,9 @@ class BaseRedismqConsumer(object):
             log = {'ts': time.time()}
             try:
                 msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(queue, product_key), settings.REDIS_BRPOP_TIMEOUT)
-                if msg:
-                    self.unpack(msg[1])
-                else:
+                if not msg:
                     continue
+                self.unpack(msg[1], log)
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)

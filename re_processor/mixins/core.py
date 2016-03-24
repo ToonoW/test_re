@@ -4,7 +4,7 @@
 import json, operator, re
 
 from re_processor import settings
-from re_processor.connections import get_mongodb
+from re_processor.connections import get_mongodb, get_mysql
 
 
 class BaseCore(object):
