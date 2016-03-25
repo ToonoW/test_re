@@ -7,7 +7,7 @@ sys.path.append('/mnt/workspace/gw_re_pocessor')
 import json
 from docopt import docopt
 
-from re_processor.connections import get_mongodb, BaseRabbitmqConsumer
+from re_processor.connections import get_mongodb, BaseRabbitmqConsumer, get_mysql
 from re_processor import settings
 
 
@@ -59,3 +59,11 @@ if '__main__' == __name__:
         print key, val
         print '\n'
     print result
+
+    db = get_mysql()
+    sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+        settings.MYSQL_TABLE['rule']['table'],
+        did,
+        product_key)
+    db.execute(sql)
+    print db.fetchall()
