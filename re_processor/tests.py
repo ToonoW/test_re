@@ -7,7 +7,8 @@ sys.path.append('/mnt/workspace/gw_re_pocessor')
 import json
 from docopt import docopt
 
-from re_processor.connections import get_mongodb, BaseRabbitmqConsumer, get_mysql
+from re_processor.connections import get_mongodb, get_mysql, get_redis
+from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
 
 
@@ -67,3 +68,8 @@ if '__main__' == __name__:
         product_key)
     db.execute(sql)
     print db.fetchall()
+
+    red = get_redis()
+    p = red.pipeline()
+    p.lpush('aaa', 'test111')
+    print red.brpop('aaa')

@@ -183,3 +183,16 @@ class QueryCore(BaseCore):
             result = {}
 
         return result
+
+
+class TriggerCore(BaseCore):
+    '''
+    execute tri task
+    '''
+
+    core_name = 'tri'
+    index = settings.INDEX['tri']
+    params = []
+
+    def process(self, task_list, task_vars, custom_vars):
+        pass

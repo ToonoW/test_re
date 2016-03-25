@@ -13,6 +13,9 @@ redis_pool = redis.ConnectionPool(
     db=settings.REDIS_DB,
     password=settings.REDIS_PWD)
 
+def get_redis():
+    return redis.Redis(connection_pool=redis_pool)
+
 mongo_conn = MongoClient(settings.MONGO_DATABASES)
 
 def get_mongodb():

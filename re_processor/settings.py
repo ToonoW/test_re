@@ -108,3 +108,14 @@ INDEX = {
         'target': 2
     }
 }
+
+# processor core_map
+CORE_INTERNAL = {
+    'sel': 'SelectorCore',
+    'cal': 'CalculatorCore',
+    'que': 'QueryCore'
+}
+
+CORE_OUTPUT = {
+    'tri': 'TriggerCore'
+}

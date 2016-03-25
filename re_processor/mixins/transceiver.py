@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, redis
+import time, json, operator
 
 from pika import (
     BlockingConnection,
@@ -10,7 +10,7 @@ from pika import (
 from pika.exceptions import AMQPConnectionError
 
 from re_processor import settings
-from re_processor.connections import get_mysql, redis_pool
+from re_processor.connections import get_mysql, get_redis
 from re_processor.common import logger
 
 
@@ -41,8 +41,8 @@ class BaseRabbitmqConsumer(object):
         log = {'ts': time.time()}
         try:
             lst = self.unpack(body, log)
-            msg = self.process(lst, log)
-            self.send(msg, log)
+            msg = map(lambda m: self.process_msg(m, log), lst)
+            self.send(reduce(operator.__add__, msg), log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
@@ -71,11 +71,7 @@ class BaseRedismqConsumer(object):
     '''
 
     def redis_initial(self, queue, product_key):
-        self.redis_conn = redis.Redis(connection_pool=redis_pool)
-
-    def redis_subcribe(self, queue, product_key):
-        self.pubsub = self.redis_conn.pubsub()
-        self.pubsub.subscribe('rules_engine.{0}.{1}'.format(queue, product_key))
+        self.redis_conn = get_redis()
 
     def redis_listen(self, queue, product_key):
         while True:
@@ -85,8 +81,8 @@ class BaseRedismqConsumer(object):
                 if not msg:
                     continue
                 lst = self.unpack(msg[1], log)
-                msg = self.process_msg(lst, log)
-                self.send(msg, log)
+                msg = map(lambda m: self.process_msg(m, log), lst)
+                self.send(reduce(operator.__add__, msg), log)
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)
@@ -138,11 +134,9 @@ class RabbitmqReceiver(object):
             custom_vars = json.loads(custom_vars) if custom_vars else custom_vars
             __rule_tree_list = [{'event': msg['event_type'],
                                'ts': log['ts'],
-                               'next': x['task_list'][0][0],
-                               'task': x['task_list'][0],
-                               'task_list': x['task_list'][1:],
-                               'task_vars': msg, 'custom_vars': custom_vars,
-                               'result': []}
+                               'current': x['task_list'][0][0],
+                               'task_list': x['task_list'],
+                               'task_vars': msg, 'custom_vars': custom_vars}
                               for x in rule_tree if event == x['event'] and x['task_list']]
             msg_list.extend(__rule_tree_list)
 
