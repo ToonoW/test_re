@@ -20,6 +20,9 @@ class CommonProcessor(object):
         '''
         return a list of msg
         '''
+
+        if not getattr(self, 'core', None):
+            return [msg]
         msg_list = []
         p_log = []
         ts = time.time()
