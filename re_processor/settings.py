@@ -32,6 +32,11 @@ ROUTING_KEY = {
     'changed': 'products.{}.events.datapoints.changed'
 }
 
+PUBLISH_ROUTING_KEY = {
+    'notification': 'test_notification',
+    'http': 'test_http'
+}
+
 # databases settings
 # mongo
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
@@ -106,16 +111,39 @@ INDEX = {
     'que': {
         'type': 1,
         'target': 2
-    }
+    },
+    'tri': {
+        'allow_time': 1,
+        'task_list': 2,
+        'action_type': 3,
+        'params': 4,
+        'action_content': 5
+    },
+    'log': {}
 }
 
 # processor core_map
-CORE_INTERNAL = {
-    'sel': 'SelectorCore',
-    'cal': 'CalculatorCore',
-    'que': 'QueryCore'
+CORE_MAP = {
+    'internal': {
+        'sel': 'SelectorCore',
+        'cal': 'CalculatorCore',
+        'que': 'QueryCore',
+        'tri': 'TriggerCore',
+        'log': 'LoggerCore'
+    }
 }
 
-CORE_OUTPUT = {
-    'tri': 'TriggerCore'
+TRANSCEIVER = {
+    'send': {
+        'redis': 'redis_publish',
+        'rabbitmq': 'mq_publish'
+    },
+    'begin': {
+        'redis': 'redis_listen',
+        'rabbitmq': 'mq_listen'
+    },
+    'unpack': {
+        'redis': 'redis_unpack',
+        'rabbitmq': 'mq_unpack'
+    },
 }

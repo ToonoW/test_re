@@ -7,75 +7,42 @@ from re_processor.mixins import core as core_mixins
 from re_processor import settings
 
 
-class InternalProcessor(object):
+class CommonProcessor(object):
     '''
-    Internal processor
+    common processor
     '''
 
-    def processor_initial(self):
-        self.core = {k: getattr(core_mixins, v)() for k, v in settings.CORE_INTERNAL.items()}
+    def processor_initial(self, pos=None):
+        core_map = settings.CORE_MAP.get(pos, None)
+        self.core = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
 
     def process_msg(self, msg, log=None):
         '''
         return a list of msg
         '''
+        msg_list = []
         p_log = []
         ts = time.time()
-        type = 'type_error'
+        task_type = 'type_error'
+        error_message = ''
         try:
-            type = msg['current']
-            result, msg['task_vars'], msg['task_list'] = self.core[type].process(
-                msg['task_list'], msg['task_vars'], msg['custom_vars']
-                )
-            p_log = [result, ts, (time.time() - ts) * 1000, '', type]
+            task_type = msg['current']
+            result, msg_list, log_flag = self.core[task_type].process(msg)
         except Exception, e:
-            p_log = ['Exception', ts, (time.time() - ts) * 1000, e.message, type]
-            result = False
+            log_flag = True
+            result = 'exception'
+            error_message = e.message
 
-        msg['log'].append(p_log)
-        if result:
-            msg['current'] = msg['task_list'][0][0] if msg['task_list'] else 'tri'
-        else:
-            msg['current'] = 'log'
+        if log_flag:
+            p_log = {
+                'result': result,
+                'ts': ts,
+                'proc_t': (time.time() - ts) * 1000,
+                'error_message': error_message,
+                'task_type': task_type
+            }
+            p_log.update(msg)
+            p_log['current'] = 'log'
+            msg_list.append(p_log)
 
-        return msg
-
-
-class OutputProcessor(object):
-    '''
-    Output processor
-    '''
-
-    def processor_initial(self):
-        self.core = {k: getattr(core_mixins, v)() for k, v in settings.CORE_OUTPUT.items()}
-
-    def process_msg(self, msg, log=None):
-        p_log = []
-        ts = time.time()
-        type = 'type_error'
-        try:
-            type = msg['current']
-            result, output_msg = self.core[type].process(
-                msg['task_list'], msg['task_vars'], msg['custom_vars']
-                )
-            p_log = [result, ts, (time.time() - ts) * 1000, '', type]
-        except Exception, e:
-            p_log = ['Exception', ts, (time.time() - ts) * 1000, e.message, type]
-            result = False
-
-        msg['log'].append(p_log)
-        msg['current'] = 'log'
-
-        return msg
-
-
-class InputProcessor(object):
-    '''
-    Input processor
-    '''
-
-    def processor_initial(self):
-        self.core = None
-
-    def process_msg(self, msg, log=None):
-        return msg
+        return msg_list

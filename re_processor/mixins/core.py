@@ -12,9 +12,9 @@ class BaseCore(object):
     base class
     '''
 
-    def process(self, task_list, task_vars, custom_vars):
+    def process(self, msg):
         '''
-        execute task, return a three-tuple (result, data, task_list)
+        execute task, return a three-tuple (result, msg_list, log_flag)
         '''
         pass
 
@@ -35,7 +35,8 @@ class SelectorCore(BaseCore):
     index = settings.INDEX['sel']
     params = ['left', 'opt', 'right']
 
-    def process(self, task_list, task_vars, custom_vars):
+    def process(self, msg):
+        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
         result = True
         while task_list:
             task = task_list.pop(0)
@@ -70,7 +71,9 @@ class SelectorCore(BaseCore):
             if result is not True:
                 break
 
-        return result, task_vars, task_list
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+
+        return result, [msg] if result else [], not result
 
 
 class CalculatorCore(BaseCore):
@@ -88,7 +91,8 @@ class CalculatorCore(BaseCore):
     index = settings.INDEX['cal']
     params = ['exp', 'name']
 
-    def process(self, task_list, task_vars, custom_vars):
+    def process(self, msg):
+        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
         result = True
         while task_list:
             task = task_list.pop(0)
@@ -119,7 +123,9 @@ class CalculatorCore(BaseCore):
             res = reduce(self._calculate, exp, [0])
             task_vars[tmp_dict['name']] = res.pop()
 
-        return result, task_vars, task_list
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+
+        return result, [msg] if result else [], not result
 
     def _calculate(self, params_stack, symbol):
         if self.opt.has_key(symbol):
@@ -141,7 +147,8 @@ class QueryCore(BaseCore):
     index = settings.INDEX['que']
     params = ['type', 'target']
 
-    def process(self, task_list, task_vars, custom_vars):
+    def process(self, msg):
+        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
         result = True
         params_list = []
         while task_list:
@@ -160,7 +167,9 @@ class QueryCore(BaseCore):
             else:
                 result = False
 
-        return result, task_vars, task_list
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+
+        return result, [msg] if result else [], not result
 
     def _query(self, task_vars, params_list):
         result = {}
@@ -194,5 +203,18 @@ class TriggerCore(BaseCore):
     index = settings.INDEX['tri']
     params = []
 
-    def process(self, task_list, task_vars, custom_vars):
+    def process(self, msg):
+        pass
+
+
+class LoggerCore(BaseCore):
+    '''
+    execute tri task
+    '''
+
+    core_name = 'log'
+    index = settings.INDEX['log']
+    params = []
+
+    def process(self, msg):
         pass
