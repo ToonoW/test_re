@@ -160,3 +160,15 @@ CORE_MAP = {
     }
 }
 
+CONTAINER_MAP = {
+    'internal': {
+        'queue': ['BaseRedismqConsumer'],
+        'processor': ['CommonProcessor'],
+        'tranceiver': ['RedisTransceiver']
+    },
+    'main': {
+        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'processor': ['CommonProcessor'],
+        'tranceiver': ['RabbitmqTransceiver']
+    }
+}

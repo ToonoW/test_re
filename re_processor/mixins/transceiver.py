@@ -148,7 +148,7 @@ class BaseRedismqConsumer(object):
 
 class CommonTransceiver(object):
     '''
-    mixins receiver
+    mixins transceiver
     '''
 
     def send(self, body, log=None):
@@ -160,8 +160,24 @@ class CommonTransceiver(object):
     def unpack(self, body, log=None):
         return getattr(self, self.unpack_method)(body, log)
 
-    def begin(self, queue, product_key):
-        self.queue = queue
-        self.product_key = product_key
+    def begin(self):
         self.unpack_method = settings.TRANSCEIVER['unpack'][self.receiver_type]
-        getattr(self, self.begin_method)(queue, product_key)
+        getattr(self, self.begin_method)(self.queue, self.product_key)
+
+class RedisTransceiver(CommonTransceiver):
+    '''
+    mixins transceiver
+    '''
+
+    def init_queue(self):
+        self.redis_initial(self.queue, self.product_key)
+
+
+class RabbitmqTransceiver(CommonTransceiver):
+    '''
+    mixins transceiver
+    '''
+
+    def init_queue(self):
+        self.mq_initial(self.queue, self.product_key)
+        self.redis_initial(self.queue, self.product_key)
