@@ -12,7 +12,7 @@ from pika.exceptions import AMQPConnectionError
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import logger
+from re_processor.common import debug_logger as logger
 
 
 class BaseRabbitmqConsumer(object):
@@ -42,7 +42,8 @@ class BaseRabbitmqConsumer(object):
         try:
             lst = self.unpack(body, log)
             msg = map(lambda m: self.process_msg(m, log), lst)
-            self.send(reduce(operator.__add__, msg), log)
+            if msg:
+                self.send(reduce(operator.__add__, msg), log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
@@ -93,11 +94,13 @@ class BaseRabbitmqConsumer(object):
             rule_tree = json.loads(rule_tree) if rule_tree else rule_tree
             custom_vars = json.loads(custom_vars) if custom_vars else custom_vars
             __rule_tree_list = [{'event': msg['event_type'],
-                               'msg_to': 'redis',
+                               'rule_id': rule_id,
+                               'msg_to': settings.MSG_TO['internal'],
                                'ts': log['ts'],
                                'current': x['task_list'][0][0],
                                'task_list': x['task_list'],
-                               'task_vars': msg, 'custom_vars': custom_vars}
+                               'task_vars': msg,
+                               'custom_vars': custom_vars}
                               for x in rule_tree if event == x['event'] and x['task_list']]
             msg_list.extend(__rule_tree_list)
 
@@ -118,15 +121,17 @@ class BaseRedismqConsumer(object):
             try:
                 msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(queue, product_key), settings.REDIS_BRPOP_TIMEOUT)
                 if not msg:
+                    print 'IDLE-----sleep 5s'
+                    time.sleep(5)
                     continue
                 lst = self.unpack(msg[1], log)
                 msg = map(lambda m: self.process_msg(m, log), lst)
+                if not msg:
+                    continue
                 self.send(reduce(operator.__add__, msg), log)
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)
-                print 'IDLE-----sleep 5s'
-                time.sleep(5)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
 

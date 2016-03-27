@@ -6,5 +6,5 @@ class BaseContainer(object):
     base container for mixins
     '''
 
-    def __init__(self, transceiver_cls=[], processor_cls=[]):
+    def __init__(self, transceiver_cls=[], processor_cls=[], mq_cls=[]):
         pass

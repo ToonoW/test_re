@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import json, operator, re
+import json, operator, re, time
 
 from re_processor import settings
-from re_processor.connections import get_mongodb
+from re_processor.connections import get_mongodb, get_mysql
+from re_processor.common import _log
 
 
 class BaseCore(object):
@@ -53,7 +54,7 @@ class SelectorCore(BaseCore):
                     tmp = self.opt[tmp]
                 elif task_vars.has_key(tmp):
                     tmp = task_vars[tmp]
-                elif task_vars.has_key(tmp.split('.')[1]):
+                elif '.' in tmp and task_vars.has_key(tmp.split('.')[1]):
                     tmp = task_vars[tmp.split('.')[1]]
                 elif custom_vars.has_key(tmp):
                     extra_task.append(custom_vars[tmp])
@@ -64,7 +65,7 @@ class SelectorCore(BaseCore):
                 tmp_dict[symbol] = tmp
 
             if extra_task or query_list:
-                task_list[0:0] = ['que', 'q', query_list] + extra_task + [task]
+                task_list[0:0] = ['que', 'q', query_list] if query_list else [] + extra_task + [task]
                 break
 
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
@@ -73,7 +74,7 @@ class SelectorCore(BaseCore):
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
 
-        return result, [msg] if result else [], not result
+        return result, [msg] if result else [], not result or 'tri' == msg['current']
 
 
 class CalculatorCore(BaseCore):
@@ -107,7 +108,7 @@ class CalculatorCore(BaseCore):
             for symbol in tmp_dict['exp']:
                 if task_vars.has_key(symbol):
                     exp.append(float(task_vars[symbol]))
-                elif task_vars.has_key(symbol.split('.')[1]):
+                elif '.' in symbol and task_vars.has_key(symbol.split('.')[1]):
                     exp.append(float(task_vars[symbol.split('.')[1]]))
                 elif custom_vars.has_key(symbol):
                     extra_task.append(custom_vars[symbol])
@@ -117,7 +118,7 @@ class CalculatorCore(BaseCore):
                     query_list.append(symbol)
 
             if extra_task or query_list:
-                task_list[0:0] = ['que', 'q', query_list] + extra_task + [task]
+                task_list[0:0] = ['que', 'q', query_list] if query_list else [] + extra_task + [task]
                 break
 
             res = reduce(self._calculate, exp, [0])
@@ -162,7 +163,8 @@ class QueryCore(BaseCore):
 
         if params_list:
             query_result = self._query(task_vars, params_list)
-            if query_result:
+            if query_result and not filter(lambda x: not query_result.has_key(x) and \
+                    '.' in x and not query_result.has_key(x.split('.')[1]), params_list):
                 task_vars.update(query_result)
             else:
                 result = False
@@ -172,12 +174,7 @@ class QueryCore(BaseCore):
         return result, [msg] if result else [], not result
 
     def _query(self, task_vars, params_list):
-        result = {}
-        if 'unbind' not in params_list and 'bind' not in params_list:
-            data = self._query_data(task_vars, params_list)
-            if data:
-                result.update(data)
-        return result
+        return self._query_data(task_vars, params_list)
 
     def _query_data(self, task_vars, params_list):
         db = get_mongodb()
@@ -201,10 +198,72 @@ class TriggerCore(BaseCore):
 
     core_name = 'tri'
     index = settings.INDEX['tri']
-    params = []
+    db_index = settings.INDEX['tri_in_db']
+    params = ['action_type', 'params', 'action_content']
+    db_params = ['allow_time', 'task_list', 'action_type', 'params', 'action_content']
 
     def process(self, msg):
-        pass
+        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
+        result = True
+        msg_list = []
+
+        if task_list:
+            db = get_mysql()
+            sql = 'select `action_tree` from `{0}` where `rule_id`={1}'.format(
+                settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
+            db.execute(sql)
+            for action_tree, in db.fetchall():
+                action_tree = json.loads(action_tree)
+                tmp_dict = {x: action_tree[self.index[x]] for x in self.params}
+                time_now = map(int, time.strftime('%m-%d-%H:%w').split('-'))
+                if time_now[0] not in tmp_dict['allow_time'].get('month', []) or \
+                        time_now[1] not in tmp_dict['allow_time'].get('day', []) or \
+                        time_now[2] not in tmp_dict['allow_time'].get('hour', []) or \
+                        time_now[3] not in tmp_dict['allow_time'].get('week', []):
+                    continue
+                if tmp_dict['task_list']:
+                    tmp_dict['task_list'].append(['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content']])
+                    _msg = {}
+                    _msg.update(msg)
+                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], task_vars, custom_vars, tmp_dict['task_list'][0][0]
+                    msg_list.append(_msg)
+                else:
+                    task_list.append(['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content']])
+
+        while task_list:
+            task = task_list.pop(0)
+            if self.core_name != task[0]:
+                task_list[0:0] = [task]
+                break
+            tmp_dict = {x: task[self.index[x]] for x in self.params}
+            extra_task = []
+            query_list = []
+            for symbol in tmp_dict['params']:
+                if custom_vars.has_key(symbol):
+                    extra_task.append(custom_vars[symbol])
+                elif not task_vars.has_key(symbol) and '.' in symbol and not task_vars.has_key(symbol.split('.')[1]):
+                    query_list.append(symbol)
+            if extra_task or query_list:
+                task_list[0:0] = ['que', 'q', query_list] if query_list else [] + extra_task + [task]
+                _msg = {}
+                _msg.update(msg)
+                _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = task_list, task_vars, custom_vars, task_list[0][0]
+            else:
+                _msg = {
+                    'msg_to': settings.MSG_TO['external'],
+                    'action_type': tmp_dict['action_type'],
+                    'event': msg.get('event', ''),
+                    'product_key': task_vars.get('product_key', ''),
+                    'did': task_vars.get('did', ''),
+                    'mac': task_vars.get('mac', ''),
+                    'ts': time.time(),
+                    'params': {x: task_vars[x] for x in tmp_dict['params']},
+                    'content': tmp_dict['action_content']
+                }
+            msg_list.append(_msg)
+
+        return True if msg_list else False, msg_list, True
+
 
 
 class LoggerCore(BaseCore):
@@ -213,8 +272,10 @@ class LoggerCore(BaseCore):
     '''
 
     core_name = 'log'
-    index = settings.INDEX['log']
-    params = []
 
     def process(self, msg):
-        pass
+        msg.pop('msg_to')
+        msg.pop('current')
+        _log(msg)
+
+        return True, [], False

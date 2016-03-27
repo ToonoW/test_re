@@ -37,6 +37,28 @@ PUBLISH_ROUTING_KEY = {
     'http': 'test_http'
 }
 
+# where msg to send
+MSG_TO = {
+    'internal': 'redis',
+    'external': 'rabbitmq'
+}
+
+#
+TRANSCEIVER = {
+    'send': {
+        MSG_TO['internal']: 'redis_publish',
+        MSG_TO['external']: 'mq_publish'
+    },
+    'begin': {
+        MSG_TO['internal']: 'redis_listen',
+        MSG_TO['external']: 'mq_listen'
+    },
+    'unpack': {
+        MSG_TO['internal']: 'redis_unpack',
+        MSG_TO['external']: 'mq_unpack'
+    },
+}
+
 # databases settings
 # mongo
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
@@ -113,12 +135,17 @@ INDEX = {
         'target': 2
     },
     'tri': {
+        'action_type': 1,
+        'params': 2,
+        'action_content': 3
+    },
+    'tri_in_db': {
         'allow_time': 1,
         'task_list': 2,
         'action_type': 3,
         'params': 4,
         'action_content': 5
-    },
+    }
     'log': {}
 }
 
@@ -133,17 +160,3 @@ CORE_MAP = {
     }
 }
 
-TRANSCEIVER = {
-    'send': {
-        'redis': 'redis_publish',
-        'rabbitmq': 'mq_publish'
-    },
-    'begin': {
-        'redis': 'redis_listen',
-        'rabbitmq': 'mq_listen'
-    },
-    'unpack': {
-        'redis': 'redis_unpack',
-        'rabbitmq': 'mq_unpack'
-    },
-}

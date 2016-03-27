@@ -21,11 +21,11 @@ class CommonProcessor(object):
         return a list of msg
         '''
 
+        ts = time.time()
         if not getattr(self, 'core', None):
             return [msg]
         msg_list = []
         p_log = []
-        ts = time.time()
         task_type = 'type_error'
         error_message = ''
         try:
@@ -38,14 +38,22 @@ class CommonProcessor(object):
 
         if log_flag:
             p_log = {
+                'msg_to': settings.MSG_TO['internal'],
+                'module': 're_processor',
+                'rule_id': msg.get('rule_id', ''),
+                'event': msg.get('event', ''),
+                'product_key': msg['task_vars'].get('product_key', ''),
+                'did': msg['task_vars'].get('did', ''),
+                'mac': msg['task_vars'].get('mac', ''),
+                'task_vars': msg['task_vars'],
+                'current': 'log',
                 'result': result,
                 'ts': ts,
                 'proc_t': (time.time() - ts) * 1000,
                 'error_message': error_message,
-                'task_type': task_type
+                'task_type': task_type,
+                'action': 'action' if 'tri' == task_type else 'rule'
             }
-            p_log.update(msg)
-            p_log['current'] = 'log'
             msg_list.append(p_log)
 
         return msg_list
