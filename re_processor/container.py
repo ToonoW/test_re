@@ -14,13 +14,16 @@ class BaseContainer(object):
         self.queue = queue
         self.product_key = product_key or '*'
 
+tmp_class = {}
 
 # todo
 def get_container(queue, product_key=None, container_type='main'):
-    container = BaseContainer(queue, product_key)
-    bases = [getattr(transceiver, x) for x in settings.CONTAINER_MAP[container_type]['queue']] + /
-        [getattr(processor, x) for x in settings.CONTAINER_MAP[container_type]['processor']] + /
-        [getattr(transceiver, x) for x in settings.CONTAINER_MAP[container_type]['transceiver']]
-    container.__base__ += tuple(bases)
+    if not tmp_class.has_key(container_type):
+        bases = [getattr(transceiver, x) for x in settings.CONTAINER_MAP[container_type]['queue']] \
+                + [getattr(processor, x) for x in settings.CONTAINER_MAP[container_type]['processor']] \
+                + [getattr(transceiver, x) for x in settings.CONTAINER_MAP[container_type]['transceiver']] + [BaseContainer]
+        tmp_class[container_type] = type('tmp_class_' + container_type, tuple(bases), {})
+    container = tmp_class[container_type](queue, product_key)
     container.init_queue()
+    container.init_processor()
     return container

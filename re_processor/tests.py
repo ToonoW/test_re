@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import sys
-sys.path.append('/mnt/workspace/gw_re_pocessor')
+import dotenv
+dotenv.read_dotenv()
+
+import sys, os
+sys.path.append(os.environ.get('SYS_PATH', '.'))
 
 import json
 from docopt import docopt
 
 from re_processor.connections import get_mongodb, get_mysql, get_redis
-from re_processor.mixins.transceiver import BaseRabbitmqConsumer
+from re_processor.consumer import BaseRabbitmqConsumer
 from re_processor import settings
 
 
@@ -50,26 +53,28 @@ if '__main__' == __name__:
     routing_key = settings.ROUTING_KEY['data'].format(product_key)
     did = 'xB6nh4FR5f25MaqdA7rTuU'
 
-    db = get_mongodb()
-    ds = db['device_status']
+    #red = get_redis()
+    #print red.rpop('rules_engine.log.*')
 
-    status = ds.find_one({'did': did})
-    result = status['attr']['0']
-    print '\n'
-    for key, val in status.items():
-        print key, val
-        print '\n'
-    print result
+    test_consumer = ConsumeEvent('gw_notification_message')
+    test_consumer.start()
 
-    db = get_mysql()
-    sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
-        settings.MYSQL_TABLE['rule']['table'],
-        did,
-        product_key)
-    db.execute(sql)
-    print db.fetchall()
+    #db = get_mongodb()
+    #ds = db['device_status']
 
-    red = get_redis()
-    p = red.pipeline()
-    p.lpush('aaa', 'test111')
-    print red.brpop('aaa')
+    #status = ds.find_one({'did': did})
+    #result = status['attr']['0']
+    #print '\n'
+    #for key, val in status.items():
+    #    print key, val
+    #    print '\n'
+    #print result
+
+    #db = get_mysql()
+    #sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+    #    settings.MYSQL_TABLE['rule']['table'],
+    #    did,
+    #    product_key)
+    #db.execute(sql)
+    #print db.fetchall()
+

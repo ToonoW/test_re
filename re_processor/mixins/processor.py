@@ -5,6 +5,7 @@ import time
 
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
+from re_processor.common import debug_logger as logger
 
 
 class CommonProcessor(object):
@@ -12,7 +13,7 @@ class CommonProcessor(object):
     common processor
     '''
 
-    def processor_initial(self, pos=None):
+    def init_processor(self, pos='internal'):
         core_map = settings.CORE_MAP.get(pos, None)
         self.core = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
 
@@ -34,7 +35,9 @@ class CommonProcessor(object):
         except Exception, e:
             log_flag = True
             result = 'exception'
-            error_message = e.message
+            #error_message = e.message
+            error_message = str(e)
+            logger.exception(e)
 
         if log_flag:
             p_log = {

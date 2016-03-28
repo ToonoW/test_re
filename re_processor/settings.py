@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import dotenv
-dotenv.read_dotenv()
+#import dotenv
+#dotenv.read_dotenv()
 
 from getenv import env
 
@@ -15,11 +15,17 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 TOPIC_MAP = {
+    'device_online': 'online',
+    'device_offline': 'offline',
+    'device_bind': 'bind',
+    'device_unbind': 'unbind',
+    'device_status_kv': 'data',
     'attr_fault': 'fault',
     'attr_alert': 'alert'
 }
 
 ROUTING_KEY = {
+    'all': '*.{}.events.device.#',
     'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',
@@ -33,8 +39,8 @@ ROUTING_KEY = {
 }
 
 PUBLISH_ROUTING_KEY = {
-    'notification': 'test_notification',
-    'http': 'test_http'
+    'notification': 'gw_notification_message',
+    'http': 'rules_engine_http'
 }
 
 # where msg to send
@@ -84,7 +90,7 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
-REDIS_BRPOP_TIMEOUT = 10
+REDIS_BRPOP_TIMEOUT = 20
 
 # logging
 LOGGING = {
@@ -97,19 +103,20 @@ LOGGING = {
         },
     },
     'handlers': {
+        'file': {
+            'level': 'INFO',
+            'when': 'D',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': '/mnt/workspace/gw_re_pocessor/processor.log',
+            'formatter': 'standard',
+        },
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         #"graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFRabbitHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
     },
     'loggers': {
-        'file': {
-            #'class': 'logging.handlers.TimedRotatingFileHandler',
-            'handlers': ['console'],
-            'filename': '/mnt/workspace/gw_re_pocessor/processor.log',
-            'formatter': 'standard',
-        },
         'processor': {
-            'handlers': ['console'],
-            'level': 'WARN',
+            'handlers': ['file'],
+            'level': 'INFO',
         },
         'processor_gray': {
             #'handlers': ['graylog'],
@@ -145,7 +152,7 @@ INDEX = {
         'action_type': 3,
         'params': 4,
         'action_content': 5
-    }
+    },
     'log': {}
 }
 
@@ -164,11 +171,16 @@ CONTAINER_MAP = {
     'internal': {
         'queue': ['BaseRedismqConsumer'],
         'processor': ['CommonProcessor'],
-        'tranceiver': ['RedisTransceiver']
+        'transceiver': ['InternalTransceiver']
     },
     'main': {
         'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
         'processor': ['CommonProcessor'],
-        'tranceiver': ['RabbitmqTransceiver']
+        'transceiver': ['MainTransceiver']
+    },
+    'output': {
+        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['OutputTransceiver']
     }
 }

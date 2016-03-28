@@ -40,10 +40,12 @@ class BaseRabbitmqConsumer(object):
     def consume(self, ch, method, properties, body):
         log = {'ts': time.time()}
         try:
+            #print body
             lst = self.unpack(body, log)
-            msg = map(lambda m: self.process_msg(m, log), lst)
-            if msg:
-                self.send(reduce(operator.__add__, msg), log)
+            if lst:
+                msg = map(lambda m: self.process_msg(m, log), lst)
+                if msg:
+                    self.send(reduce(operator.__add__, msg), log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
@@ -59,7 +61,7 @@ class BaseRabbitmqConsumer(object):
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
-            routing_key = settings.PUBLISH_ROUTING_KEY[msg['current']]
+            routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
             log = {
                 'module': 're_processor',
                 'action': 'pub',
@@ -67,7 +69,7 @@ class BaseRabbitmqConsumer(object):
                 'topic': routing_key
             }
             self.channel.basic_publish(settings.EXCHANGE, routing_key,
-                                       json.dumps(message),
+                                       json.dumps(msg),
                                        properties=BasicProperties(delivery_mode=2))
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
@@ -82,6 +84,23 @@ class BaseRabbitmqConsumer(object):
             else:
                 msg.update(data)
 
+        event =  settings.TOPIC_MAP[msg['event_type']]
+        msg['sys.time_now'] = int(time.time())
+
+        if 'online' == event:
+            msg['online.status'] = True
+            msg['offline.status'] = False
+        elif 'offline' == event:
+            msg['online.status'] = False
+            msg['offline.status'] = True
+        elif 'bind' == event:
+            msg['bind.status'] = True
+            msg['unbind.status'] = False
+        elif 'unbind' == event:
+            msg['bind.status'] = False
+            msg['unbind.status'] = True
+
+
         db = get_mysql()
         sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
             settings.MYSQL_TABLE['rule']['table'],
@@ -90,9 +109,8 @@ class BaseRabbitmqConsumer(object):
         db.execute(sql)
         msg_list = []
         for rule_id, rule_tree, custom_vars in db.fetchall():
-            event =  settings.TOPIC_MAP[msg['event_type']]
-            rule_tree = json.loads(rule_tree) if rule_tree else rule_tree
-            custom_vars = json.loads(custom_vars) if custom_vars else custom_vars
+            rule_tree = json.loads(rule_tree) if rule_tree else []
+            custom_vars = json.loads(custom_vars) if custom_vars else {}
             __rule_tree_list = [{'event': msg['event_type'],
                                'rule_id': rule_id,
                                'msg_to': settings.MSG_TO['internal'],
@@ -102,7 +120,10 @@ class BaseRabbitmqConsumer(object):
                                'task_vars': msg,
                                'custom_vars': custom_vars}
                               for x in rule_tree if event == x['event'] and x['task_list']]
-            msg_list.extend(__rule_tree_list)
+            if __rule_tree_list:
+                msg_list.extend(__rule_tree_list)
+
+        db.close()
 
         return msg_list
 
@@ -121,14 +142,14 @@ class BaseRedismqConsumer(object):
             try:
                 msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(queue, product_key), settings.REDIS_BRPOP_TIMEOUT)
                 if not msg:
-                    print 'IDLE-----sleep 5s'
-                    time.sleep(5)
+                    print '{} IDLE-----sleep 1s'.format(self.queue)
                     continue
+                #print msg
                 lst = self.unpack(msg[1], log)
-                msg = map(lambda m: self.process_msg(m, log), lst)
+                msg = self.process_msg(lst, log)
                 if not msg:
                     continue
-                self.send(reduce(operator.__add__, msg), log)
+                self.send(msg, log)
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)
@@ -152,7 +173,7 @@ class CommonTransceiver(object):
     '''
 
     def send(self, body, log=None):
-        for _type, method in settings.TRANSCEIVER['send']:
+        for _type, method in settings.TRANSCEIVER['send'].items():
             msg_list = filter(lambda x: _type == x['msg_to'], body)
             if msg_list:
                 getattr(self, method)(self.product_key, msg_list)
@@ -162,22 +183,36 @@ class CommonTransceiver(object):
 
     def begin(self):
         self.unpack_method = settings.TRANSCEIVER['unpack'][self.receiver_type]
+        self.begin_method = settings.TRANSCEIVER['begin'][self.receiver_type]
         getattr(self, self.begin_method)(self.queue, self.product_key)
 
-class RedisTransceiver(CommonTransceiver):
+class InternalTransceiver(CommonTransceiver):
     '''
     mixins transceiver
     '''
 
     def init_queue(self):
+        self.receiver_type = settings.MSG_TO['internal']
         self.redis_initial(self.queue, self.product_key)
 
 
-class RabbitmqTransceiver(CommonTransceiver):
+class MainTransceiver(CommonTransceiver):
     '''
     mixins transceiver
     '''
 
     def init_queue(self):
+        self.receiver_type = settings.MSG_TO['external']
+        self.mq_initial(self.queue, self.product_key)
+        self.redis_initial(self.queue, self.product_key)
+
+
+class OutputTransceiver(CommonTransceiver):
+    '''
+    mixins transceiver
+    '''
+
+    def init_queue(self):
+        self.receiver_type = settings.MSG_TO['internal']
         self.mq_initial(self.queue, self.product_key)
         self.redis_initial(self.queue, self.product_key)
