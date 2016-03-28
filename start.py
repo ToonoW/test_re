@@ -2,12 +2,13 @@
 # coding=utf-8
 """
 Usage:
-  start.py [options] <queue>
+  start.py [options]
 
 Options:
-  -h --help          Show this screen.
-  --version          Show version.
-  --speed=<kn>
+  -h --help                      Show this screen.
+  --version                      Show version.
+  --queue=<queue>                binding queue [default: all]
+  --product_key=<product_key>    binding product_key
 """
 
 from gevent import monkey
@@ -29,12 +30,13 @@ from re_processor.container import get_container
 if '__main__' == __name__:
     args = docopt(__doc__, version='RulesEngine Processor 0.1.0')
     print args
-    queue = 'all'
+    queue = args['<queue>'] if args.has_key('<queue>') else 'all'
+    product_key = args['<product_key>'] if args.has_key('<product_key>') else None
     gevent.joinall([
-        gevent.spawn(get_container(queue, container_type='main').begin),
-        gevent.spawn(get_container('tri', container_type='output').begin),
-        gevent.spawn(get_container('sel', container_type='internal').begin),
-        gevent.spawn(get_container('cal', container_type='internal').begin),
-        gevent.spawn(get_container('que', container_type='internal').begin),
-        gevent.spawn(get_container('log', container_type='internal').begin)
+        gevent.spawn(get_container(queue, product_key=product_key, container_type='main').begin),
+        gevent.spawn(get_container('tri', product_key=product_key, container_type='output').begin),
+        gevent.spawn(get_container('sel', product_key=product_key, container_type='internal').begin),
+        gevent.spawn(get_container('cal', product_key=product_key, container_type='internal').begin),
+        gevent.spawn(get_container('que', product_key=product_key, container_type='internal').begin),
+        gevent.spawn(get_container('log', product_key=product_key, container_type='internal').begin)
     ])
