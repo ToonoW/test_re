@@ -141,7 +141,7 @@ class BaseRedismqConsumer(object):
         while True:
             log = {'ts': time.time()}
             try:
-                msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.REDIS_BRPOP_TIMEOUT)
+                msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.LISTEN_TIMEOUT)
                 if not msg:
                     print '{} IDLE-----'.format(mq_queue_name)
                     continue
@@ -176,7 +176,7 @@ class DefaultQueueConsumer(object):
         while True:
             log = {'ts': time.time()}
             try:
-                msg = self.default_queue[mq_queue_name].get(timeout=settings.REDIS_BRPOP_TIMEOUT)
+                msg = self.default_queue[mq_queue_name].get(timeout=settings.LISTEN_TIMEOUT)
                 msg = self.process_msg(msg, log)
                 if msg:
                     self.send(msg, log)
