@@ -8,7 +8,7 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
-  --product_key=<product_key>    binding product_key
+  --product_key=<product_key>    binding product_key [default: all]
   --with-http-consumer           start with a http consumer
 """
 
