@@ -9,6 +9,7 @@ Options:
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
   --product_key=<product_key>    binding product_key
+  --with-http-consumer           start with a http consumer
 """
 
 from gevent import monkey
@@ -25,6 +26,7 @@ from gevent.queue import Queue
 from docopt import docopt
 
 from re_processor import settings
+from re_processor.consumer import HttpConsumer
 from re_processor.container import get_container
 
 
@@ -39,5 +41,8 @@ if '__main__' == __name__:
     start_unit[mq_queue_name] = 'main'
 
     greenlet_list = [gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for name, c_type in settings.START_UNIT.items()]
+
+    if args['--with-http-consumer']:
+        greenlet_list += [gevent.spawn(HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start)]
 
     gevent.joinall(greenlet_list)

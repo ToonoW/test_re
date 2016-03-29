@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import json, time
+import json, time, requests
 
 from pika import (
     BlockingConnection,
@@ -37,7 +37,7 @@ class BaseRabbitmqConsumer(object):
         log['proc_t'] = int((time.time() - log['ts']) * 1000)
         logger.info(json.dumps(log))
 
-    def process(self, body, biz_log=None):
+    def process(self, body, log=None):
         print body
 
     def start(self):
@@ -59,3 +59,31 @@ class BaseRabbitmqConsumer(object):
                                    properties=BasicProperties(delivery_mode=2))
         log['proc_t'] = int((time.time() - log['ts']) * 1000)
         logger.info(json.dumps(log))
+
+
+class HttpConsumer(BaseRabbitmqConsumer):
+
+    def process(self, body, log=None):
+        #print body
+        msg = json.loads(body)
+        if 'http' != msg['action_type']:
+            raise Exception('Invalid action_type: {}'.format(msg['action_type']))
+        content = json.loads(msg['content'])
+        method = content.get('method', 'get').lower()
+        log['http_method'] = method
+        if method not in ['get', 'post', 'put', 'delete']:
+            raise Exception('Invalid http_method: {}'.format(content['method']))
+        url = content.get('url')
+        log['url'] = url
+        if not url:
+            raise Exception('url not found')
+        data = content.get('data')
+        log['data'] = data
+        headers = content.get('headers')
+        log['headers'] = headers
+        timeout = content.get('timeout')
+        log['timeout'] = timeout
+
+        resp = getattr(requests, method)(url, data=data, headers=headers, timeout=timeout)
+        log['status'] = resp.status_code
+        #print resp.content
