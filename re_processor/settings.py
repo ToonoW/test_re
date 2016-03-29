@@ -53,24 +53,66 @@ PUBLISH_ROUTING_KEY = {
 
 # where msg to send
 MSG_TO = {
-    'internal': 'redis',
+    #'internal': 'redis',
+    'internal': 'default',
     'external': 'rabbitmq'
 }
 
 #
 TRANSCEIVER = {
     'send': {
-        MSG_TO['internal']: 'redis_publish',
-        MSG_TO['external']: 'mq_publish'
+        'redis': 'redis_publish',
+        'rabbitmq': 'mq_publish',
+        'default': 'default_publish'
     },
     'begin': {
-        MSG_TO['internal']: 'redis_listen',
-        MSG_TO['external']: 'mq_listen'
+        'redis': 'redis_listen',
+        'rabbitmq': 'mq_listen',
+        'default': 'default_listen'
     },
     'unpack': {
-        MSG_TO['internal']: 'redis_unpack',
-        MSG_TO['external']: 'mq_unpack'
+        'redis': 'redis_unpack',
+        'rabbitmq': 'mq_unpack',
+        'default': 'default_unpack'
     },
+    'init': {
+        'redis': 'redis_initial',
+        'rabbitmq': 'mq_initial',
+        'default': 'default_initial'
+    },
+}
+
+# container map
+CONTAINER_MAP = {
+    'internal': {
+        #'queue': ['BaseRedismqConsumer'],
+        'queue': ['DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['InternalTransceiver']
+    },
+    'main': {
+        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['MainTransceiver']
+    },
+    'output': {
+        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['OutputTransceiver']
+    }
+}
+
+# processor core_map
+CORE_MAP = {
+    'internal': {
+        'sel': 'SelectorCore',
+        'cal': 'CalculatorCore',
+        'que': 'QueryCore',
+        'tri': 'TriggerCore',
+        'log': 'LoggerCore'
+    }
 }
 
 # databases settings
@@ -164,31 +206,3 @@ INDEX = {
     'log': {}
 }
 
-# processor core_map
-CORE_MAP = {
-    'internal': {
-        'sel': 'SelectorCore',
-        'cal': 'CalculatorCore',
-        'que': 'QueryCore',
-        'tri': 'TriggerCore',
-        'log': 'LoggerCore'
-    }
-}
-
-CONTAINER_MAP = {
-    'internal': {
-        'queue': ['BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['InternalTransceiver']
-    },
-    'main': {
-        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['MainTransceiver']
-    },
-    'output': {
-        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['OutputTransceiver']
-    }
-}

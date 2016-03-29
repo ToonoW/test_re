@@ -9,6 +9,7 @@ from pika import (
     URLParameters,
     BasicProperties)
 from pika.exceptions import AMQPConnectionError
+from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
@@ -142,14 +143,13 @@ class BaseRedismqConsumer(object):
             try:
                 msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.REDIS_BRPOP_TIMEOUT)
                 if not msg:
-                    print '{} IDLE-----sleep 1s'.format(mq_queue_name)
+                    print '{} IDLE-----'.format(mq_queue_name)
                     continue
                 #print msg
                 lst = self.unpack(msg[1], log)
                 msg = self.process_msg(lst, log)
-                if not msg:
-                    continue
-                self.send(msg, log)
+                if msg:
+                    self.send(msg, log)
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)
@@ -165,6 +165,38 @@ class BaseRedismqConsumer(object):
 
     def redis_unpack(self, body, log=None):
         return json.loads(body)
+
+
+class DefaultQueueConsumer(object):
+
+    def default_initial(self):
+        pass
+
+    def default_listen(self, mq_queue_name, product_key):
+        while True:
+            log = {'ts': time.time()}
+            try:
+                msg = self.default_queue[mq_queue_name].get(timeout=settings.REDIS_BRPOP_TIMEOUT)
+                msg = self.process_msg(msg, log)
+                if msg:
+                    self.send(msg, log)
+            except Empty, e:
+                print '{} IDLE-----'.format(mq_queue_name)
+            except Exception, e:
+                logger.exception(e)
+                log['exception'] = str(e)
+            log['proc_t'] = int((time.time() - log['ts']) * 1000)
+            logger.info(json.dumps(log))
+
+    def default_publish(self, product_key, msg_list):
+        for msg in msg_list:
+            try:
+                self.default_queue[msg['current']].put(msg)
+            except:
+                pass
+
+    def default_unpack(self, body, log=None):
+        pass
 
 
 class CommonTransceiver(object):
@@ -193,7 +225,7 @@ class InternalTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['internal']
-        self.redis_initial()
+        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
 
 
 class MainTransceiver(CommonTransceiver):
@@ -203,8 +235,8 @@ class MainTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['external']
-        self.mq_initial()
-        self.redis_initial()
+        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['external']])()
+        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
 
 
 class OutputTransceiver(CommonTransceiver):
@@ -214,5 +246,5 @@ class OutputTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['internal']
-        self.mq_initial()
-        self.redis_initial()
+        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['external']])()
+        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
