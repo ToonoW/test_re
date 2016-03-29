@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import dotenv
-dotenv.read_dotenv()
-
 import sys, os
+import dotenv
+dotenv.read_dotenv(os.getcwd()+'/.env')
+
 sys.path.append(os.environ.get('SYS_PATH', '.'))
 
 import json

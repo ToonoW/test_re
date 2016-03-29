@@ -14,6 +14,14 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
+START_UNIT = {
+    'sel': 'internal',
+    'cal': 'internal',
+    'que': 'internal',
+    'log': 'internal',
+    'tri': 'output'
+}
+
 TOPIC_MAP = {
     'device_online': 'online',
     'device_offline': 'offline',
@@ -90,7 +98,7 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
-REDIS_BRPOP_TIMEOUT = 20
+REDIS_BRPOP_TIMEOUT = env("REDIS_BRPOP_TIMEOUT", 20)
 
 # logging
 LOGGING = {

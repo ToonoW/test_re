@@ -20,7 +20,7 @@ class BaseRabbitmqConsumer(object):
     Base class for rabbitmq consumer
     '''
 
-    def mq_initial(self, queue, product_key):
+    def mq_initial(self):
         # connect rabbitmq
         try:
             self.m2m_conn = BlockingConnection(
@@ -30,12 +30,12 @@ class BaseRabbitmqConsumer(object):
             exit(1)
         self.channel = self.m2m_conn.channel()
 
-    def mq_subcribe(self, queue, product_key):
-        self.channel.queue_declare(queue=queue, durable=True)
+    def mq_subcribe(self, mq_queue_name, product_key):
+        self.channel.queue_declare(queue=mq_queue_name, durable=True)
         self.channel.queue_bind(
             exchange=settings.EXCHANGE,
-            queue=queue,
-            routing_key=settings.ROUTING_KEY[queue].format(product_key))
+            queue=mq_queue_name,
+            routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
 
     def consume(self, ch, method, properties, body):
         log = {'ts': time.time()}
@@ -53,10 +53,10 @@ class BaseRabbitmqConsumer(object):
         log['proc_t'] = int((time.time() - log['ts']) * 1000)
         logger.info(json.dumps(log))
 
-    def mq_listen(self, queue, product_key):
-        self.mq_subcribe(queue, product_key)
+    def mq_listen(self, mq_queue_name, product_key):
+        self.mq_subcribe(mq_queue_name, product_key)
         self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(self.consume, queue=queue)
+        self.channel.basic_consume(self.consume, queue=mq_queue_name)
         self.channel.start_consuming()
 
     def mq_publish(self, product_key, msg_list):
@@ -133,16 +133,16 @@ class BaseRedismqConsumer(object):
     Base class for redismq consumer
     '''
 
-    def redis_initial(self, queue, product_key):
+    def redis_initial(self):
         self.redis_conn = get_redis()
 
-    def redis_listen(self, queue, product_key):
+    def redis_listen(self, mq_queue_name, product_key):
         while True:
             log = {'ts': time.time()}
             try:
-                msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(queue, product_key), settings.REDIS_BRPOP_TIMEOUT)
+                msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.REDIS_BRPOP_TIMEOUT)
                 if not msg:
-                    print '{} IDLE-----sleep 1s'.format(self.queue)
+                    print '{} IDLE-----sleep 1s'.format(mq_queue_name)
                     continue
                 #print msg
                 lst = self.unpack(msg[1], log)
@@ -184,7 +184,7 @@ class CommonTransceiver(object):
     def begin(self):
         self.unpack_method = settings.TRANSCEIVER['unpack'][self.receiver_type]
         self.begin_method = settings.TRANSCEIVER['begin'][self.receiver_type]
-        getattr(self, self.begin_method)(self.queue, self.product_key)
+        getattr(self, self.begin_method)(self.mq_queue_name, self.product_key)
 
 class InternalTransceiver(CommonTransceiver):
     '''
@@ -193,7 +193,7 @@ class InternalTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['internal']
-        self.redis_initial(self.queue, self.product_key)
+        self.redis_initial()
 
 
 class MainTransceiver(CommonTransceiver):
@@ -203,8 +203,8 @@ class MainTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['external']
-        self.mq_initial(self.queue, self.product_key)
-        self.redis_initial(self.queue, self.product_key)
+        self.mq_initial()
+        self.redis_initial()
 
 
 class OutputTransceiver(CommonTransceiver):
@@ -214,5 +214,5 @@ class OutputTransceiver(CommonTransceiver):
 
     def init_queue(self):
         self.receiver_type = settings.MSG_TO['internal']
-        self.mq_initial(self.queue, self.product_key)
-        self.redis_initial(self.queue, self.product_key)
+        self.mq_initial()
+        self.redis_initial()
