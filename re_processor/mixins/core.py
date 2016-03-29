@@ -73,7 +73,7 @@ class SelectorCore(BaseCore):
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
 
-        return result, [msg] if result else [], not result or 'tri' == msg['current']
+        return result, [msg] if result else [], 'tri' == msg['current']
 
 
 class CalculatorCore(BaseCore):
