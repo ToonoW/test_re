@@ -24,6 +24,6 @@ serverurl=unix:///data/supervisor/supervisor.sock ; use a unix:// URL  for a uni
 ; interpreted as relative to this file.  Included files *cannot*
 ; include files themselves.
 
-[program:reapi]
+[program:gw_re_processor]
 command=/env-gw_re_processor/bin/python start.py
 stopsignal=INT
