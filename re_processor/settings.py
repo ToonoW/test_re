@@ -6,6 +6,9 @@
 
 from getenv import env
 
+# debug
+DEBUG = env('DEBUG', False)
+
 # project path
 SYS_PATH = env('SYS_PATH', '.')
 
@@ -33,7 +36,7 @@ TOPIC_MAP = {
 }
 
 ROUTING_KEY = {
-    'all': '*.{}.events.device.#',
+    'all': 'products.{}.events.device.#',
     'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',

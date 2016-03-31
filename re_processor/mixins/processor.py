@@ -57,6 +57,9 @@ class CommonProcessor(object):
                 'task_type': task_type,
                 'action': 'action' if 'tri' == task_type else 'rule'
             }
+            if msg.get('debug') is True and self.debug is True:
+                p_log['debug'] = True
+                p_log['msg_to'] = settings.MSG_TO['external']
             msg_list.append(p_log)
 
         return msg_list

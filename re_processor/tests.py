@@ -10,7 +10,7 @@ sys.path.append(os.environ.get('SYS_PATH', '.'))
 import json
 from docopt import docopt
 
-from re_processor.connections import get_mongodb, get_mysql, get_redis
+from re_processor.connections import get_mongodb, get_mysql
 from re_processor.consumer import BaseRabbitmqConsumer
 from re_processor import settings
 
@@ -57,6 +57,8 @@ if '__main__' == __name__:
     #print red.rpop('rules_engine.log.*')
 
     test_consumer = ConsumeEvent('gw_notification_message')
+    #test_consumer = ConsumeEvent('rules_engine_debug')
+    #test_consumer = ConsumeEvent('rules_engine_http')
     test_consumer.start()
 
     #db = get_mongodb()

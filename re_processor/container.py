@@ -14,6 +14,7 @@ class BaseContainer(object):
         self.mq_queue_name = mq_queue_name
         self.default_queue = default_queue
         self.product_key = product_key or '*'
+        self.debug = settings.DEBUG
 
 tmp_class = {}
 

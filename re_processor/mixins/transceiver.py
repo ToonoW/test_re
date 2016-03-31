@@ -62,7 +62,10 @@ class BaseRabbitmqConsumer(object):
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
-            routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
+            if msg.get('debug') is True and self.debug is True:
+                routing_key = 'rules_engine_debug'
+            else:
+                routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
             log = {
                 'module': 're_processor',
                 'action': 'pub',
@@ -89,17 +92,24 @@ class BaseRabbitmqConsumer(object):
         msg['sys.time_now'] = int(time.time())
 
         if 'online' == event:
-            msg['online.status'] = True
-            msg['offline.status'] = False
+            msg['online.status'] = 1
+            msg['offline.status'] = 0
+            msg['bind.status'] = 0
+            msg['unbind.status'] = 0
         elif 'offline' == event:
-            msg['online.status'] = False
-            msg['offline.status'] = True
+            msg['online.status'] = 0
+            msg['offline.status'] = 1
+            msg['bind.status'] = 0
+            msg['unbind.status'] = 0
         elif 'bind' == event:
-            msg['bind.status'] = True
-            msg['unbind.status'] = False
+            msg['bind.status'] = 1
+            msg['unbind.status'] = 0
         elif 'unbind' == event:
-            msg['bind.status'] = False
-            msg['unbind.status'] = True
+            msg['bind.status'] = 0
+            msg['unbind.status'] = 1
+        else:
+            msg['bind.status'] = 0
+            msg['unbind.status'] = 0
 
 
         db = get_mysql()
@@ -114,6 +124,7 @@ class BaseRabbitmqConsumer(object):
             custom_vars = json.loads(custom_vars) if custom_vars else {}
             __rule_tree_list = [{'event': msg['event_type'],
                                'rule_id': rule_id,
+                               'debug': msg.get('debug', False),
                                'msg_to': settings.MSG_TO['internal'],
                                'ts': log['ts'],
                                'current': x['task_list'][0][0],
@@ -181,7 +192,8 @@ class DefaultQueueConsumer(object):
                 if msg:
                     self.send(msg, log)
             except Empty, e:
-                print '{} IDLE-----'.format(mq_queue_name)
+                #print '{} IDLE-----'.format(mq_queue_name)
+                pass
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)

@@ -59,7 +59,7 @@ class SelectorCore(BaseCore):
                     tmp = task_vars[tmp.split('.', 1)[1]]
                 elif custom_vars.has_key(tmp):
                     extra_task.append(custom_vars[tmp])
-                elif re.search(r'^([0-9]+(\.[0-9]+)*|true|false)$', tmp):
+                elif re.search(r'^[0-9]+(\.[0-9]+)*$', tmp):
                     tmp = json.loads(tmp)
                 else:
                     query_list.append(tmp)
@@ -69,6 +69,7 @@ class SelectorCore(BaseCore):
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 break
 
+            print tmp_dict
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
@@ -93,7 +94,7 @@ class CalculatorCore(BaseCore):
 
     def _process(self, msg):
         task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
-        result = True
+        result = False
         while task_list:
             task = task_list.pop(0)
             if self.core_name != task[0]:
@@ -122,7 +123,11 @@ class CalculatorCore(BaseCore):
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 break
 
-            res = reduce(self._calculate, exp, [0])
+            try:
+                res = reduce(self._calculate, exp, [0])
+                result = True
+            except ZeroDivisionError:
+                break
             task_vars[tmp_dict['name']] = res.pop()
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
@@ -184,8 +189,8 @@ class QueryCore(BaseCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result = status['attr']['0']
-            result['online.status'] = status['is_online']
-            result['offline.status'] = not status['is_online']
+            result['online.status'] = 1 if status['is_online'] else 0
+            result['offline.status'] = 1 if not status['is_online'] else 0
         except KeyError:
             result = {}
 
@@ -220,7 +225,7 @@ class TriggerCore(BaseCore):
                 if time_now[0] not in tmp_dict['allow_time'].get('month', range(1, 13)) or \
                         time_now[1] not in tmp_dict['allow_time'].get('day', range(1, 32)) or \
                         time_now[2] not in tmp_dict['allow_time'].get('hour', range(1, 61)) or \
-                        time_now[3] + 1 not in tmp_dict['allow_time'].get('week', range(1, 8)):
+                        time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(1, 8)):
                     continue
                 if tmp_dict['task_list']:
                     tmp_dict['task_list'].append(['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content']])
@@ -262,6 +267,10 @@ class TriggerCore(BaseCore):
                     'params': {x: (task_vars[x] if task_vars.has_key(x) else task_vars[x.split('.', 1)[1]]) for x in tmp_dict['params']},
                     'content': tmp_dict['action_content']
                 }
+                if msg.get('debug') is True and self.debug is True:
+                    _msg['debug'] = True
+                    _msg['msg_to'] = settings.MSG_TO['external']
+                    _msg['rule_id'] = msg.get('rule_id', '')
             msg_list.append(_msg)
 
         return True if msg_list else False, msg_list, log_flag
