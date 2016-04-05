@@ -61,6 +61,8 @@ class SelectorCore(BaseCore):
                     extra_task.append(custom_vars[tmp])
                 elif re.search(r'^[0-9]+(\.[0-9]+)*$', tmp):
                     tmp = json.loads(tmp)
+                elif re.search(r'^(\'.+\'|".+")$', tmp):
+                    tmp = tmp[1:-1]
                 else:
                     query_list.append(tmp)
                 tmp_dict[symbol] = tmp
