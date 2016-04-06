@@ -55,8 +55,8 @@ class SelectorCore(BaseCore):
                     tmp = self.opt[tmp]
                 elif task_vars.has_key(tmp):
                     tmp = task_vars[tmp]
-                elif '.' in tmp and task_vars.has_key(tmp.split('.', 1)[1]):
-                    tmp = task_vars[tmp.split('.', 1)[1]]
+                #elif '.' in tmp and task_vars.has_key(tmp.split('.', 1)[1]):
+                #    tmp = task_vars[tmp.split('.', 1)[1]]
                 elif custom_vars.has_key(tmp):
                     extra_task.append(custom_vars[tmp])
                 elif re.search(r'^[0-9]+(\.[0-9]+)*$', tmp):
@@ -112,8 +112,8 @@ class CalculatorCore(BaseCore):
                     exp.append(symbol)
                 elif task_vars.has_key(symbol):
                     exp.append(float(task_vars[symbol]))
-                elif '.' in symbol and task_vars.has_key(symbol.split('.', 1)[1]):
-                    exp.append(float(task_vars[symbol.split('.', 1)[1]]))
+                #elif '.' in symbol and task_vars.has_key(symbol.split('.', 1)[1]):
+                #    exp.append(float(task_vars[symbol.split('.', 1)[1]]))
                 elif custom_vars.has_key(symbol):
                     extra_task.append(custom_vars[symbol])
                 elif re.search(r'^[0-9]+(\.[0-9]+)*$', symbol):
@@ -172,8 +172,7 @@ class QueryCore(BaseCore):
 
         if params_list:
             query_result = self._query(task_vars, params_list)
-            if query_result and not filter(lambda x: not query_result.has_key(x) and \
-                    '.' in x and not query_result.has_key(x.split('.', 1)[1]), params_list):
+            if query_result and not filter(lambda x: not query_result.has_key(x), params_list):
                 task_vars.update(query_result)
                 result = True
 
@@ -190,9 +189,9 @@ class QueryCore(BaseCore):
 
         try:
             status = ds.find_one({'did': task_vars['did']})
-            result = status['attr']['0']
+            result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
-            result['offline.status'] = 1 if not status['is_online'] else 0
+            result['offline.status'] = 0 if status['is_online'] else 1
         except KeyError:
             result = {}
 
@@ -249,7 +248,7 @@ class TriggerCore(BaseCore):
             for symbol in tmp_dict['params']:
                 if custom_vars.has_key(symbol):
                     extra_task.append(custom_vars[symbol])
-                elif not task_vars.has_key(symbol) and '.' in symbol and not task_vars.has_key(symbol.split('.', 1)[1]):
+                elif not task_vars.has_key(symbol):
                     query_list.append(symbol)
             if extra_task or query_list:
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
@@ -266,7 +265,7 @@ class TriggerCore(BaseCore):
                     'did': task_vars.get('did', ''),
                     'mac': task_vars.get('mac', ''),
                     'ts': time.time(),
-                    'params': {x: (task_vars[x] if task_vars.has_key(x) else task_vars[x.split('.', 1)[1]]) for x in tmp_dict['params']},
+                    'params': {x: task_vars[x] for x in tmp_dict['params']},
                     'content': tmp_dict['action_content']
                 }
                 if msg.get('debug') is True and self.debug is True:
@@ -276,7 +275,6 @@ class TriggerCore(BaseCore):
             msg_list.append(_msg)
 
         return True if msg_list else False, msg_list, log_flag
-
 
 
 class LoggerCore(BaseCore):

@@ -80,15 +80,15 @@ class BaseRabbitmqConsumer(object):
 
     def mq_unpack(self, body, log=None):
         msg = json.loads(body)
+        event =  settings.TOPIC_MAP[msg['event_type']]
         if msg.has_key('data'):
             data = msg.pop('data')
             if 'attr_fault' == msg['event_type'] or 'attr_alert' == msg['event_type']:
-                msg[data['attr_name']] = data['value']
+                msg['.'.join([event, data['attr_name']])] = data['value']
                 msg['attr_displayname'] = data['attr_displayname']
             else:
-                msg.update(data)
+                msg.update({'.'.join(['data', k]): v for k, v in data.items()})
 
-        event =  settings.TOPIC_MAP[msg['event_type']]
         msg['sys.time_now'] = int(time.time())
 
         if 'online' == event:
