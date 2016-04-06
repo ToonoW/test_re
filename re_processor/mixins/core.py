@@ -71,7 +71,6 @@ class SelectorCore(BaseCore):
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 break
 
-            print tmp_dict
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
@@ -206,7 +205,7 @@ class TriggerCore(BaseCore):
     core_name = 'tri'
     index = settings.INDEX['tri']
     db_index = settings.INDEX['tri_in_db']
-    params = ['action_type', 'params', 'action_content']
+    params = ['action_type', 'params', 'action_content', 'action_id']
     db_params = ['allow_time', 'task_list', 'action_type', 'params', 'action_content']
 
     def _process(self, msg):
@@ -216,10 +215,10 @@ class TriggerCore(BaseCore):
 
         if not task_list:
             db = get_mysql()
-            sql = 'select `action_tree` from `{0}` where `rule_id_id`={1}'.format(
+            sql = 'select `id`, `action_tree` from `{0}` where `rule_id_id`={1}'.format(
                 settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
             db.execute(sql)
-            for action_tree, in db.fetchall():
+            for action_id, action_tree in db.fetchall():
                 action_tree = json.loads(action_tree)
                 tmp_dict = {x: action_tree[self.db_index[x]] for x in self.db_params}
                 time_now = map(int, time.strftime('%m-%d-%H-%w').split('-'))
@@ -228,14 +227,16 @@ class TriggerCore(BaseCore):
                         time_now[2] not in tmp_dict['allow_time'].get('hour', range(1, 61)) or \
                         time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(1, 8)):
                     continue
+
+                action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content'], action_id]
                 if tmp_dict['task_list']:
-                    tmp_dict['task_list'].append(['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content']])
+                    tmp_dict['task_list'].append(action_task)
                     _msg = {}
                     _msg.update(msg)
                     _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], task_vars, custom_vars, tmp_dict['task_list'][0][0]
                     msg_list.append(_msg)
                 else:
-                    task_list.append(['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content']])
+                    task_list.append(action_task)
 
         while task_list:
             task = task_list.pop(0)
@@ -270,8 +271,8 @@ class TriggerCore(BaseCore):
                 }
                 if msg.get('debug') is True and self.debug is True:
                     _msg['debug'] = True
-                    _msg['msg_to'] = settings.MSG_TO['external']
                     _msg['rule_id'] = msg.get('rule_id', '')
+                    _msg['action_id'] = tmp_dict['action_id']
             msg_list.append(_msg)
 
         return True if msg_list else False, msg_list, log_flag

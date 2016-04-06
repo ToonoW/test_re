@@ -197,7 +197,8 @@ INDEX = {
     'tri': {
         'action_type': 1,
         'params': 2,
-        'action_content': 3
+        'action_content': 3,
+        'action_id': 4
     },
     'tri_in_db': {
         'allow_time': 1,
