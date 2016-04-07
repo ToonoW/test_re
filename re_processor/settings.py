@@ -54,6 +54,12 @@ PUBLISH_ROUTING_KEY = {
     'http': 'rules_engine_http'
 }
 
+DEBUG_ROUTING_KEY = {
+    'notification': 'rules_engine_debug',
+    'http': 'rules_engine_debug',
+    'log': 'rules_engine_debug'
+}
+
 # where msg to send
 MSG_TO = {
     #'internal': 'redis',

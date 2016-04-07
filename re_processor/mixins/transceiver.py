@@ -63,7 +63,7 @@ class BaseRabbitmqConsumer(object):
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
             if msg.get('debug') is True and self.debug is True:
-                routing_key = 'rules_engine_debug'
+                routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
             else:
                 routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
             log = {

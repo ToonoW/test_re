@@ -269,7 +269,7 @@ class TriggerCore(BaseCore):
                     'params': {x: task_vars[x] for x in tmp_dict['params']},
                     'content': tmp_dict['action_content']
                 }
-                if msg.get('debug') is True and self.debug is True:
+                if msg.get('debug') is True and msg['debug'] is True:
                     _msg['debug'] = True
                     _msg['rule_id'] = msg.get('rule_id', '')
                     _msg['action_id'] = tmp_dict['action_id']

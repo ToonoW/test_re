@@ -41,8 +41,10 @@ class ConsumeEvent(BaseRabbitmqConsumer):
     def fetch_publish_msg(self, queue):
         self.channel.confirm_delivery()
         method_frame, header_frame, body = self.channel.basic_get(queue=queue)
+        #print method_frame, header_frame, body
         if not body:
             return {}
+        #self.channel.basic_ack(delivery_tag=method_frame.delivery_tag)
         return json.loads(body)
 
 
@@ -57,9 +59,10 @@ if '__main__' == __name__:
     #print red.rpop('rules_engine.log.*')
 
     #test_consumer = ConsumeEvent('gw_notification_message')
-    #test_consumer = ConsumeEvent('rules_engine_debug')
-    test_consumer = ConsumeEvent('rules_engine_http')
+    test_consumer = ConsumeEvent('rules_engine_debug')
+    #test_consumer = ConsumeEvent('rules_engine_http')
     test_consumer.start()
+    #test_consumer.fetch_publish_msg('rules_engine_debug')
 
     #db = get_mongodb()
     #ds = db['device_status']
