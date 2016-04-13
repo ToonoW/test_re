@@ -125,6 +125,7 @@ class BaseRabbitmqConsumer(object):
             __rule_tree_list = [{'event': msg['event_type'],
                                'rule_id': rule_id,
                                'debug': msg.get('debug', False),
+                               'test_id': msg.get('test_id', ''),
                                'msg_to': settings.MSG_TO['internal'],
                                'ts': log['ts'],
                                'current': x['task_list'][0][0],
