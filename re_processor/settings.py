@@ -21,7 +21,7 @@ START_UNIT = {
     'sel': 'internal',
     'cal': 'internal',
     'que': 'internal',
-    'log': 'internal',
+    'log': 'output',
     'tri': 'output'
 }
 

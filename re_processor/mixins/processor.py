@@ -59,7 +59,6 @@ class CommonProcessor(object):
             }
             if msg.get('debug') is True and self.debug is True:
                 p_log['debug'] = True
-                p_log['msg_to'] = settings.MSG_TO['external']
                 p_log['test_id'] = msg.get('test_id', '')
             msg_list.append(p_log)
 

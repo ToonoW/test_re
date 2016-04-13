@@ -291,4 +291,8 @@ class LoggerCore(BaseCore):
         msg.pop('current')
         _log(msg)
 
+        if msg.get('debug', False) is True:
+            msg['msg_to'] = settings.MSG_TO['external']
+            return True, [msg], False
+
         return True, [], False
