@@ -238,6 +238,8 @@ class TriggerCore(BaseCore):
                 else:
                     task_list.append(action_task)
 
+            db.close()
+
         while task_list:
             task = task_list.pop(0)
             if self.core_name != task[0]:

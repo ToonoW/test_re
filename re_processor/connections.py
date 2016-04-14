@@ -35,10 +35,24 @@ class MysqlConnection(object):
             db=settings.MYSQL_DB
             )
 
+    def reconnect(self):
+        self.conn = MySQLdb.connect(
+            host=settings.MYSQL_HOST,
+            port=settings.MYSQL_PORT,
+            user=settings.MYSQL_USER,
+            passwd=settings.MYSQL_PWD,
+            db=settings.MYSQL_DB
+            )
+
     def __del__(self):
         self.conn.close()
 
 mysql_conn = MysqlConnection()
 
 def get_mysql():
+    try:
+        mysql_conn.conn.ping()
+    except:
+        print 'reconnect mysql'
+        mysql_conn.reconnect()
     return mysql_conn.conn.cursor()
