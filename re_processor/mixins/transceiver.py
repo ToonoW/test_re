@@ -86,6 +86,7 @@ class BaseRabbitmqConsumer(object):
 
     def mq_unpack(self, body, log=None):
         msg = json.loads(body)
+        #print msg;
         event =  settings.TOPIC_MAP[msg['event_type']]
         if msg.has_key('data'):
             data = msg.pop('data')
@@ -110,9 +111,13 @@ class BaseRabbitmqConsumer(object):
         elif 'bind' == event:
             msg['bind.status'] = 1
             msg['unbind.status'] = 0
+            msg['bind.app_id'] = msg['app_id']
+            msg['bind.uid'] = msg['uid']
         elif 'unbind' == event:
             msg['bind.status'] = 0
             msg['unbind.status'] = 1
+            msg['unbind.app_id'] = msg['app_id']
+            msg['unbind.uid'] = msg['uid']
         else:
             msg['bind.status'] = 0
             msg['unbind.status'] = 0

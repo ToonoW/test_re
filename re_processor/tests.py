@@ -59,8 +59,8 @@ if '__main__' == __name__:
     #print red.rpop('rules_engine.log.*')
 
     #test_consumer = ConsumeEvent('gw_notification_message')
-    test_consumer = ConsumeEvent('rules_engine_debug')
-    #test_consumer = ConsumeEvent('rules_engine_http')
+    #test_consumer = ConsumeEvent('rules_engine_debug')
+    test_consumer = ConsumeEvent('rules_engine_http')
     test_consumer.start()
     #test_consumer.fetch_publish_msg('rules_engine_debug')
 
