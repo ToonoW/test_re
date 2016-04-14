@@ -37,16 +37,16 @@ TOPIC_MAP = {
 
 ROUTING_KEY = {
     'all': 'products.{}.events.device.#',
-    'enterprises': 'enterprises.{}.events',
+    #'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',
     'online': 'products.{}.events.device.online',
     'offline': 'products.{}.events.device.offline',
     'bind': 'products.{}.events.device.bind',
     'unbind': 'products.{}.events.device.unbind',
-    'raw': 'products.{}.events.device.status.raw',
+    #'raw': 'products.{}.events.device.status.raw',
     'data': 'products.{}.events.device.status.kv',
-    'changed': 'products.{}.events.datapoints.changed'
+    #'changed': 'products.{}.events.datapoints.changed'
 }
 
 PUBLISH_ROUTING_KEY = {
