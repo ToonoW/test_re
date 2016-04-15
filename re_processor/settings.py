@@ -162,24 +162,16 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'when': 'D',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/mnt/workspace/gw_re_pocessor/processor.log',
-            'formatter': 'standard',
-        },
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
-        #"graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFRabbitHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
+        "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFRabbitHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
     },
     'loggers': {
         'processor': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': 'INFO',
         },
         'processor_gray': {
-            #'handlers': ['graylog'],
-            'handlers': ['console'],
+            'handlers': ['graylog'],
             'level': 'INFO'
         }
     }

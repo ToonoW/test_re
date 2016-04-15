@@ -22,6 +22,7 @@ class CommonProcessor(object):
         return a list of msg
         '''
 
+        log['status'] = 'process'
         ts = time.time()
         if not getattr(self, 'core', None):
             return [msg]
