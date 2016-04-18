@@ -42,7 +42,7 @@ class BaseRabbitmqConsumer(object):
         log = {
             'ts': time.time(),
             'module': 're_processor_status',
-            'status': 'beginning'
+            'running_status': 'beginning'
         }
         try:
             #print body
@@ -89,7 +89,7 @@ class BaseRabbitmqConsumer(object):
             logger.info(json.dumps(log))
 
     def mq_unpack(self, body, log=None):
-        log['status'] = 'unpack'
+        log['running_status'] = 'unpack'
         msg = json.loads(body)
         #print msg;
         event =  settings.TOPIC_MAP[msg['event_type']]
@@ -170,7 +170,7 @@ class BaseRedismqConsumer(object):
             log = {
                 'ts': time.time(),
                 'module': 're_processor_status',
-                'status': 'beginning'
+                'running_status': 'beginning'
             }
             try:
                 msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.LISTEN_TIMEOUT)
@@ -196,7 +196,7 @@ class BaseRedismqConsumer(object):
             self.redis_conn.lpush('rules_engine.{0}.{1}'.format(key, product_key), *map(json.dumps, val))
 
     def redis_unpack(self, body, log=None):
-        log['status'] = 'unpack'
+        log['running_status'] = 'unpack'
         return json.loads(body)
 
 
@@ -210,7 +210,7 @@ class DefaultQueueConsumer(object):
             log = {
                 'ts': time.time(),
                 'module': 're_processor_status',
-                'status': 'beginning'
+                'running_status': 'beginning'
             }
             try:
                 msg = self.default_queue[mq_queue_name].get(timeout=settings.LISTEN_TIMEOUT)
@@ -234,7 +234,7 @@ class DefaultQueueConsumer(object):
                 pass
 
     def default_unpack(self, body, log=None):
-        log['status'] = 'unpack'
+        log['running_status'] = 'unpack'
 
 
 class CommonTransceiver(object):
@@ -243,14 +243,14 @@ class CommonTransceiver(object):
     '''
 
     def send(self, body, log=None):
-        log['status'] = 'send'
+        log['running_status'] = 'send'
         for _type, method in settings.TRANSCEIVER['send'].items():
             msg_list = filter(lambda x: _type == x['msg_to'], body)
             if msg_list:
                 getattr(self, method)(self.product_key, msg_list)
 
     def unpack(self, body, log=None):
-        log['status'] = 'unpack'
+        log['running_status'] = 'unpack'
         return getattr(self, self.unpack_method)(body, log)
 
     def begin(self):
