@@ -34,6 +34,7 @@ class MysqlConnection(object):
             passwd=settings.MYSQL_PWD,
             db=settings.MYSQL_DB
             )
+        self.conn.autocommit(True)
 
     def reconnect(self):
         self.conn = MySQLdb.connect(
@@ -43,6 +44,8 @@ class MysqlConnection(object):
             passwd=settings.MYSQL_PWD,
             db=settings.MYSQL_DB
             )
+        self.conn.autocommit(True)
+
 
     def __del__(self):
         self.conn.close()
