@@ -251,10 +251,11 @@ class TriggerCore(BaseCore):
             extra_task = []
             query_list = []
             for symbol in tmp_dict['params']:
-                if custom_vars.has_key(symbol):
-                    extra_task.append(custom_vars[symbol])
-                elif not task_vars.has_key(symbol):
-                    query_list.append(symbol)
+                if not task_vars.has_key(symbol):
+                    if custom_vars.has_key(symbol):
+                        extra_task.append(custom_vars[symbol])
+                    else:
+                        query_list.append(symbol)
             if extra_task or query_list:
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 _msg = {}
