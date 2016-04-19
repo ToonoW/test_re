@@ -137,8 +137,8 @@ class CalculatorCore(BaseCore):
 
     def _calculate(self, params_stack, symbol):
         if self.opt.has_key(symbol):
-            left, right = params_stack[0:2]
-            params_stack = params_stack[2:]
+            left, right = params_stack[-2:]
+            params_stack = params_stack[0:-2]
             params_stack.append(self.opt[symbol](left, right))
         else:
             params_stack.append(symbol)
