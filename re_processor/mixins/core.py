@@ -100,6 +100,7 @@ class CalculatorCore(BaseCore):
             task = task_list.pop(0)
             if self.core_name != task[0]:
                 task_list[0:0] = [task]
+                result = True
                 break
             extra_task = []
             query_list = []
@@ -121,7 +122,8 @@ class CalculatorCore(BaseCore):
                     query_list.append(symbol)
 
             if extra_task or query_list:
-                task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
+                task_list[0:0] = ([['que', 'q', query_list]] if query_list else []) + extra_task + [task]
+                result = True
                 break
 
             try:
