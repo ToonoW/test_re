@@ -61,8 +61,6 @@ class SelectorCore(BaseCore):
                     tmp = self.opt[tmp]
                 elif task_vars.has_key(tmp):
                     tmp = task_vars[tmp]
-                #elif '.' in tmp and task_vars.has_key(tmp.split('.', 1)[1]):
-                #    tmp = task_vars[tmp.split('.', 1)[1]]
                 elif custom_vars.has_key(tmp):
                     extra_task.append(custom_vars[tmp])
                 elif self.pattern['number'].search(tmp):
