@@ -36,6 +36,11 @@ class SelectorCore(BaseCore):
     }
     index = settings.INDEX['sel']
     params = ['left', 'opt', 'right']
+    pattern = {
+        'number': re.compile(r'^[0-9]+(\.[0-9]+)*$'),
+        'string': re.compile(r'^(\'.+\'|".+")$'),
+        'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
+    }
 
     def _process(self, msg):
         task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
@@ -60,11 +65,11 @@ class SelectorCore(BaseCore):
                 #    tmp = task_vars[tmp.split('.', 1)[1]]
                 elif custom_vars.has_key(tmp):
                     extra_task.append(custom_vars[tmp])
-                elif re.search(r'^[0-9]+(\.[0-9]+)*$', tmp):
+                elif self.pattern['number'].search(tmp):
                     tmp = json.loads(tmp)
-                elif re.search(r'^(\'.+\'|".+")$', tmp):
+                elif self.pattern['string'].search(tmp):
                     tmp = tmp[1:-1]
-                elif re.search(r'^0(x|X)[0-9a-fA-F]+$', tmp):
+                elif self.pattern['hex'].search(tmp):
                     hex_flag = True
                 else:
                     query_list.append(tmp)
@@ -99,6 +104,11 @@ class CalculatorCore(BaseCore):
     }
     index = settings.INDEX['cal']
     params = ['exp', 'name']
+    pattern = {
+        'number': re.compile(r'^[0-9]+(\.[0-9]+)*$'),
+        'string': re.compile(r'^(\'.+\'|".+")$'),
+        'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
+    }
 
     def _process(self, msg):
         task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
@@ -119,11 +129,9 @@ class CalculatorCore(BaseCore):
                     exp.append(symbol)
                 elif task_vars.has_key(symbol):
                     exp.append(float(task_vars[symbol]))
-                #elif '.' in symbol and task_vars.has_key(symbol.split('.', 1)[1]):
-                #    exp.append(float(task_vars[symbol.split('.', 1)[1]]))
                 elif custom_vars.has_key(symbol):
                     extra_task.append(custom_vars[symbol])
-                elif re.search(r'^[0-9]+(\.[0-9]+)*$', symbol):
+                elif self.pattern['number'].search(symbol):
                     exp.append(json.loads(symbol))
                 else:
                     query_list.append(symbol)
