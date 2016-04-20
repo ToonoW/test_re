@@ -49,6 +49,7 @@ class SelectorCore(BaseCore):
             extra_task = []
             query_list = []
             tmp_dict = {}
+            hex_flag = False
             for symbol in self.params:
                 tmp = task[self.index[symbol]]
                 if self.opt.has_key(tmp):
@@ -63,6 +64,8 @@ class SelectorCore(BaseCore):
                     tmp = json.loads(tmp)
                 elif re.search(r'^(\'.+\'|".+")$', tmp):
                     tmp = tmp[1:-1]
+                elif re.search(r'^0(x|X)[0-9a-fA-F]+$', tmp):
+                    hex_flag = True
                 else:
                     query_list.append(tmp)
                 tmp_dict[symbol] = tmp
@@ -70,6 +73,10 @@ class SelectorCore(BaseCore):
             if extra_task or query_list:
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 break
+
+            if hex_flag:
+                tmp_dict['left'] = int(tmp_dict['left'], 16)
+                tmp_dict['right'] = int(tmp_dict['right'], 16)
 
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
