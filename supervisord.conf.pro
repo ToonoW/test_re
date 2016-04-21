@@ -25,5 +25,5 @@ serverurl=unix:///data/supervisor/supervisor.sock ; use a unix:// URL  for a uni
 ; include files themselves.
 
 [program:gw_re_processor]
-command=/env-gw_re_processor/bin/python start.py
+command=/env-gw_re_processor/bin/python start.py --with-http-consumer
 stopsignal=INT

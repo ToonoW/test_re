@@ -10,8 +10,6 @@ RUN /env-gw_re_processor/bin/pip install -r requirements.txt
 
 VOLUME /data/supervisor
 
-ADD . /gw_re_processor
-
 WORKDIR /gw_re_processor
 
 EXPOSE 80
