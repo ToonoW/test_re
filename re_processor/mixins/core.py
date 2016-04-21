@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import json, operator, re, time
+import json, operator, re, time, copy
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_mysql
@@ -273,7 +273,7 @@ class TriggerCore(BaseCore):
                 task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
                 _msg = {}
                 _msg.update(msg)
-                _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = task_list, task_vars, custom_vars, task_list[0][0]
+                _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = task_list, copy.copy(task_vars), custom_vars, task_list[0][0]
             else:
                 log_flag = True
                 _msg = {

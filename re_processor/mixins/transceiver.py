@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, operator
+import time, json, operator, copy
 from collections import defaultdict
 
 from pika import (
@@ -150,7 +150,7 @@ class BaseRabbitmqConsumer(object):
                                'ts': log['ts'],
                                'current': x['task_list'][0][0],
                                'task_list': x['task_list'],
-                               'task_vars': msg,
+                               'task_vars': copy.copy(msg),
                                'custom_vars': custom_vars}
                               for x in rule_tree if event == x['event'] and x['task_list']]
             if __rule_tree_list:
