@@ -248,7 +248,7 @@ class TriggerCore(BaseCore):
                     tmp_dict['task_list'].append(action_task)
                     _msg = {}
                     _msg.update(msg)
-                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], task_vars, custom_vars, tmp_dict['task_list'][0][0]
+                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], copy.copy(task_vars), custom_vars, tmp_dict['task_list'][0][0]
                     msg_list.append(_msg)
                 else:
                     task_list.append(action_task)
