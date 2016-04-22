@@ -43,7 +43,7 @@ class SelectorCore(BaseCore):
     }
 
     def _process(self, msg):
-        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
+        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
         result = True
         while result and task_list:
             task = task_list.pop(0)
@@ -83,7 +83,11 @@ class SelectorCore(BaseCore):
 
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+        if result is False and para_task:
+            task_list = para_task.pop()
+            result = True
+
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
 
         return result, [msg] if result else [], 'tri' == msg['current']
 
@@ -109,7 +113,7 @@ class CalculatorCore(BaseCore):
     }
 
     def _process(self, msg):
-        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
+        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
         result = False
         while task_list:
             task = task_list.pop(0)
@@ -146,7 +150,11 @@ class CalculatorCore(BaseCore):
                 break
             task_vars[tmp_dict['name']] = res.pop()
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+        if result is False and para_task:
+            task_list = para_task.pop()
+            result = True
+
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
 
         return result, [msg] if result else [], not result
 
@@ -171,7 +179,7 @@ class QueryCore(BaseCore):
     params = ['type', 'target', 'pass']
 
     def _process(self, msg):
-        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
+        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
         result = False
         params_list = []
         pass_flag = False
@@ -197,7 +205,11 @@ class QueryCore(BaseCore):
                 task_vars.update({x: '' for x in not_found})
                 result = True
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
+        if result is False and para_task:
+            task_list = para_task.pop()
+            result = True
+
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
 
         return result, [msg] if result else [], not result
 

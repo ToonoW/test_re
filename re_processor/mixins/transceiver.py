@@ -142,19 +142,22 @@ class BaseRabbitmqConsumer(object):
         for rule_id, rule_tree, custom_vars in db.fetchall():
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
-            __rule_tree_list = [{'event': msg['event_type'],
-                               'rule_id': rule_id,
-                               'debug': msg.get('debug', False),
-                               'test_id': msg.get('test_id', ''),
-                               'msg_to': settings.MSG_TO['internal'],
-                               'ts': log['ts'],
-                               'current': x['task_list'][0][0],
-                               'task_list': x['task_list'],
-                               'task_vars': copy.copy(msg),
-                               'custom_vars': custom_vars}
-                              for x in rule_tree if event == x['event'] and x['task_list']]
+            __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event'] and x['task_list']]
             if __rule_tree_list:
-                msg_list.extend(__rule_tree_list)
+                __rule_tree = {
+                    'event': msg['event_type'],
+                    'rule_id': rule_id,
+                    'debug': msg.get('debug', False),
+                    'test_id': msg.get('test_id', ''),
+                    'msg_to': settings.MSG_TO['internal'],
+                    'ts': log['ts'],
+                    'current': __rule_tree_list[0][0][0],
+                    'task_list': __rule_tree_list[0],
+                    'para_task': __rule_tree_list[1:],
+                    'task_vars': copy.copy(msg),
+                    'custom_vars': custom_vars
+                }
+                msg_list.append(__rule_tree)
 
         db.close()
 
