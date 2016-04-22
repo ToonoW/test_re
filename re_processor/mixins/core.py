@@ -74,7 +74,7 @@ class SelectorCore(BaseCore):
                 tmp_dict[symbol] = tmp
 
             if extra_task or query_list:
-                task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
+                task_list[0:0] = [['que', 'q', list(set(query_list)), False]] if query_list else [] + extra_task + [task]
                 break
 
             if hex_flag:
@@ -135,7 +135,7 @@ class CalculatorCore(BaseCore):
                     query_list.append(symbol)
 
             if extra_task or query_list:
-                task_list[0:0] = ([['que', 'q', query_list]] if query_list else []) + extra_task + [task]
+                task_list[0:0] = ([['que', 'q', list(set(query_list)), False]] if query_list else []) + extra_task + [task]
                 result = True
                 break
 
@@ -168,12 +168,13 @@ class QueryCore(BaseCore):
 
     core_name = 'que'
     index = settings.INDEX['que']
-    params = ['type', 'target']
+    params = ['type', 'target', 'pass']
 
     def _process(self, msg):
         task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
         result = False
         params_list = []
+        pass_flag = False
         while task_list:
             task = task_list.pop(0)
             if self.core_name != task[0]:
@@ -183,11 +184,17 @@ class QueryCore(BaseCore):
             tmp_dict = {x: task[self.index[x]] for x in self.params}
             if 'q' == tmp_dict['type']:
                 params_list.extend(tmp_dict['target'])
+                pass_flag = tmp_dict['pass']
 
         if params_list:
             query_result = self._query(task_vars, params_list)
-            if query_result and not filter(lambda x: not query_result.has_key(x), params_list):
+            not_found = filter(lambda x: not query_result.has_key(x), params_list)
+            if query_result and not not_found:
                 task_vars.update(query_result)
+                result = True
+            elif pass_flag:
+                task_vars.update(query_result)
+                task_vars.update({x: '' for x in not_found})
                 result = True
 
         msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri'
@@ -270,7 +277,7 @@ class TriggerCore(BaseCore):
                     else:
                         query_list.append(symbol)
             if extra_task or query_list:
-                task_list[0:0] = [['que', 'q', query_list]] if query_list else [] + extra_task + [task]
+                task_list[0:0] = [['que', 'q', list(set(query_list)), True]] if query_list else [] + extra_task + [task]
                 _msg = {}
                 _msg.update(msg)
                 _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = task_list, copy.copy(task_vars), custom_vars, task_list[0][0]
