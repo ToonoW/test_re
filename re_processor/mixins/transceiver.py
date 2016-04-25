@@ -105,7 +105,6 @@ class BaseRabbitmqConsumer(object):
         msg['common.product_key'] = msg['product_key']
         msg['common.did'] = msg['did']
         msg['common.mac'] = msg['mac']
-        msg['common.created_at'] = msg['created_at']
 
         if 'online' == event:
             msg['online.status'] = 1
