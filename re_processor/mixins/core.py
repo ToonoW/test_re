@@ -189,10 +189,10 @@ class QueryCore(BaseCore):
                 task_list[0:0] = [task]
                 result = True
                 break
-            tmp_dict = {x: task[self.index[x]] for x in self.params}
+            tmp_dict = {x: task[self.index[x]] for x in self.params if self.index[x] < len(task)}
             if 'q' == tmp_dict['type']:
                 params_list.extend(tmp_dict['target'])
-                pass_flag = tmp_dict['pass']
+                pass_flag = tmp_dict.get('pass', False)
 
         if params_list:
             query_result = self._query(task_vars, params_list)
