@@ -101,7 +101,8 @@ class BaseRabbitmqConsumer(object):
             else:
                 msg.update({'.'.join(['data', k]): v for k, v in data.items()})
 
-        msg['sys.time_now'] = int(time.time())
+        msg['sys.timestamp'] = int(time.time())
+        msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
         msg['common.product_key'] = msg['product_key']
         msg['common.did'] = msg['did']
         msg['common.mac'] = msg['mac']
