@@ -51,7 +51,7 @@ ROUTING_KEY = {
 
 PUBLISH_ROUTING_KEY = {
     'notification': 'gw_notification_message',
-    'http': 'rules_engine_http'
+    'http': 'gw_http_message'
 }
 
 DEBUG_ROUTING_KEY = {
@@ -124,7 +124,7 @@ CORE_MAP = {
     }
 }
 
-# databases settings
+###########databases settings################
 # mongo
 MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
 
@@ -150,6 +150,12 @@ REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
 LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
+
+#############################################
+
+# host_get_bindings
+HOST_GET_BINDING = env('HOST_GET_BINDING', 'innerapi.gwdev.com')
+INNER_API_TOKEN = env('INNER_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # logging
 LOGGING = {
@@ -196,8 +202,9 @@ INDEX = {
     'tri': {
         'action_type': 1,
         'params': 2,
-        'action_content': 3,
-        'action_id': 4
+        'extern_params': 3,
+        'action_content': 4,
+        'action_id': 5
     },
     'tri_in_db': {
         'allow_time': 1,

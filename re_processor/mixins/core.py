@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import json, operator, re, time, copy
+import json, operator, re, time, copy, requests
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_mysql
@@ -179,9 +179,10 @@ class QueryCore(BaseCore):
     params = ['type', 'target', 'pass']
 
     def _process(self, msg):
-        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
+        task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
         result = False
         params_list = []
+        extern_list = []
         pass_flag = False
         while task_list:
             task = task_list.pop(0)
@@ -194,8 +195,18 @@ class QueryCore(BaseCore):
                 params_list.extend(tmp_dict['target'])
                 pass_flag = tmp_dict.get('pass', False)
 
+            elif 'e' == tmp_dict['type']:
+                for target in tmp_dict['target']:
+                    if not extern_params.has_key(target):
+                        extern_list.append(target)
+
+        if extern_list:
+            extern_result = self._query_extern(task_vars, extern_list)
+            extern_params.update(extern_result)
+            result = True
+
         if params_list:
-            query_result = self._query(task_vars, params_list)
+            query_result = self._query_data(task_vars, params_list)
             not_found = filter(lambda x: not query_result.has_key(x), params_list)
             if query_result and not not_found:
                 task_vars.update(query_result)
@@ -204,17 +215,34 @@ class QueryCore(BaseCore):
                 task_vars.update(query_result)
                 task_vars.update({x: '' for x in not_found})
                 result = True
+            else:
+                result = False
 
         if result is False and para_task:
             task_list = para_task.pop()
             result = True
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
+        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'], msg['extern_params'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else [], extern_params
 
         return result, [msg] if result else [], not result
 
-    def _query(self, task_vars, params_list):
-        return self._query_data(task_vars, params_list)
+    def _query_extern(self, task_vars, extern_list):
+        extern_list = list(set(extern_list))
+        result = {x: getattr(self, 'extern_' + x)(task_vars) for x in extern_list}
+        return result
+
+    def extern_alias(self, task_vars):
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'])
+        headers = {
+            'Authorization': settings.INNER_API_TOKEN
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            data = json.loads(response.content)
+        except:
+            data = {}
+
+        return data
 
     def _query_data(self, task_vars, params_list):
         db = get_mongodb()
@@ -239,21 +267,22 @@ class TriggerCore(BaseCore):
     core_name = 'tri'
     index = settings.INDEX['tri']
     db_index = settings.INDEX['tri_in_db']
-    params = ['action_type', 'params', 'action_content', 'action_id']
+    params = ['action_type', 'params', 'extern_params', 'action_content', 'action_id']
     db_params = ['allow_time', 'task_list', 'action_type', 'params', 'action_content']
 
     def _process(self, msg):
-        task_list, task_vars, custom_vars = msg['task_list'], msg['task_vars'], msg['custom_vars']
+        task_list, task_vars, custom_vars, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg.get('extern_params', {})
         msg_list = []
         log_flag = False
 
         if not task_list:
             db = get_mysql()
-            sql = 'select `id`, `action_tree` from `{0}` where `rule_id_id`={1}'.format(
+            sql = 'select `id`, `action_tree`, `extern_params` from `{0}` where `rule_id_id`={1}'.format(
                 settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
             db.execute(sql)
-            for action_id, action_tree in db.fetchall():
+            for action_id, action_tree, extern_params_db in db.fetchall():
                 action_tree = json.loads(action_tree)
+                extern_params_db = json.loads(extern_params_db) if extern_params_db else []
                 tmp_dict = {x: action_tree[self.db_index[x]] for x in self.db_params}
                 time_now = map(int, time.strftime('%m-%d-%H-%w').split('-'))
                 if time_now[0] not in tmp_dict['allow_time'].get('month', range(1, 13)) or \
@@ -262,7 +291,7 @@ class TriggerCore(BaseCore):
                         time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(1, 8)):
                     continue
 
-                action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], tmp_dict['action_content'], action_id]
+                action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], extern_params_db, tmp_dict['action_content'], action_id]
                 if tmp_dict['task_list']:
                     tmp_dict['task_list'].append(action_task)
                     _msg = {}
@@ -282,6 +311,11 @@ class TriggerCore(BaseCore):
             tmp_dict = {x: task[self.index[x]] for x in self.params}
             extra_task = []
             query_list = []
+            if tmp_dict['extern_params']:
+                for x in tmp_dict['extern_params']:
+                    if not extern_params.has_key(x):
+                        extra_task.append(['que', 'e', list(set(tmp_dict['extern_params'])), True])
+                        break
             for symbol in tmp_dict['params']:
                 if not task_vars.has_key(symbol):
                     if custom_vars.has_key(symbol):
@@ -304,6 +338,7 @@ class TriggerCore(BaseCore):
                     'mac': task_vars.get('mac', ''),
                     'ts': time.time(),
                     'params': {x: task_vars[x] for x in tmp_dict['params']},
+                    'extern_params': extern_params,
                     'content': tmp_dict['action_content']
                 }
                 if msg.get('debug') is True and msg['debug'] is True:
