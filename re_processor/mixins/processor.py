@@ -49,6 +49,7 @@ class CommonProcessor(object):
                 'product_key': msg['task_vars'].get('product_key', ''),
                 'did': msg['task_vars'].get('did', ''),
                 'mac': msg['task_vars'].get('mac', ''),
+                'extern_params': msg.get('extern_params', ''),
                 'task_vars': msg['task_vars'],
                 'current': 'log',
                 'result': result,
@@ -56,7 +57,7 @@ class CommonProcessor(object):
                 'proc_t': (time.time() - ts) * 1000,
                 'error_message': error_message,
                 'task_type': task_type,
-                'action': 'action' if 'tri' == task_type else 'rule'
+                'handling': 'action' if 'tri' == task_type else 'rule'
             }
             if msg.get('debug') is True and self.debug is True:
                 p_log['debug'] = True
