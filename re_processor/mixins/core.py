@@ -257,7 +257,7 @@ class QueryCore(BaseCore):
         return result
 
     def _query_product_name(self, task_vars):
-        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/products/{}', task_vars['product_key'])
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/products/', task_vars['product_key'])
         headers = {
             'Authorization': settings.INNER_API_TOKEN
         }
@@ -267,7 +267,7 @@ class QueryCore(BaseCore):
         except:
             data = {}
 
-        if not data:
+        if data:
             data = {'common.product_name': data['name']}
 
         return data
