@@ -75,16 +75,26 @@ if '__main__' == __name__:
     #    print '\n'
     #print result
 
+    #db = get_mongodb('core')
+    #ds = db['datapoints']
+
+    #status = ds.find_one({'product_key': product_key})
+    #print '\n'
+
+    #for val in status['datas']['entities'][0]['attrs']:
+    #    print val
+    #    print '\n'
+    #status.pop('_id')
+    #print json.dumps(status)
+
     db = get_mongodb('core')
-    ds = db['datapoints']
+    print db.collection_names()
+    ds = db['device']
 
     status = ds.find_one({'product_key': product_key})
     print '\n'
 
-    for val in status['datas']['entities'][0]['attrs']:
-        print val
-        print '\n'
-    #print status
+    print (status)
 
     #db = get_mysql()
     #sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(

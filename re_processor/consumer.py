@@ -27,7 +27,9 @@ class BaseRabbitmqConsumer(object):
         self.channel = self.m2m_conn.channel()
 
     def consume(self, ch, method, properties, body):
-        log = {'ts': time.time()}
+        log = {'module': 're_processor',
+               'ts': time.time(),
+               'running_status': 'tmp'}
         try:
             self.process(body, log)
         except Exception, e:
@@ -66,24 +68,52 @@ class HttpConsumer(BaseRabbitmqConsumer):
     def process(self, body, log=None):
         #print body
         msg = json.loads(body)
-        if 'http' != msg['action_type']:
+        if 'tmp' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
         content = json.loads(msg['content'])
-        method = content.get('method', 'get').lower()
-        log['http_method'] = method
-        if method not in ['get', 'post', 'put', 'delete']:
-            raise Exception('Invalid http_method: {}'.format(content['method']))
-        url = content.get('url')
-        log['url'] = url
-        if not url:
-            raise Exception('url not found')
-        data = content.get('data')
-        log['data'] = data
-        headers = content.get('headers')
-        log['headers'] = headers
-        timeout = content.get('timeout')
-        log['timeout'] = timeout
+        tpl = content['template']
+        for key, value in msg['params'].items():
+            tpl = tpl.replace(r'${' + key + '}', u'{}'.format(value))
+        headers = {'Authorization': settings.INNER_API_TOKEN}
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', msg['did'])
+        resp = requests.get(url, headers=headers)
+        alias = json.loads(resp.content)
+        user_alias = {key: {x['uid']: x['dev_alias'] for x in val} for key, val in alias.items()}
 
-        resp = getattr(requests, method)(url, data=data, headers=headers, timeout=timeout)
-        log['status'] = resp.status_code
-        #print resp.content
+        url = "{0}{1}{2}".format('http://', settings.HOST_GET_BINDING, '/v1/apps/{}/users')
+        users = {}
+        for appid in content['app_id']:
+            resp = requests.get(url.format(appid) + '?uids={}'.format(','.join(user_alias[appid].keys())), headers=headers)
+            users[appid] = json.loads(resp.content)
+
+        if 'phone' == content['name'] or 'sms' == content['name']:
+            for appid, user in users.items():
+                for u in user:
+                    u['dev_alias'] = user_alias[appid][u['uid']] if user_alias.has_key(appid) and user_alias[appid].has_key(u['uid']) else ''
+                    data = {
+                        'appid': appid,
+                        'users': [u],
+                        'msg': {
+                            'description': tpl.replace('${alias}', u['dev_alias'])
+                        }
+                    }
+
+                    #print data
+
+                    resp = requests.post(content['url'], data=json.dumps(data), headers=headers, timeout=5)
+                    log['status'] = resp.status_code
+                    log['message'] = resp.content
+                    print resp.content
+
+        elif 'anxinke' == content['name']:
+            for appid, user in users.items():
+                for u in user:
+                    u['dev_alias'] = user_alias[appid][u['uid']] if user_alias.has_key(appid) and user_alias[appid].has_key(u['uid']) else ''
+                    data = {
+                        'mobile': u['phone'],
+                        'content': tpl.replace('${alias}', u['dev_alias'])
+                    }
+                    resp = requests.post(content['url'], data=json.dumps(data), headers=headers, timeout=5)
+                    log['http_status'] = resp.status_code
+                    log['message'] = resp.content
+                    print resp.content

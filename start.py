@@ -9,7 +9,7 @@ Options:
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
   --product_key=<product_key>    binding product_key [default: all]
-  --with-http-consumer           start with a http consumer
+  --only-tmp-consumer           start with a http consumer
 """
 
 from gevent import monkey
@@ -33,16 +33,16 @@ from re_processor.container import get_container
 if '__main__' == __name__:
     args = docopt(__doc__, version='RulesEngine Processor 0.1.0')
     print args
-    mq_queue_name = args['<queue>'] if args.has_key('<queue>') else 'all'
-    product_key = args['<product_key>'] if args.has_key('<product_key>') else None
+    if args['--only-tmp-consumer']:
+        HttpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
+    else:
+        mq_queue_name = args['<queue>'] if args.has_key('<queue>') else 'all'
+        product_key = args['<product_key>'] if args.has_key('<product_key>') else None
 
-    start_unit = settings.START_UNIT
-    default_queue = {x: Queue() for x in start_unit}
-    start_unit[mq_queue_name] = 'main'
+        start_unit = settings.START_UNIT
+        default_queue = {x: Queue() for x in start_unit}
+        start_unit[mq_queue_name] = 'main'
 
-    greenlet_list = [gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for name, c_type in settings.START_UNIT.items()]
+        greenlet_list = [gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for name, c_type in settings.START_UNIT.items()]
 
-    if args['--with-http-consumer']:
-        greenlet_list += [gevent.spawn(HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start)]
-
-    gevent.joinall(greenlet_list)
+        gevent.joinall(greenlet_list)

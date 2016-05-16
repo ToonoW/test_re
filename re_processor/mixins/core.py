@@ -246,31 +246,14 @@ class QueryCore(BaseCore):
 
     def _query(self, task_vars, params_list):
         result = {}
-        if 'common.product_name' in params_list:
-            result.update(self._query_product_name(task_vars))
-        prefix = [x.split('.')[0] for x in params_list]
+        prefix = list(set([x.split('.')[0] for x in params_list]))
+
         if 'data' in prefix:
             result.update(self._query_data(task_vars))
-        if 'display' in prefix:
+        if 'display' in prefix or 'common.product_name' in params_list:
             result.update(self._query_display(task_vars))
 
         return result
-
-    def _query_product_name(self, task_vars):
-        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/products/', task_vars['product_key'])
-        headers = {
-            'Authorization': settings.INNER_API_TOKEN
-        }
-        try:
-            response = requests.get(url, headers=headers)
-            data = json.loads(response.content)
-        except:
-            data = {}
-
-        if data:
-            data = {'common.product_name': data['name']}
-
-        return data
 
     def _query_data(self, task_vars):
         db = get_mongodb('data')
@@ -293,6 +276,7 @@ class QueryCore(BaseCore):
         try:
             status = ds.find_one({'product_key': task_vars['product_key']})
             result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['datas']['entities'][0]['attrs']}
+            result['common.product_name'] = status['datas']['name']
         except KeyError:
             result = {}
 
