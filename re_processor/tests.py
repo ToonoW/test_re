@@ -60,8 +60,8 @@ if '__main__' == __name__:
 
     #test_consumer = ConsumeEvent('gw_notification_message')
     #test_consumer = ConsumeEvent('rules_engine_debug')
-    test_consumer = ConsumeEvent('rules_engine_http')
-    test_consumer.start()
+    #test_consumer = ConsumeEvent('rules_engine_http')
+    #test_consumer.start()
     #test_consumer.fetch_publish_msg('rules_engine_debug')
 
     #db = get_mongodb()
@@ -74,6 +74,17 @@ if '__main__' == __name__:
     #    print key, val
     #    print '\n'
     #print result
+
+    db = get_mongodb('core')
+    ds = db['datapoints']
+
+    status = ds.find_one({'product_key': product_key})
+    print '\n'
+
+    for val in status['datas']['entities'][0]['attrs']:
+        print val
+        print '\n'
+    #print status
 
     #db = get_mysql()
     #sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(

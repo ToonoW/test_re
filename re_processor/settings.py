@@ -126,7 +126,8 @@ CORE_MAP = {
 
 ###########databases settings################
 # mongo
-MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
+MONGO_GIZWITS_DATA= env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
+MONGO_GIZWITS_CORE= env("MONGO_GIZWITS_CORE", "mongodb://localhost:27017/gizwits_core")
 
 # mysql
 MYSQL_HOST = env("MYSQL_HOST", "localhost")

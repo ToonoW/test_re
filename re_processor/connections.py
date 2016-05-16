@@ -16,10 +16,16 @@ redis_pool = redis.ConnectionPool(
 def get_redis():
     return redis.Redis(connection_pool=redis_pool)
 
-mongo_conn = MongoClient(settings.MONGO_DATABASES)
+mongo_conn_data = MongoClient(settings.MONGO_GIZWITS_DATA)
+mongo_conn_core = MongoClient(settings.MONGO_GIZWITS_CORE)
 
-def get_mongodb():
-    return mongo_conn.get_default_database()
+def get_mongodb(name='data'):
+    if 'data' == name:
+        return mongo_conn_data.get_default_database()
+    elif 'core' == name:
+        return mongo_conn_core.get_default_database()
+    else:
+        return False
 
 
 class MysqlConnection(object):

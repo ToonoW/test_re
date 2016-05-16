@@ -206,7 +206,7 @@ class QueryCore(BaseCore):
             result = True
 
         if params_list:
-            query_result = self._query_data(task_vars, params_list)
+            query_result = self._query(task_vars, params_list)
             not_found = filter(lambda x: not query_result.has_key(x), params_list)
             if query_result and not not_found:
                 task_vars.update(query_result)
@@ -244,8 +244,36 @@ class QueryCore(BaseCore):
 
         return data
 
-    def _query_data(self, task_vars, params_list):
-        db = get_mongodb()
+    def _query(self, task_vars, params_list):
+        result = {}
+        if 'common.product_name' in params_list:
+            result.update(self._query_product_name(task_vars))
+        prefix = [x.split('.')[0] for x in params_list]
+        if 'data' in prefix:
+            result.update(self._query_data(task_vars))
+        if 'display' in prefix:
+            result.update(self._query_display(task_vars))
+
+        return result
+
+    def _query_product_name(self, task_vars):
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/products/{}', task_vars['product_key'])
+        headers = {
+            'Authorization': settings.INNER_API_TOKEN
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            data = json.loads(response.content)
+        except:
+            data = {}
+
+        if not data:
+            data = {'common.product_name': data['name']}
+
+        return data
+
+    def _query_data(self, task_vars):
+        db = get_mongodb('data')
         ds = db['device_status']
 
         try:
@@ -253,6 +281,18 @@ class QueryCore(BaseCore):
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
             result['offline.status'] = 0 if status['is_online'] else 1
+        except KeyError:
+            result = {}
+
+        return result
+
+    def _query_display(self, task_vars):
+        db = get_mongodb('core')
+        ds = db['datapoints']
+
+        try:
+            status = ds.find_one({'product_key': task_vars['product_key']})
+            result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['datas']['entities'][0]['attrs']}
         except KeyError:
             result = {}
 
