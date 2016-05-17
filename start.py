@@ -9,7 +9,8 @@ Options:
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
   --product_key=<product_key>    binding product_key [default: all]
-  --only-tmp-consumer            start with a http consumer
+  --only-tmp-consumer            start with a tmp consumer
+  --only-http-consumer           start with a http consumer
 """
 
 from gevent import monkey
