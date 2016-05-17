@@ -9,7 +9,7 @@ Options:
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
   --product_key=<product_key>    binding product_key [default: all]
-  --only-tmp-consumer           start with a http consumer
+  --only-tmp-consumer            start with a http consumer
 """
 
 from gevent import monkey
@@ -26,7 +26,7 @@ from gevent.queue import Queue
 from docopt import docopt
 
 from re_processor import settings
-from re_processor.consumer import HttpConsumer
+from re_processor.consumer import HttpConsumer, TmpConsumer
 from re_processor.container import get_container
 
 
@@ -34,7 +34,9 @@ if '__main__' == __name__:
     args = docopt(__doc__, version='RulesEngine Processor 0.1.0')
     print args
     if args['--only-tmp-consumer']:
-        HttpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
+        TmpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
+    elif args['--only-http-consumer']:
+        HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start()
     else:
         mq_queue_name = args['<queue>'] if args.has_key('<queue>') else 'all'
         product_key = args['<product_key>'] if args.has_key('<product_key>') else None
