@@ -13,8 +13,7 @@ from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import debug_logger
-from re_processor.common import logger
+from re_processor.common import debug_logger as logger
 
 
 class BaseRabbitmqConsumer(object):
@@ -45,22 +44,20 @@ class BaseRabbitmqConsumer(object):
             'module': 're_processor_status',
             'running_status': 'beginning'
         }
-        has_rule = False
         try:
             #print body
             lst = self.unpack(body, log)
             if lst:
-                has_rule = True
                 msg = map(lambda m: self.process_msg(m, log), lst)
                 if msg:
                     self.send(reduce(operator.__add__, msg), log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
-        self.channel.basic_ack(delivery_tag=method.delivery_tag)
-        if has_rule:
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
+
+        self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def mq_listen(self, mq_queue_name, product_key):
         self.mq_subcribe(mq_queue_name, product_key)
@@ -234,8 +231,8 @@ class DefaultQueueConsumer(object):
             except Exception, e:
                 logger.exception(e)
                 log['exception'] = str(e)
-            log['proc_t'] = int((time.time() - log['ts']) * 1000)
-            logger.info(json.dumps(log))
+                log['proc_t'] = int((time.time() - log['ts']) * 1000)
+                logger.info(json.dumps(log))
 
     def default_publish(self, product_key, msg_list):
         for msg in msg_list:
