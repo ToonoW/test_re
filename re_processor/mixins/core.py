@@ -184,6 +184,7 @@ class QueryCore(BaseCore):
         params_list = []
         extern_list = []
         pass_flag = False
+
         while task_list:
             task = task_list.pop(0)
             if self.core_name != task[0]:
@@ -327,6 +328,8 @@ class TriggerCore(BaseCore):
 
             db.close()
 
+        new_task_list = []
+
         while task_list:
             task = task_list.pop(0)
             if self.core_name != task[0]:
@@ -335,22 +338,23 @@ class TriggerCore(BaseCore):
             tmp_dict = {x: task[self.index[x]] for x in self.params}
             extra_task = []
             query_list = []
+
             if tmp_dict['extern_params']:
                 for x in tmp_dict['extern_params']:
                     if not extern_params.has_key(x):
                         extra_task.append(['que', 'e', list(set(tmp_dict['extern_params'])), True])
                         break
+
             for symbol in tmp_dict['params']:
                 if not task_vars.has_key(symbol):
                     if custom_vars.has_key(symbol):
                         extra_task.append(custom_vars[symbol])
                     else:
                         query_list.append(symbol)
+
             if extra_task or query_list:
-                task_list[0:0] = [['que', 'q', list(set(query_list)), True]] if query_list else [] + extra_task + [task]
-                _msg = {}
-                _msg.update(msg)
-                _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = task_list, copy.copy(task_vars), custom_vars, task_list[0][0]
+                new_task_list[0:0] = ([['que', 'q', list(set(query_list)), True]] if query_list else []) + extra_task
+                new_task_list.append(task)
             else:
                 log_flag = True
                 _msg = {
@@ -370,7 +374,15 @@ class TriggerCore(BaseCore):
                     _msg['rule_id'] = msg.get('rule_id', '')
                     _msg['test_id'] = msg.get('test_id', '')
                     _msg['action_id'] = tmp_dict['action_id']
+
+                msg_list.append(_msg)
+
+        if new_task_list:
+            _msg = {}
+            _msg.update(msg)
+            _msg['task_list'], _msg['task_vars'],  _msg['current'] = new_task_list, copy.copy(task_vars), new_task_list[0][0]
             msg_list.append(_msg)
+
 
         return True if msg_list else False, msg_list, log_flag
 
