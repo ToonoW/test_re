@@ -181,6 +181,10 @@ LOGGING = {
         'processor_gray': {
             'handlers': ['graylog'],
             'level': 'INFO'
+        },
+        'debug_gray': {
+            'handlers': ['graylog'],
+            'level': 'INFO'
         }
     }
 }
