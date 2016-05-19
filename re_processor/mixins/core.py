@@ -273,6 +273,9 @@ class QueryCore(BaseCore):
     def _query_display(self, task_vars):
         db = get_mongodb('core')
         ds = db['datapoints']
+        ds_extra = db['parsers']
+
+        return_result = {}
 
         try:
             status = ds.find_one({'product_key': task_vars['product_key']})
@@ -281,7 +284,17 @@ class QueryCore(BaseCore):
         except KeyError:
             result = {}
 
-        return result
+        return_result.update(result)
+
+        try:
+            status = ds_extra.find_one({'product_key': task_vars['product_key']})
+            result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['ext_data_points']}
+        except KeyError:
+            result = {}
+
+        return_result.update(result)
+
+        return return_result
 
 
 class TriggerCore(BaseCore):
