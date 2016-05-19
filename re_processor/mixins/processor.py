@@ -41,6 +41,8 @@ class CommonProcessor(object):
             logger.exception(e)
 
         if log_flag:
+            if 'exception' != result:
+                result = 'success' if result else 'failed'
             p_log = {
                 'msg_to': settings.MSG_TO['internal'],
                 'module': 're_processor',
