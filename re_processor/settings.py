@@ -58,6 +58,7 @@ PUBLISH_ROUTING_KEY = {
 DEBUG_ROUTING_KEY = {
     'notification': 'rules_engine_debug',
     'http': 'rules_engine_debug',
+    'tmp': 'rules_engine_debug',
     'log': 'rules_engine_debug'
 }
 

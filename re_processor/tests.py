@@ -64,37 +64,50 @@ if '__main__' == __name__:
     #test_consumer.start()
     #test_consumer.fetch_publish_msg('rules_engine_debug')
 
-    #db = get_mongodb()
-    #ds = db['device_status']
+    db = get_mongodb()
+    ds = db['device_status']
 
-    #status = ds.find_one({'did': did})
-    #result = status['attr']['0']
-    #print '\n'
-    #for key, val in status.items():
-    #    print key, val
-    #    print '\n'
-    #print result
-
-    db = get_mongodb('core')
-    ds = db['datapoints']
-
-    status = ds.find_one({'product_key': product_key})
+    status = ds.find_one({'did': did})
+    result = status['attr']['0']
     print '\n'
-
-    for val in status['datas']['entities'][0]['attrs']:
-        print val
+    for key, val in status.items():
+        print key, val
         print '\n'
-    status.pop('_id')
-    print json.dumps(status)
+    print result
 
     #db = get_mongodb('core')
-    #print db.collection_names()
-    #ds = db['device']
+    #ds = db['datapoints']
 
     #status = ds.find_one({'product_key': product_key})
     #print '\n'
 
-    #print (status)
+    #for val in status['datas']['entities'][0]['attrs']:
+    #    print val
+    #    print '\n'
+    #status.pop('_id')
+    #print json.dumps(status)
+
+    db = get_mongodb('core')
+    print db.collection_names()
+    ds = db['parsers']
+
+    status = ds.find_one({'product_key': '64b5ef69af9a42eabef65c5f8fedd171'})
+    print '\n'
+
+    dp = []
+    #status.pop('_id')
+    #print json.dumps(status)
+    if status and status['ext_data_points']:
+        for attr in status['ext_data_points']:
+            dp.append({
+                'display_name': attr['display_name'],
+                'name': attr['name'],
+                'detail': [attr['type']],
+                'type': (attr['data_type']),
+                'enum': attr['range'].split(',') if 'enum' == attr['data_type'] else []
+            })
+
+    print dp
 
     #db = get_mysql()
     #sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(

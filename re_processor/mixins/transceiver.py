@@ -67,10 +67,27 @@ class BaseRabbitmqConsumer(object):
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
-            if msg.get('debug') is True and self.debug is True:
+            if self.debug is True:
                 routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
-            else:
-                routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
+                log = {
+                    'module': 're_processor',
+                    'action': 'pub',
+                    'ts': time.time(),
+                    'topic': routing_key
+                }
+                try:
+                    self.channel.basic_publish(settings.EXCHANGE, routing_key,
+                                               json.dumps(msg),
+                                               properties=BasicProperties(delivery_mode=2))
+                except:
+                    self.mq_initial()
+                    self.channel.basic_publish(settings.EXCHANGE, routing_key,
+                                               json.dumps(msg),
+                                               properties=BasicProperties(delivery_mode=2))
+                log['proc_t'] = int((time.time() - log['ts']) * 1000)
+                logger.info(json.dumps(log))
+
+            routing_key = settings.PUBLISH_ROUTING_KEY[msg['action_type']]
             log = {
                 'module': 're_processor',
                 'action': 'pub',

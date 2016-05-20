@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time
+import time, json
 
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
@@ -52,7 +52,7 @@ class CommonProcessor(object):
                 'did': msg['task_vars'].get('did', ''),
                 'mac': msg['task_vars'].get('mac', ''),
                 'extern_params': msg.get('extern_params', ''),
-                'task_vars': msg['task_vars'],
+                'task_vars': json.dumps(msg['task_vars']),
                 'current': 'log',
                 'result': result,
                 'ts': ts,
