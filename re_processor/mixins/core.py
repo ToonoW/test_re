@@ -279,8 +279,11 @@ class QueryCore(BaseCore):
 
         try:
             status = ds.find_one({'product_key': task_vars['product_key']})
-            result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['datas']['entities'][0]['attrs']}
-            result['common.product_name'] = status['datas']['name']
+            if status:
+                result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['datas']['entities'][0]['attrs']}
+                result['common.product_name'] = status['datas']['name']
+            else:
+                result = {}
         except KeyError:
             result = {}
 
@@ -288,7 +291,10 @@ class QueryCore(BaseCore):
 
         try:
             status = ds_extra.find_one({'product_key': task_vars['product_key']})
-            result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['ext_data_points']}
+            if status:
+                result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['ext_data_points']}
+            else:
+                result = {}
         except KeyError:
             result = {}
 
