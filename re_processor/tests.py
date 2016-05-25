@@ -91,12 +91,43 @@ if '__main__' == __name__:
     #print db.collection_names()
     ds = db['parsers']
 
-    status = ds.find_one({'product_key': '64b5ef69af9a42eabef65c5f8fedd171'})
-    print '\n'
+    jsn = [
+        {
+            'name': 'leakage',
+            'display_name': u'漏水报警',
+            'type': 'alert',
+            'data_type': 'bool'
+        },
+        {
+            'name': 'life1',
+            'display_name': u'滤芯1寿命',
+            'val': 1,
+            'type': 'alert',
+            'data_type': 'bool'
+        },
+        {
+            'name': 'life2',
+            'display_name': u'滤芯2寿命',
+            'val': 1,
+            'type': 'alert',
+            'data_type': 'bool'
+        },
+        {
+            'name': 'life3',
+            'display_name': u'滤芯3寿命',
+            'val': 1,
+            'type': 'alert',
+            'data_type': 'bool'
+        }
+    ]
+    ds.update({'product_key': product_key}, {"$set": {"ext_data_points": jsn}})
 
+    status = ds.find_one({'product_key': product_key})
+    print '\n'
     dp = []
     #status.pop('_id')
     #print json.dumps(status)
+    print status
     if status and status['ext_data_points']:
         for attr in status['ext_data_points']:
             dp.append({

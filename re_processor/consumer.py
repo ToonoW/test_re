@@ -139,7 +139,7 @@ class HttpConsumer(BaseRabbitmqConsumer):
         log['data'] = data
         headers = content.get('headers')
         log['headers'] = headers
-        need_params = content.get('timeout')
+        need_params = content.get('need_params')
         log['need_params'] = need_params
         if need_params:
             data.update(msg['params'])
