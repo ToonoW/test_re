@@ -61,9 +61,10 @@ class BaseRabbitmqConsumer(object):
         self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def mq_listen(self, mq_queue_name, product_key):
+        name = 'rules_engine_core_{}'.format(mq_queue_name)
         self.mq_subcribe(mq_queue_name, product_key)
         self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(self.consume, queue=mq_queue_name)
+        self.channel.basic_consume(self.consume, queue=name)
         self.channel.start_consuming()
 
     def mq_publish(self, product_key, msg_list):
