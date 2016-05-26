@@ -32,10 +32,11 @@ class BaseRabbitmqConsumer(object):
         self.channel = self.m2m_conn.channel()
 
     def mq_subcribe(self, mq_queue_name, product_key):
-        self.channel.queue_declare(queue=mq_queue_name, durable=True)
+        name = 'rules_engine_core_{}'.format(mq_queue_name)
+        self.channel.queue_declare(queue=name, durable=True)
         self.channel.queue_bind(
             exchange=settings.EXCHANGE,
-            queue=mq_queue_name,
+            queue=name,
             routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
 
     def consume(self, ch, method, properties, body):
