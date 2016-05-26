@@ -36,7 +36,7 @@ TOPIC_MAP = {
 }
 
 ROUTING_KEY = {
-    'all': 'products.{}.events.device.#',
+    'all': 'products.{}.events.device.*',
     #'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',

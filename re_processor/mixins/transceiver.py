@@ -91,14 +91,10 @@ class BaseRabbitmqConsumer(object):
                 'topic': routing_key
             }
             try:
-                self.channel.basic_publish(settings.EXCHANGE, routing_key,
-                                           json.dumps(msg),
-                                           properties=BasicProperties(delivery_mode=2))
+                self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
             except:
                 self.mq_initial()
-                self.channel.basic_publish(settings.EXCHANGE, routing_key,
-                                           json.dumps(msg),
-                                           properties=BasicProperties(delivery_mode=2))
+                self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
 
