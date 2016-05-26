@@ -8,7 +8,7 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
-  --product_key=<product_key>    binding product_key [default: all]
+  --product_key=<product_key>    binding product_key [default: *]
   --only-tmp-consumer            start with a tmp consumer
   --only-http-consumer           start with a http consumer
 """
@@ -39,8 +39,8 @@ if '__main__' == __name__:
     elif args['--only-http-consumer']:
         HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start()
     else:
-        mq_queue_name = args['<queue>'] if args.has_key('<queue>') else 'all'
-        product_key = args['<product_key>'] if args.has_key('<product_key>') else None
+        mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
+        product_key = args['--product_key'] if args.has_key('--product_key') else '*'
 
         start_unit = settings.START_UNIT
         default_queue = {x: Queue() for x in start_unit}
