@@ -11,6 +11,12 @@ Options:
   --product_key=<product_key>    binding product_key [default: *]
   --only-tmp-consumer            start with a tmp consumer
   --only-http-consumer           start with a http consumer
+  --main=<main>                  set num of main core
+  --sel=<sel>                    set num of sel core
+  --cal=<cal>                    set num of cal core
+  --que=<que>                    set num of que core
+  --log=<log>                    set num of log core
+  --tri=<log>                    set num of log core
 """
 
 from gevent import monkey
@@ -46,6 +52,13 @@ if '__main__' == __name__:
         default_queue = {x: Queue() for x in start_unit}
         start_unit[mq_queue_name] = 'main'
 
-        greenlet_list = [gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for name, c_type in settings.START_UNIT.items()]
+        greenlet_list = []
+        for name, c_type in settings.START_UNIT.items():
+            if 'main' == c_type and args['--main']:
+                greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--main']))])
+            elif args['--{}'.format(name)]:
+                greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--{}'.format(name)]))])
+            else:
+                greenlet_list.append(gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin))
 
         gevent.joinall(greenlet_list)

@@ -17,7 +17,7 @@ class BaseCore(object):
         '''
         execute task, return a three-tuple (result, msg_list, log_flag)
         '''
-        print 'running {}'.format(self.core_name)
+        #print 'running {}'.format(self.core_name)
         return self._process(msg)
 
 
