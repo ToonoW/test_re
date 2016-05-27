@@ -56,7 +56,7 @@ if '__main__' == __name__:
         for name, c_type in settings.START_UNIT.items():
             if 'main' == c_type and args['--main']:
                 greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--main']))])
-            elif args['--{}'.format(name)]:
+            elif 'main' != c_type and args['--{}'.format(name)]:
                 greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--{}'.format(name)]))])
             else:
                 greenlet_list.append(gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin))
