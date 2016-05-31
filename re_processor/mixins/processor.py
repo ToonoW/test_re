@@ -36,7 +36,6 @@ class CommonProcessor(object):
         except Exception, e:
             log_flag = True
             result = 'exception'
-            #error_message = e.message
             error_message = str(e)
             logger.exception(e)
 
