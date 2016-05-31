@@ -40,6 +40,7 @@ class BaseRabbitmqConsumer(object):
             routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
 
     def consume(self, ch, method, properties, body):
+        self.channel.basic_ack(delivery_tag=method.delivery_tag)
         log = {
             'ts': time.time(),
             'module': 're_processor_status',
@@ -58,7 +59,6 @@ class BaseRabbitmqConsumer(object):
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
 
-        self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def mq_listen(self, mq_queue_name, product_key):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
