@@ -13,7 +13,7 @@ from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import debug_logger as logger
+from re_processor.common import debug_logger as logger, console_logger
 
 
 class BaseRabbitmqConsumer(object):
@@ -24,10 +24,9 @@ class BaseRabbitmqConsumer(object):
     def mq_initial(self):
         # connect rabbitmq
         try:
-            self.m2m_conn = BlockingConnection(
-                URLParameters(settings.M2M_MQ_URL))
+            self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
         except AMQPConnectionError, e:
-            logger.exception(e)
+            console_logger.exception(e)
             exit(1)
         self.channel = self.m2m_conn.channel()
 
@@ -38,6 +37,19 @@ class BaseRabbitmqConsumer(object):
             exchange=settings.EXCHANGE,
             queue=name,
             routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
+
+    def mq_reconnect(self):
+        # reconnect rabbitmq
+        while True:
+            try:
+                time.sleep(5)
+                self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
+            except AMQPConnectionError, e:
+                console_logger.exception(e)
+                continue
+            else:
+                self.channel = self.m2m_conn.channel()
+                break
 
     def consume(self, ch, method, properties, body):
         log = {
@@ -53,7 +65,7 @@ class BaseRabbitmqConsumer(object):
                 if msg:
                     self.send(reduce(operator.__add__, msg), log)
         except Exception, e:
-            logger.exception(e)
+            console_logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
@@ -63,10 +75,15 @@ class BaseRabbitmqConsumer(object):
 
     def mq_listen(self, mq_queue_name, product_key):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
-        self.mq_subcribe(mq_queue_name, product_key)
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(self.consume, queue=name, no_ack=True)
-        self.channel.start_consuming()
+        while True:
+            try:
+                self.mq_subcribe(mq_queue_name, product_key)
+                self.channel.basic_qos(prefetch_count=1)
+                self.channel.basic_consume(self.consume, queue=name, no_ack=True)
+                self.channel.start_consuming()
+            except AMQPConnectionError, e:
+                console_logger.exception(e)
+                self.mq_reconnect()
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
@@ -78,11 +95,14 @@ class BaseRabbitmqConsumer(object):
                     'ts': time.time(),
                     'topic': routing_key
                 }
-                try:
-                    self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
-                except:
-                    self.mq_initial()
-                    self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                while True:
+                    try:
+                        self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                    except AMQPConnectionError, e:
+                        console_logger.exception(e)
+                        self.mq_reconnect()
+                    else:
+                        break
                 log['proc_t'] = int((time.time() - log['ts']) * 1000)
                 logger.info(json.dumps(log))
 
@@ -93,11 +113,14 @@ class BaseRabbitmqConsumer(object):
                 'ts': time.time(),
                 'topic': routing_key
             }
-            try:
-                self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
-            except:
-                self.mq_initial()
-                self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+            while True:
+                try:
+                    self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                except AMQPConnectionError, e:
+                    console_logger.exception(e)
+                    self.mq_reconnect()
+                else:
+                    break
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
 
@@ -203,7 +226,7 @@ class BaseRedismqConsumer(object):
                 if msg:
                     self.send(msg, log)
             except Exception, e:
-                logger.exception(e)
+                console_logger.exception(e)
                 log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
@@ -241,7 +264,7 @@ class DefaultQueueConsumer(object):
                 #print '{} IDLE-----'.format(mq_queue_name)
                 continue
             except Exception, e:
-                logger.exception(e)
+                console_logger.exception(e)
                 log['exception'] = str(e)
                 log['proc_t'] = int((time.time() - log['ts']) * 1000)
                 logger.info(json.dumps(log))
