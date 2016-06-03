@@ -180,6 +180,8 @@ class BaseRabbitmqConsumer(object):
             custom_vars = json.loads(custom_vars) if custom_vars else {}
             __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event'] and x['task_list']]
             if __rule_tree_list:
+                tmp_msg = copy.copy(msg)
+                tmp_msg['common.rule_id'] = rule_id
                 __rule_tree = {
                     'event': msg['event_type'],
                     'rule_id': rule_id,
@@ -190,7 +192,7 @@ class BaseRabbitmqConsumer(object):
                     'current': __rule_tree_list[0][0][0],
                     'task_list': __rule_tree_list[0],
                     'para_task': __rule_tree_list[1:],
-                    'task_vars': copy.copy(msg),
+                    'task_vars': tmp_msg,
                     'custom_vars': custom_vars
                 }
                 msg_list.append(__rule_tree)

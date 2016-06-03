@@ -52,12 +52,14 @@ ROUTING_KEY = {
 PUBLISH_ROUTING_KEY = {
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
+    'gdms_http': 'rules_engine_debug',
     'tmp': 'gw_tmp_message'
 }
 
 DEBUG_ROUTING_KEY = {
     'notification': 'rules_engine_debug',
     'http': 'rules_engine_debug',
+    'gdms_http': 'rules_engine_debug',
     'tmp': 'rules_engine_debug',
     'log': 'rules_engine_debug'
 }
