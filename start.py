@@ -9,8 +9,9 @@ Options:
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
   --product_key=<product_key>    binding product_key [default: *]
-  --only-tmp-consumer            start with a tmp consumer
-  --only-http-consumer           start with a http consumer
+  --only-tmp-consumer            start as a tmp consumer
+  --only-http-consumer           start as a http consumer
+  --only-gdmshttp-consumer       start as a gdms_http consumer
   --main=<main>                  set num of main core
   --sel=<sel>                    set num of sel core
   --cal=<cal>                    set num of cal core
@@ -33,7 +34,7 @@ from gevent.queue import Queue
 from docopt import docopt
 
 from re_processor import settings
-from re_processor.consumer import HttpConsumer, TmpConsumer
+from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer
 from re_processor.container import get_container
 
 
@@ -44,6 +45,11 @@ if '__main__' == __name__:
         TmpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
     elif args['--only-http-consumer']:
         HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start()
+    elif args['--only-gdmshttp-consumer']:
+        GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start()
+        greenlet_list = []
+        greenlet_list.extend([gevent.spawn(GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start) for i in range(10)])
+        gevent.joinall(greenlet_list)
     else:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
         product_key = args['--product_key'] if args.has_key('--product_key') else '*'
