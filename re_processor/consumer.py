@@ -200,15 +200,16 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
         content = json.loads(msg['content'])
         key = 'rules_engine_gdms_token_{}'.format(hash(content['app_id'] + content['secret_key']))
         cnt = 0
-        while cnt < 3:
+        url = content['url']
+        data = content.get('data', {})
+        headers = content.get('headers', {})
+        if content.get('need_params', True):
+            data.update({k.split('.')[-1]: v for k, v in msg['params'].items()})
+        while cnt < 5:
             token = self.get_token(key, log)
             if token is None:
                 token = self.new_token(key, content, log)
                 self.delete_token(key)
-            url = content['url']
-            data = content.get('data', {})
-            headers = content.get('headers', {})
-            data.update({k.split('.')[-1]: v for k, v in msg['params'].items()})
             headers['Api-Token'] = token
             #headers['X-Gizwits-Rulesengine-Token'] = '1234'
             if headers.has_key('Content-Type') and 'application/json' == headers['Content-Type']:
