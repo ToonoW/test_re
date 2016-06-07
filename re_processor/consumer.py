@@ -203,6 +203,7 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
         url = content['url']
         data = content.get('data', {})
         headers = content.get('headers', {})
+        timeout = content.get('timeout', 5)
         if content.get('need_params', True):
             data.update({k.split('.')[-1]: v for k, v in msg['params'].items()})
         while cnt < 5:
@@ -213,9 +214,9 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
             headers['Api-Token'] = token
             #headers['X-Gizwits-Rulesengine-Token'] = '1234'
             if headers.has_key('Content-Type') and 'application/json' == headers['Content-Type']:
-                resp = requests.post(url, data=json.dumps(data), headers=headers, timeout=5)
+                resp = requests.post(url, data=json.dumps(data), headers=headers, timeout=timeout)
             else:
-                resp = requests.post(url, data=data, headers=headers, timeout=5)
+                resp = requests.post(url, data=data, headers=headers, timeout=timeout)
 
             if 401 != resp.status_code:
                 break
