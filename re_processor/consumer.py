@@ -218,8 +218,11 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
 
             if 401 != resp.status_code:
                 break
+
+            self.delete_token(key, token)
             cnt += 1
 
+        log['token'] = token
         log['status'] = resp.status_code
         log['message'] = resp.content
         log['retry_cnt'] = cnt
