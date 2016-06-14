@@ -19,12 +19,24 @@ class BaseRabbitmqConsumer(object):
         # connect rabbitmq
         self.queue = queue
         try:
-            self.m2m_conn = BlockingConnection(
-                URLParameters(settings.M2M_MQ_URL))
+            self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
         except AMQPConnectionError, e:
             logger.exception(e)
             exit(1)
         self.channel = self.m2m_conn.channel()
+
+    def mq_reconnect(self):
+        # reconnect rabbitmq
+        while True:
+            try:
+                time.sleep(5)
+                self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
+            except AMQPConnectionError, e:
+                logger.exception(e)
+                continue
+            else:
+                self.channel = self.m2m_conn.channel()
+                break
 
     def consume(self, ch, method, properties, body):
         log = {'module': 're_processor',
@@ -43,14 +55,16 @@ class BaseRabbitmqConsumer(object):
         print body
 
     def start(self):
-        self.channel.queue_declare(queue=self.queue, durable=True)
-        self.channel.queue_bind(
-            exchange=settings.EXCHANGE,
-            queue=self.queue,
-            routing_key=self.queue)
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(self.consume, queue=self.queue)
-        self.channel.start_consuming()
+        while True:
+            try:
+                self.channel.queue_declare(queue=self.queue, durable=True)
+                self.channel.queue_bind(exchange=settings.EXCHANGE, queue=self.queue, routing_key=self.queue)
+                self.channel.basic_qos(prefetch_count=1)
+                self.channel.basic_consume(self.consume, queue=self.queue)
+                self.channel.start_consuming()
+            except AMQPConnectionError, e:
+                logger.exception(e)
+                self.mq_reconnect()
 
     def publish(self, routing_key, message):
         log = {'module': 're_processor',
