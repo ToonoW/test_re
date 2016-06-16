@@ -178,7 +178,7 @@ class BaseRabbitmqConsumer(object):
         for rule_id, rule_tree, custom_vars in db.fetchall():
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
-            __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event'] and x['task_list']]
+            __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
             if __rule_tree_list:
                 tmp_msg = copy.copy(msg)
                 tmp_msg['common.rule_id'] = rule_id
@@ -189,7 +189,7 @@ class BaseRabbitmqConsumer(object):
                     'test_id': msg.get('test_id', ''),
                     'msg_to': settings.MSG_TO['internal'],
                     'ts': log['ts'],
-                    'current': __rule_tree_list[0][0][0],
+                    'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
                     'task_list': __rule_tree_list[0],
                     'para_task': __rule_tree_list[1:],
                     'task_vars': tmp_msg,
