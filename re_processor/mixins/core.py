@@ -74,7 +74,7 @@ class SelectorCore(BaseCore):
                 tmp_dict[symbol] = tmp
 
             if extra_task or query_list:
-                task_list[0:0] = [['que', 'q', list(set(query_list)), False]] if query_list else [] + extra_task + [task]
+                task_list[0:0] = ([['que', 'q', list(set(query_list)), False]] if query_list else []) + extra_task + [task]
                 break
 
             if hex_flag:
