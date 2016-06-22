@@ -82,6 +82,9 @@ class TmpConsumer(BaseRabbitmqConsumer):
         msg = json.loads(body)
         if 'tmp' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
+        log['product_key'] = msg['product_key']
+        log['did'] = msg['did']
+        log['action_type'] = msg['action_type']
         content = json.loads(msg['content'])
         tpl = content['template']
         for key, value in msg['params'].items():
@@ -138,6 +141,9 @@ class HttpConsumer(BaseRabbitmqConsumer):
         msg = json.loads(body)
         if 'http' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
+        log['product_key'] = msg['product_key']
+        log['did'] = msg['did']
+        log['action_type'] = msg['action_type']
         content = json.loads(msg['content'])
         method = content.get('method', 'get').lower()
         log['re_http_method'] = method
@@ -211,7 +217,12 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
         msg = json.loads(body)
         if 'gdms_http' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
+        log['product_key'] = msg['product_key']
+        log['did'] = msg['did']
+        log['action_type'] = msg['action_type']
         content = json.loads(msg['content'])
+        log['app_id'] = content['app_id']
+        log['secret_key'] = content['secret_key']
         key = 'rules_engine_gdms_token_{}'.format(hash(content['app_id'] + content['secret_key']))
         cnt = 0
         url = content['url']
