@@ -190,9 +190,9 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
             resp_token = requests.get(token_url)
             resp_content = json.loads(resp_token.content)
             token = resp_content['token']
-            created_at = resp_content['created_at'].split('.')
-            created_at = int(time.mktime(time.strptime(created_at[0],'%Y-%m-%dT%H:%M:%S'))) + int(created_at[1][0:-1])/1000.0
-            redis_conn.zadd(key, token, created_at)
+            expires_at = resp_content['expires_at'].split('.')
+            expires_at = int(time.mktime(time.strptime(expires_at[0],'%Y-%m-%dT%H:%M:%S'))) * 1000 + int(expires_at[1][0:-1])
+            redis_conn.zadd(key, token, expires_at)
         except Exception, e:
             log['status'] = resp_token.status_code
             log['message'] = resp_token.content
