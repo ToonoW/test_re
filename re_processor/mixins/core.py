@@ -380,6 +380,7 @@ class TriggerCore(BaseCore):
                     'msg_to': settings.MSG_TO['external'],
                     'action_type': tmp_dict['action_type'],
                     'event': msg.get('event', ''),
+                    'rule_id': msg.get('rule_id', ''),
                     'product_key': task_vars.get('product_key', ''),
                     'did': task_vars.get('did', ''),
                     'mac': task_vars.get('mac', ''),
@@ -390,7 +391,6 @@ class TriggerCore(BaseCore):
                 }
                 if msg.get('debug') is True and msg['debug'] is True:
                     _msg['debug'] = True
-                    _msg['rule_id'] = msg.get('rule_id', '')
                     _msg['test_id'] = msg.get('test_id', '')
                     _msg['action_id'] = tmp_dict['action_id']
 
