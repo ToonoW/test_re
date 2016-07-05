@@ -87,17 +87,19 @@ class BaseRabbitmqConsumer(object):
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
+            msg_pub = json.dumps(msg)
             if self.debug is True:
                 routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
                 log = {
                     'module': 're_processor',
                     'action': 'pub',
                     'ts': time.time(),
-                    'topic': routing_key
+                    'topic': routing_key,
+                    'msg': msg_pub
                 }
                 while True:
                     try:
-                        self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                        self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
                         console_logger.exception(e)
                         self.mq_reconnect()
@@ -111,11 +113,12 @@ class BaseRabbitmqConsumer(object):
                 'module': 're_processor',
                 'action': 'pub',
                 'ts': time.time(),
-                'topic': routing_key
+                'topic': routing_key,
+                'msg': msg_pub
             }
             while True:
                 try:
-                    self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                    self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
                     console_logger.exception(e)
                     self.mq_reconnect()
