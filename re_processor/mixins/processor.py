@@ -17,13 +17,13 @@ class CommonProcessor(object):
         core_map = settings.CORE_MAP.get(pos, None)
         self.core = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
 
-    def process_msg(self, msg, log=None):
+    def process_msg(self, msg, log={}):
         '''
         return a list of msg
         '''
 
         log['running_status'] = 'process'
-        ts = time.time()
+        ts = log.get('ts', time.time())
         if not getattr(self, 'core', None):
             return [msg]
         msg_list = []
