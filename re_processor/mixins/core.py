@@ -331,7 +331,7 @@ class TriggerCore(BaseCore):
                 time_now = map(int, time.strftime('%m-%d-%H-%w').split('-'))
                 if time_now[0] not in tmp_dict['allow_time'].get('month', range(1, 13)) or \
                         time_now[1] not in tmp_dict['allow_time'].get('day', range(1, 32)) or \
-                        time_now[2] not in tmp_dict['allow_time'].get('hour', range(1, 61)) or \
+                        time_now[2] not in tmp_dict['allow_time'].get('hour', range(24)) or \
                         time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(1, 8)):
                     continue
 
