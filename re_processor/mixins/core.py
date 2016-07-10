@@ -332,7 +332,7 @@ class TriggerCore(BaseCore):
                 if time_now[0] not in tmp_dict['allow_time'].get('month', range(1, 13)) or \
                         time_now[1] not in tmp_dict['allow_time'].get('day', range(1, 32)) or \
                         time_now[2] not in tmp_dict['allow_time'].get('hour', range(24)) or \
-                        time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(1, 8)):
+                        time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(7)):
                     continue
 
                 action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], extern_params_db, tmp_dict['action_content'], action_id]
