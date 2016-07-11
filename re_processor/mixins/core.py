@@ -328,28 +328,31 @@ class TriggerCore(BaseCore):
                 action_tree = json.loads(action_tree)
                 extern_params_db = json.loads(extern_params_db) if extern_params_db else []
                 tmp_dict = {x: action_tree[self.db_index[x]] for x in self.db_params}
-                time_now = map(int, time.strftime('%m-%d-%H-%w').split('-'))
-                if time_now[0] not in tmp_dict['allow_time'].get('month', range(1, 13)) or \
-                        time_now[1] not in tmp_dict['allow_time'].get('day', range(1, 32)) or \
-                        time_now[2] not in tmp_dict['allow_time'].get('hour', range(24)) or \
-                        time_now[3] % 7 not in tmp_dict['allow_time'].get('week', range(7)):
-                    p_log = {
-                        'msg_to': settings.MSG_TO['internal'],
-                        'module': 're_processor',
-                        'rule_id': msg.get('rule_id', ''),
-                        'action_id': action_id,
-                        'event': msg.get('event', ''),
-                        'product_key': msg['task_vars'].get('product_key', ''),
-                        'did': msg['task_vars'].get('did', ''),
-                        'mac': msg['task_vars'].get('mac', ''),
-                        'current': 'log',
-                        'time_now': 'month: {0}, day: {1}, hour: {2}, week: {3}'.format(tuple(time_now)),
-                        'result': 'failed',
-                        'handling': 'action',
-                        'error_message': 'time now is not in list of allow_time'
-                    }
-                    msg_list.append(p_log)
-                    continue
+
+                if tmp_dict['allow_time']:
+                    time_now = map(int, time.strftime('%m-%d-%H-%w').split('-'))
+                    time_month, time_day, time_hour, time_week = tmp_dict['allow_time'].get('month', []), tmp_dict['allow_time'].get('day', []), tmp_dict['allow_time'].get('hour', []), tmp_dict['allow_time'].get('week', [])
+                    if (time_month and time_now[0] not in time_month) or \
+                            (time_day and time_now[1] not in time_day) or \
+                            (time_hour and time_now[2] not in time_hour) or \
+                            (time_week and time_now[3] % 7 not in time_week):
+                        p_log = {
+                            'msg_to': settings.MSG_TO['internal'],
+                            'module': 're_processor',
+                            'rule_id': msg.get('rule_id', ''),
+                            'action_id': action_id,
+                            'event': msg.get('event', ''),
+                            'product_key': msg['task_vars'].get('product_key', ''),
+                            'did': msg['task_vars'].get('did', ''),
+                            'mac': msg['task_vars'].get('mac', ''),
+                            'current': 'log',
+                            'time_now': 'month: {0}, day: {1}, hour: {2}, week: {3}'.format(tuple(time_now)),
+                            'result': 'failed',
+                            'handling': 'action',
+                            'error_message': 'time now is not in list of allow_time'
+                        }
+                        msg_list.append(p_log)
+                        continue
 
                 action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], extern_params_db, tmp_dict['action_content'], action_id]
                 if tmp_dict['task_list']:
