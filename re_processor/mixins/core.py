@@ -346,7 +346,7 @@ class TriggerCore(BaseCore):
                             'did': msg['task_vars'].get('did', ''),
                             'mac': msg['task_vars'].get('mac', ''),
                             'current': 'log',
-                            'time_now': 'month: {0}, day: {1}, hour: {2}, week: {3}'.format(tuple(time_now)),
+                            'time_now': 'month: {0}, day: {1}, hour: {2}, week: {3}'.format(*time_now),
                             'result': 'failed',
                             'handling': 'action',
                             'error_message': 'time now is not in list of allow_time'
