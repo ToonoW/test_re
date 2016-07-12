@@ -5,8 +5,7 @@ MAINTAINER Jam Huang <jamhuang@gizwits.com>
 RUN virtualenv /env-gw_re_processor
 RUN mkdir -p /gw_re_processor
 ADD deploy/requirement.txt.docker requirements.txt
-#RUN /env-gw_re_processor/bin/pip install -i http://172.32.1.187:3141/root/gizwits -r requirements.txt
-RUN /env-gw_re_processor/bin/pip install -r requirements.txt
+RUN /env-gw_re_processor/bin/pip install -i http://172.32.1.187:3141/root/gizwits -r requirements.txt
 
 VOLUME /data/supervisor
 

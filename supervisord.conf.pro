@@ -24,6 +24,18 @@ serverurl=unix:///data/supervisor/supervisor.sock ; use a unix:// URL  for a uni
 ; interpreted as relative to this file.  Included files *cannot*
 ; include files themselves.
 
-[program:gw_re_processor]
-command=/env-gw_re_processor/bin/python start.py --with-http-consumer
+[program:core_all]
+command=/env-gw_re_processor/bin/python start.py
+stopsignal=INT
+
+[program:core_data]
+command=/env-gw_re_processor/bin/python start.py --queue=data
+stopsignal=INT
+
+[program:core_data]
+command=/env-gw_re_processor/bin/python start.py --only-tmp-consumer
+stopsignal=INT
+
+[program:core_data]
+command=/env-gw_re_processor/bin/python start.py --only-gdmshttp-consumer
 stopsignal=INT
