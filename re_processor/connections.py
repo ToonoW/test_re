@@ -16,10 +16,16 @@ redis_pool = redis.ConnectionPool(
 def get_redis():
     return redis.Redis(connection_pool=redis_pool)
 
-mongo_conn = MongoClient(settings.MONGO_DATABASES)
+mongo_conn_data = MongoClient(settings.MONGO_GIZWITS_DATA)
+mongo_conn_core = MongoClient(settings.MONGO_GIZWITS_CORE)
 
-def get_mongodb():
-    return mongo_conn.get_default_database()
+def get_mongodb(name='data'):
+    if 'data' == name:
+        return mongo_conn_data.get_default_database()
+    elif 'core' == name:
+        return mongo_conn_core.get_default_database()
+    else:
+        return False
 
 
 class MysqlConnection(object):
@@ -34,6 +40,18 @@ class MysqlConnection(object):
             passwd=settings.MYSQL_PWD,
             db=settings.MYSQL_DB
             )
+        self.conn.autocommit(True)
+
+    def reconnect(self):
+        self.conn = MySQLdb.connect(
+            host=settings.MYSQL_HOST,
+            port=settings.MYSQL_PORT,
+            user=settings.MYSQL_USER,
+            passwd=settings.MYSQL_PWD,
+            db=settings.MYSQL_DB
+            )
+        self.conn.autocommit(True)
+
 
     def __del__(self):
         self.conn.close()
@@ -41,4 +59,9 @@ class MysqlConnection(object):
 mysql_conn = MysqlConnection()
 
 def get_mysql():
+    try:
+        mysql_conn.conn.ping()
+    except:
+        print 'reconnect mysql'
+        mysql_conn.reconnect()
     return mysql_conn.conn.cursor()

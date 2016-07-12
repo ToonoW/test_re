@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time
+import time, json
 
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
@@ -22,6 +22,7 @@ class CommonProcessor(object):
         return a list of msg
         '''
 
+        log['running_status'] = 'process'
         ts = time.time()
         if not getattr(self, 'core', None):
             return [msg]
@@ -35,11 +36,12 @@ class CommonProcessor(object):
         except Exception, e:
             log_flag = True
             result = 'exception'
-            #error_message = e.message
             error_message = str(e)
             logger.exception(e)
 
         if log_flag:
+            if 'exception' != result:
+                result = 'success' if result else 'failed'
             p_log = {
                 'msg_to': settings.MSG_TO['internal'],
                 'module': 're_processor',
@@ -48,15 +50,19 @@ class CommonProcessor(object):
                 'product_key': msg['task_vars'].get('product_key', ''),
                 'did': msg['task_vars'].get('did', ''),
                 'mac': msg['task_vars'].get('mac', ''),
-                'task_vars': msg['task_vars'],
+                'extern_params': msg.get('extern_params', ''),
+                'task_vars': json.dumps(msg['task_vars']),
                 'current': 'log',
                 'result': result,
                 'ts': ts,
                 'proc_t': (time.time() - ts) * 1000,
                 'error_message': error_message,
                 'task_type': task_type,
-                'action': 'action' if 'tri' == task_type else 'rule'
+                'handling': 'action' if 'tri' == task_type else 'rule'
             }
+            if msg.get('debug') is True and self.debug is True:
+                p_log['debug'] = True
+                p_log['test_id'] = msg.get('test_id', '')
             msg_list.append(p_log)
 
         return msg_list

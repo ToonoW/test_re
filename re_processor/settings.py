@@ -6,6 +6,9 @@
 
 from getenv import env
 
+# debug
+DEBUG = env('DEBUG', False)
+
 # project path
 SYS_PATH = env('SYS_PATH', '.')
 
@@ -13,6 +16,14 @@ SYS_PATH = env('SYS_PATH', '.')
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
+
+START_UNIT = {
+    'sel': 'internal',
+    'cal': 'internal',
+    'que': 'internal',
+    'log': 'output',
+    'tri': 'output'
+}
 
 TOPIC_MAP = {
     'device_online': 'online',
@@ -25,49 +36,102 @@ TOPIC_MAP = {
 }
 
 ROUTING_KEY = {
-    'all': '*.{}.events.device.#',
-    'enterprises': 'enterprises.{}.events',
+    'all': 'products.{}.events.device.*',
+    #'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',
     'online': 'products.{}.events.device.online',
     'offline': 'products.{}.events.device.offline',
     'bind': 'products.{}.events.device.bind',
     'unbind': 'products.{}.events.device.unbind',
-    'raw': 'products.{}.events.device.status.raw',
+    #'raw': 'products.{}.events.device.status.raw',
     'data': 'products.{}.events.device.status.kv',
-    'changed': 'products.{}.events.datapoints.changed'
+    #'changed': 'products.{}.events.datapoints.changed'
 }
 
 PUBLISH_ROUTING_KEY = {
     'notification': 'gw_notification_message',
-    'http': 'rules_engine_http'
+    'http': 'gw_http_message',
+    'gdms_http': 'gw_gdms_http_message',
+    'tmp': 'gw_tmp_message'
+}
+
+DEBUG_ROUTING_KEY = {
+    'notification': 'rules_engine_debug',
+    'http': 'rules_engine_debug',
+    'gdms_http': 'rules_engine_debug',
+    'tmp': 'rules_engine_debug',
+    'log': 'rules_engine_debug'
 }
 
 # where msg to send
 MSG_TO = {
-    'internal': 'redis',
+    #'internal': 'redis',
+    'internal': 'default',
     'external': 'rabbitmq'
 }
 
 #
 TRANSCEIVER = {
     'send': {
-        MSG_TO['internal']: 'redis_publish',
-        MSG_TO['external']: 'mq_publish'
+        'redis': 'redis_publish',
+        'rabbitmq': 'mq_publish',
+        'default': 'default_publish'
     },
     'begin': {
-        MSG_TO['internal']: 'redis_listen',
-        MSG_TO['external']: 'mq_listen'
+        'redis': 'redis_listen',
+        'rabbitmq': 'mq_listen',
+        'default': 'default_listen'
     },
     'unpack': {
-        MSG_TO['internal']: 'redis_unpack',
-        MSG_TO['external']: 'mq_unpack'
+        'redis': 'redis_unpack',
+        'rabbitmq': 'mq_unpack',
+        'default': 'default_unpack'
+    },
+    'init': {
+        'redis': 'redis_initial',
+        'rabbitmq': 'mq_initial',
+        'default': 'default_initial'
     },
 }
 
-# databases settings
+# container map
+CONTAINER_MAP = {
+    'internal': {
+        #'queue': ['BaseRedismqConsumer'],
+        'queue': ['DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['InternalTransceiver']
+    },
+    'main': {
+        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['MainTransceiver']
+    },
+    'output': {
+        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
+        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
+        'processor': ['CommonProcessor'],
+        'transceiver': ['OutputTransceiver']
+    }
+}
+
+# processor core_map
+CORE_MAP = {
+    'internal': {
+        'sel': 'SelectorCore',
+        'cal': 'CalculatorCore',
+        'que': 'QueryCore',
+        'tri': 'TriggerCore',
+        'log': 'LoggerCore'
+    }
+}
+
+###########databases settings################
 # mongo
-MONGO_DATABASES = env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
+MONGO_GIZWITS_DATA= env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
+MONGO_GIZWITS_CORE= env("MONGO_GIZWITS_CORE", "mongodb://localhost:27017/gizwits_core")
 
 # mysql
 MYSQL_HOST = env("MYSQL_HOST", "localhost")
@@ -90,7 +154,13 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
-REDIS_BRPOP_TIMEOUT = 20
+LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
+
+#############################################
+
+# host_get_bindings
+HOST_GET_BINDING = env('HOST_GET_BINDING', 'innerapi.gwdev.com')
+INNER_API_TOKEN = env('INNER_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # logging
 LOGGING = {
@@ -103,24 +173,20 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'when': 'D',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/mnt/workspace/gw_re_pocessor/processor.log',
-            'formatter': 'standard',
-        },
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
-        #"graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFRabbitHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
+        "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
     },
     'loggers': {
         'processor': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': 'INFO',
         },
         'processor_gray': {
-            #'handlers': ['graylog'],
-            'handlers': ['console'],
+            'handlers': ['graylog'],
+            'level': 'INFO'
+        },
+        'debug_gray': {
+            'handlers': ['graylog'],
             'level': 'INFO'
         }
     }
@@ -139,12 +205,15 @@ INDEX = {
     },
     'que': {
         'type': 1,
-        'target': 2
+        'target': 2,
+        'pass': 3
     },
     'tri': {
         'action_type': 1,
         'params': 2,
-        'action_content': 3
+        'extern_params': 3,
+        'action_content': 4,
+        'action_id': 5
     },
     'tri_in_db': {
         'allow_time': 1,
@@ -156,31 +225,3 @@ INDEX = {
     'log': {}
 }
 
-# processor core_map
-CORE_MAP = {
-    'internal': {
-        'sel': 'SelectorCore',
-        'cal': 'CalculatorCore',
-        'que': 'QueryCore',
-        'tri': 'TriggerCore',
-        'log': 'LoggerCore'
-    }
-}
-
-CONTAINER_MAP = {
-    'internal': {
-        'queue': ['BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['InternalTransceiver']
-    },
-    'main': {
-        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['MainTransceiver']
-    },
-    'output': {
-        'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['OutputTransceiver']
-    }
-}
