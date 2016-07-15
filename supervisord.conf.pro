@@ -32,10 +32,10 @@ stopsignal=INT
 command=/env-gw_re_processor/bin/python start.py --queue=data
 stopsignal=INT
 
-[program:core_data]
+[program:core_tmp]
 command=/env-gw_re_processor/bin/python start.py --only-tmp-consumer
 stopsignal=INT
 
-[program:core_data]
+[program:core_gdmshttp]
 command=/env-gw_re_processor/bin/python start.py --only-gdmshttp-consumer
 stopsignal=INT
