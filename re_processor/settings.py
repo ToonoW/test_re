@@ -53,7 +53,8 @@ PUBLISH_ROUTING_KEY = {
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
     'gdms_http': 'gw_gdms_http_message',
-    'tmp': 'gw_tmp_message'
+    'tmp': 'gw_tmp_message',
+    'email': 'gw_email_message'
 }
 
 DEBUG_ROUTING_KEY = {
@@ -61,7 +62,8 @@ DEBUG_ROUTING_KEY = {
     'http': 'rules_engine_debug',
     'gdms_http': 'rules_engine_debug',
     'tmp': 'rules_engine_debug',
-    'log': 'rules_engine_debug'
+    'log': 'rules_engine_debug',
+    'email': 'rules_engine_debug'
 }
 
 # where msg to send
