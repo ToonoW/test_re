@@ -251,8 +251,12 @@ class QueryCore(BaseCore):
 
         if 'data' in prefix:
             result.update(self._query_data(task_vars))
-        if 'display' in prefix or 'common.product_name' in params_list:
+
+        if 'display' in prefix:
             result.update(self._query_display(task_vars))
+
+        if 'common.product_name' in params_list:
+            result.update(self._query_product_name(task_vars))
 
         return result
 
@@ -301,6 +305,21 @@ class QueryCore(BaseCore):
         return_result.update(result)
 
         return return_result
+
+    def _query_product_name(self, task_vars):
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/products/', task_vars['product_key'])
+        headers = {
+            'Authorization': settings.INNER_API_TOKEN
+        }
+        result = {}
+        try:
+            response = requests.get(url, headers=headers)
+            data = json.loads(response.content)
+            result['common.product_name'] = data['name']
+        except:
+            pass
+
+        return result
 
 
 class TriggerCore(BaseCore):
