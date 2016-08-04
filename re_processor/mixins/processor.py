@@ -23,7 +23,6 @@ class CommonProcessor(object):
         '''
 
         log['running_status'] = 'process'
-        ts = log.get('ts', time.time())
         if not getattr(self, 'core', None):
             return [msg]
         msg_list = []
@@ -42,6 +41,7 @@ class CommonProcessor(object):
         if log_flag:
             if 'exception' != result:
                 result = 'success' if result else 'failed'
+            ts = msg.get('ts', time.time())
             p_log = {
                 'msg_to': settings.MSG_TO['internal'],
                 'module': 're_processor',
