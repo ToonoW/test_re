@@ -20,8 +20,40 @@ class BaseCore(object):
         #print 'running {}'.format(self.core_name)
         return self._process(msg)
 
+class BaseInnerCore(object):
+    '''
+    base class
+    '''
 
-class SelectorCore(BaseCore):
+    def process(self, msg):
+        '''
+        execute task, return a three-tuple (result, msg_list, log_flag)
+        '''
+        #print 'running {}'.format(self.core_name)
+        task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
+
+        result = self._process(task_list, task_vars, custom_vars, para_task, extern_params)
+
+        if result is False and para_task:
+            task_list = para_task.pop()
+            result = True
+
+        if not task_list and msg.get('todo_task', []):
+            if result:
+                msg['triggle'].extend(msg['can_tri'])
+            while msg['todo_task']:
+                todo_task = msg['todo_task'].pop(0)
+                if set(msg['triggle']) >= set(todo_task['action']):
+                    continue
+                task_list = todo_task['task_list']
+                msg['can_tri'] = todo_task['action']
+
+        msg['task_list'], msg['current'], msg['para_task'] = task_list, task_list[0][0] if task_list else 'tri', para_task if task_list else []
+
+        return result, [msg] if result else [], not result
+
+
+class SelectorCore(BaseInnerCore):
     '''
     execute cmp task
     '''
@@ -42,8 +74,7 @@ class SelectorCore(BaseCore):
         'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
     }
 
-    def _process(self, msg):
-        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
         result = True
         while result and task_list:
             task = task_list.pop(0)
@@ -83,16 +114,10 @@ class SelectorCore(BaseCore):
 
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
-        if result is False and para_task:
-            task_list = para_task.pop()
-            result = True
-
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
-
-        return result, [msg] if result else [], 'tri' == msg['current']
+        return result
 
 
-class CalculatorCore(BaseCore):
+class CalculatorCore(BaseInnerCore):
     '''
     execute cal task
     '''
@@ -112,8 +137,7 @@ class CalculatorCore(BaseCore):
         'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
     }
 
-    def _process(self, msg):
-        task_list, task_vars, custom_vars, para_task = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task']
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
         result = False
         while task_list:
             task = task_list.pop(0)
@@ -150,13 +174,8 @@ class CalculatorCore(BaseCore):
                 break
             task_vars[tmp_dict['name']] = res.pop()
 
-        if result is False and para_task:
-            task_list = para_task.pop()
-            result = True
+        return result
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else []
-
-        return result, [msg] if result else [], not result
 
     def _calculate(self, params_stack, symbol):
         if self.opt.has_key(symbol):
@@ -169,7 +188,7 @@ class CalculatorCore(BaseCore):
         return params_stack
 
 
-class QueryCore(BaseCore):
+class QueryCore(BaseInnerCore):
     '''
     execute que task
     '''
@@ -178,8 +197,7 @@ class QueryCore(BaseCore):
     index = settings.INDEX['que']
     params = ['type', 'target', 'pass']
 
-    def _process(self, msg):
-        task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
         result = False
         params_list = []
         extern_list = []
@@ -219,13 +237,8 @@ class QueryCore(BaseCore):
             else:
                 result = False
 
-        if result is False and para_task:
-            task_list = para_task.pop()
-            result = True
+        return result
 
-        msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['current'], msg['para_task'], msg['extern_params'] = task_list, task_vars, custom_vars, task_list[0][0] if task_list else 'tri', para_task if task_list else [], extern_params
-
-        return result, [msg] if result else [], not result
 
     def _query_extern(self, task_vars, extern_list):
         extern_list = list(set(extern_list))
@@ -338,12 +351,14 @@ class TriggerCore(BaseCore):
         msg_list = []
         log_flag = False
 
-        if not task_list:
+        if not task_list and (msg['action_sel'] is False or msg.get('triggle', [])):
             db = get_mysql()
-            sql = 'select `id`, `action_tree`, `extern_params` from `{0}` where `rule_id_id`={1}'.format(
+            sql = 'select `id`, `action_tree`, `extern_params`, `name` from `{0}` where `rule_id_id`={1}'.format(
                 settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
             db.execute(sql)
-            for action_id, action_tree, extern_params_db in db.fetchall():
+            for action_id, action_tree, extern_params_db, name in db.fetchall():
+                if msg['action_sel'] and name not in msg.get('triggle', []):
+                    continue
                 action_tree = json.loads(action_tree)
                 extern_params_db = json.loads(extern_params_db) if extern_params_db else []
                 tmp_dict = {x: action_tree[self.db_index[x]] for x in self.db_params}
@@ -414,6 +429,7 @@ class TriggerCore(BaseCore):
                 new_task_list.append(task)
             else:
                 log_flag = True
+                msg['action_id_list'].append(str(tmp_dict['action_id']))
                 _msg = {
                     'msg_to': settings.MSG_TO['external'],
                     'action_type': tmp_dict['action_type'],

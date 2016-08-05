@@ -185,19 +185,42 @@ class BaseRabbitmqConsumer(object):
             if __rule_tree_list:
                 tmp_msg = copy.copy(msg)
                 tmp_msg['common.rule_id'] = rule_id
-                __rule_tree = {
-                    'event': msg['event_type'],
-                    'rule_id': rule_id,
-                    'debug': msg.get('debug', False),
-                    'test_id': msg.get('test_id', ''),
-                    'msg_to': settings.MSG_TO['internal'],
-                    'ts': log['ts'],
-                    'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
-                    'task_list': __rule_tree_list[0],
-                    'para_task': __rule_tree_list[1:],
-                    'task_vars': tmp_msg,
-                    'custom_vars': custom_vars
-                }
+                if __rule_tree_list[0] and type(__rule_tree_list[0][0]) is dict:
+                    _task = __rule_tree_list[0].pop(0)
+                    __rule_tree = {
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'action_id_list': [],
+                        'debug': msg.get('debug', False),
+                        'test_id': msg.get('test_id', ''),
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'action_sel': True,
+                        'can_tri': _task['action'],
+                        'triggle': [] if _task['task_list'] else _task['action'],
+                        'current': _task['task_list'][0][0] if _task['task_list'] else 'tri',
+                        'task_list': _task['task_list'],
+                        'para_task': [],
+                        'todo_task': __rule_tree_list[0],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                else:
+                    __rule_tree = {
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'action_id_list': [],
+                        'debug': msg.get('debug', False),
+                        'test_id': msg.get('test_id', ''),
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'action_sel': False,
+                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+                        'task_list': __rule_tree_list[0],
+                        'para_task': __rule_tree_list[1:],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
                 msg_list.append(__rule_tree)
 
         db.close()

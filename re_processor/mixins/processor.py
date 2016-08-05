@@ -46,6 +46,7 @@ class CommonProcessor(object):
                 'msg_to': settings.MSG_TO['internal'],
                 'module': 're_processor',
                 'rule_id': msg.get('rule_id', ''),
+                'action_id_list': ','.join(msg.get('action_id_list', [])),
                 'event': msg.get('event', ''),
                 'product_key': msg['task_vars'].get('product_key', ''),
                 'did': msg['task_vars'].get('did', ''),
