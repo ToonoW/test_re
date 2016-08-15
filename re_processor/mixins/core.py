@@ -32,13 +32,14 @@ class BaseInnerCore(object):
         #print 'running {}'.format(self.core_name)
         task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
 
-        result = self._process(task_list, task_vars, custom_vars, para_task, extern_params)
+        result, log_flag = self._process(task_list, task_vars, custom_vars, para_task, extern_params)
 
         if result is False and para_task:
             task_list = para_task.pop()
             result = True
+            log_flag = False
 
-        if not task_list and msg.get('todo_task', []):
+        if (not result or not task_list) and msg.get('todo_task', []):
             if result:
                 msg['triggle'].extend(msg['can_tri'])
             while msg['todo_task']:
@@ -47,10 +48,12 @@ class BaseInnerCore(object):
                     continue
                 task_list = todo_task['task_list']
                 msg['can_tri'] = todo_task['action']
+                result = True
+                log_flag = False
 
-        msg['task_list'], msg['current'], msg['para_task'] = task_list, task_list[0][0] if task_list else 'tri', para_task if task_list else []
+        msg['task_list'], msg['current'], msg['para_task'], msg['extern_params'] = task_list, (task_list[0][0] if task_list else 'tri'), (para_task if task_list else []), extern_params
 
-        return result, [msg] if result else [], not result
+        return result, ([msg] if result else []), log_flag
 
 
 class SelectorCore(BaseInnerCore):
@@ -114,7 +117,7 @@ class SelectorCore(BaseInnerCore):
 
             result = tmp_dict['opt'](tmp_dict['left'], tmp_dict['right'])
 
-        return result
+        return result, (not result or not task_list or 'tri' == task_list[0][0])
 
 
 class CalculatorCore(BaseInnerCore):
@@ -174,7 +177,7 @@ class CalculatorCore(BaseInnerCore):
                 break
             task_vars[tmp_dict['name']] = res.pop()
 
-        return result
+        return result, not result
 
 
     def _calculate(self, params_stack, symbol):
@@ -237,7 +240,7 @@ class QueryCore(BaseInnerCore):
             else:
                 result = False
 
-        return result
+        return result, not result
 
 
     def _query_extern(self, task_vars, extern_list):
@@ -455,7 +458,6 @@ class TriggerCore(BaseCore):
             _msg.update(msg)
             _msg['task_list'], _msg['task_vars'],  _msg['current'] = new_task_list, copy.copy(task_vars), new_task_list[0][0]
             msg_list.append(_msg)
-
 
         return True if msg_list else False, msg_list, log_flag
 
