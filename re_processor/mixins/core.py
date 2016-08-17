@@ -39,17 +39,23 @@ class BaseInnerCore(object):
             result = True
             log_flag = False
 
-        if (not result or not task_list) and msg.get('todo_task', []):
-            if result:
+        if not result or not task_list:
+            if msg['action_sel'] and result:
                 msg['triggle'].extend(msg['can_tri'])
             while msg['todo_task']:
                 todo_task = msg['todo_task'].pop(0)
                 if set(msg['triggle']) >= set(todo_task['action']):
                     continue
+                if not todo_task['task_list']:
+                    msg['triggle'].extend(todo_task['action'])
+                    continue
                 task_list = todo_task['task_list']
                 msg['can_tri'] = todo_task['action']
                 result = True
                 log_flag = False
+                break
+            if not result and msg['triggle']:
+                result = True
 
         msg['task_list'], msg['current'], msg['para_task'], msg['extern_params'] = task_list, (task_list[0][0] if task_list else 'tri'), (para_task if task_list else []), extern_params
 
@@ -354,13 +360,13 @@ class TriggerCore(BaseCore):
         msg_list = []
         log_flag = False
 
-        if not task_list and (msg['action_sel'] is False or msg.get('triggle', [])):
+        if not task_list and (msg['action_sel'] is False or msg['triggle']):
             db = get_mysql()
             sql = 'select `id`, `action_tree`, `extern_params`, `name` from `{0}` where `rule_id_id`={1}'.format(
                 settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
             db.execute(sql)
             for action_id, action_tree, extern_params_db, name in db.fetchall():
-                if msg['action_sel'] and name not in msg.get('triggle', []):
+                if msg['action_sel'] and name not in msg['triggle']:
                     continue
                 action_tree = json.loads(action_tree)
                 extern_params_db = json.loads(extern_params_db) if extern_params_db else []

@@ -187,6 +187,14 @@ class BaseRabbitmqConsumer(object):
                 tmp_msg['common.rule_id'] = rule_id
                 if __rule_tree_list[0] and type(__rule_tree_list[0][0]) is dict:
                     _task = __rule_tree_list[0].pop(0)
+                    triggled = []
+                    while __rule_tree_list[0]:
+                        if _task['task_list']:
+                            break
+                        else:
+                            triggled += _task['can_tri']
+                            _task = __rule_tree_list[0].pop(0)
+
                     __rule_tree = {
                         'event': msg['event_type'],
                         'rule_id': rule_id,
@@ -197,8 +205,8 @@ class BaseRabbitmqConsumer(object):
                         'ts': log['ts'],
                         'action_sel': True,
                         'can_tri': _task['action'],
-                        'triggle': [] if _task['task_list'] else _task['action'],
-                        'current': _task['task_list'][0][0] if _task['task_list'] else 'tri',
+                        'triggle': triggled if _task['task_list'] else triggled + _task['action'],
+                        'current': 'tri' if not __rule_tree_list[0] and not _task['task_list'] else _task['task_list'][0][0],
                         'task_list': _task['task_list'],
                         'para_task': [],
                         'todo_task': __rule_tree_list[0],
@@ -215,9 +223,12 @@ class BaseRabbitmqConsumer(object):
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
                         'action_sel': False,
+                        'can_tri': [],
+                        'triggle': [],
                         'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
                         'task_list': __rule_tree_list[0],
                         'para_task': __rule_tree_list[1:],
+                        'todo_task': [],
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
