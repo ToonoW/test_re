@@ -402,7 +402,7 @@ class TriggerCore(BaseCore):
                     tmp_dict['task_list'].append(action_task)
                     _msg = {}
                     _msg.update(msg)
-                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], copy.copy(task_vars), custom_vars, tmp_dict['task_list'][0][0]
+                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'], _msg['action_id_list'] = tmp_dict['task_list'], copy.copy(task_vars), custom_vars, tmp_dict['task_list'][0][0], []
                     msg_list.append(_msg)
                 else:
                     task_list.append(action_task)
@@ -462,7 +462,7 @@ class TriggerCore(BaseCore):
         if new_task_list:
             _msg = {}
             _msg.update(msg)
-            _msg['task_list'], _msg['task_vars'],  _msg['current'] = new_task_list, copy.copy(task_vars), new_task_list[0][0]
+            _msg['task_list'], _msg['task_vars'],  _msg['current'], _msg['action_id_list'] = new_task_list, copy.copy(task_vars), new_task_list[0][0], []
             msg_list.append(_msg)
 
         return True if msg_list else False, msg_list, log_flag
