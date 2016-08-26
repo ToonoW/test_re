@@ -172,13 +172,15 @@ class BaseRabbitmqConsumer(object):
 
 
         db = get_mysql()
-        sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+        sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
             settings.MYSQL_TABLE['rule']['table'],
             msg['did'],
             msg['product_key'])
         db.execute(sql)
         msg_list = []
-        for rule_id, rule_tree, custom_vars in db.fetchall():
+        for rule_id, rule_tree, custom_vars, enabled in db.fetchall():
+            if 1 != enabled:
+                continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
             __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
