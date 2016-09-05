@@ -39,7 +39,7 @@ from re_processor.container import get_container
 
 
 if '__main__' == __name__:
-    args = docopt(__doc__, version='RulesEngine Processor 0.1.0')
+    args = docopt(__doc__, version='RulesEngine Processor 0.2.2')
     print args
     if args['--only-tmp-consumer']:
         TmpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
