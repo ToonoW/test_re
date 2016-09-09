@@ -20,6 +20,7 @@ EXCHANGE = env('EXCHANGE', 'amq.topic')
 START_UNIT = {
     'sel': 'internal',
     'cal': 'internal',
+    'script': 'internal',
     'que': 'internal',
     'log': 'output',
     'tri': 'output'
@@ -126,6 +127,7 @@ CORE_MAP = {
     'internal': {
         'sel': 'SelectorCore',
         'cal': 'CalculatorCore',
+        'script': 'ScriptCore',
         'que': 'QueryCore',
         'tri': 'TriggerCore',
         'log': 'LoggerCore'
@@ -165,6 +167,10 @@ LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 # host_get_bindings
 HOST_GET_BINDING = env('HOST_GET_BINDING', 'innerapi.gwdev.com')
 INNER_API_TOKEN = env('INNER_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
+
+# host_run_script
+SCRIPT_HOST = env('SCRIPT_HOST', 'script.gwdev.com')
+SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # logging
 LOGGING = {
@@ -206,6 +212,11 @@ INDEX = {
     'cal': {
         'exp': 1,
         'name': 2
+    },
+    'script': {
+        'script_id': 1,
+        'params': 2,
+        'name': 3
     },
     'que': {
         'type': 1,

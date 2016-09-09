@@ -15,6 +15,7 @@ Options:
   --main=<main>                  set num of main core
   --sel=<sel>                    set num of sel core
   --cal=<cal>                    set num of cal core
+  --script=<script>              set num of script core
   --que=<que>                    set num of que core
   --log=<log>                    set num of log core
   --tri=<log>                    set num of log core

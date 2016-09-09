@@ -172,13 +172,13 @@ class BaseRabbitmqConsumer(object):
 
 
         db = get_mysql()
-        sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+        sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
             settings.MYSQL_TABLE['rule']['table'],
             msg['did'],
             msg['product_key'])
         db.execute(sql)
         msg_list = []
-        for rule_id, rule_tree, custom_vars, enabled in db.fetchall():
+        for rule_id, rule_tree, custom_vars, enabled, ver in db.fetchall():
             if 1 != enabled:
                 continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
@@ -187,7 +187,7 @@ class BaseRabbitmqConsumer(object):
             if __rule_tree_list:
                 tmp_msg = copy.copy(msg)
                 tmp_msg['common.rule_id'] = rule_id
-                if __rule_tree_list[0] and type(__rule_tree_list[0][0]) is dict:
+                if 2 == ver:
                     _task = __rule_tree_list[0].pop(0)
                     triggled = []
                     while __rule_tree_list[0]:
@@ -215,7 +215,7 @@ class BaseRabbitmqConsumer(object):
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
-                else:
+                elif 1 == ver:
                     __rule_tree = {
                         'event': msg['event_type'],
                         'rule_id': rule_id,

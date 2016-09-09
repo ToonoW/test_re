@@ -20,6 +20,7 @@ class BaseCore(object):
         #print 'running {}'.format(self.core_name)
         return self._process(msg)
 
+
 class BaseInnerCore(object):
     '''
     base class
@@ -189,7 +190,6 @@ class CalculatorCore(BaseInnerCore):
 
         return result
 
-
     def _calculate(self, params_stack, symbol):
         if self.opt.has_key(symbol):
             left, right = params_stack[-2:]
@@ -199,6 +199,61 @@ class CalculatorCore(BaseInnerCore):
             params_stack.append(symbol)
 
         return params_stack
+
+
+class ScriptCore(BaseInnerCore):
+    '''
+    execute script task
+    '''
+
+    core_name = 'script'
+    params = ['script_id', 'params', 'name']
+    index = settings.INDEX['script']
+
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+        result = False
+        while task_list:
+            task = task_list.pop(0)
+            if self.core_name != task[0]:
+                task_list[0:0] = [task]
+                result = True
+                break
+
+            extra_task = []
+            query_list = []
+            params = {}
+            tmp_dict = {x: task[self.index[x]] for x in self.params}
+
+            for symbol in tmp_dict['params']:
+                if task_vars.has_key(symbol):
+                    params[symbol] = task_vars[symbol]
+                elif custom_vars.has_key(symbol):
+                    extra_task.append(custom_vars[symbol])
+                else:
+                    query_list.append(symbol)
+
+            if extra_task or query_list:
+                task_list[0:0] = ([['que', 'q', list(set(query_list)), False]] if query_list else []) + extra_task + [task]
+                result = True
+                break
+
+            task_vars[tmp_dict['name']] = self.run(tmp_dict['script_id'], params)
+            result = True
+
+        return result
+
+    def run(self, script_id, params):
+        url = "{0}{1}{2}".format('http://', settings.SCRIPT_HOST, '/run')
+        headers = {
+            'Authorization': settings.SCRIPT_API_TOKEN
+        }
+        data = {
+            'script_id': script_id,
+            'context': params
+        }
+        response = requests.post(url, data=json.dumps(data), headers=headers)
+        return json.loads(response.content)['result']
+
 
 
 class QueryCore(BaseInnerCore):
