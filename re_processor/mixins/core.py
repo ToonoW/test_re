@@ -8,6 +8,31 @@ from re_processor.connections import get_mongodb, get_mysql
 from re_processor.common import _log
 
 
+def get_value_from_json(name, json_obj):
+    fields = name.split('.')
+    _obj = json_obj
+    for field in fields[1:]:
+        if type(_obj) is dict:
+            if field not in _obj:
+                break
+        elif type(_obj) is list:
+            try:
+                field = int(field)
+            except ValueError, e:
+                break
+            if field > len(_obj):
+                break
+        else:
+            break
+
+        _obj = _obj[field]
+    else:
+        return _obj
+    return ''
+
+def get_value_from_task(name, task_vars):
+    return task_vars.get(name, '') or get_value_from_json(name, task_vars.get(name.split('.')[0], {}))
+
 class BaseCore(object):
     '''
     base class
@@ -114,6 +139,12 @@ class SelectorCore(BaseInnerCore):
                     tmp = tmp[1:-1]
                 elif self.pattern['hex'].search(tmp):
                     hex_flag = True
+                elif tmp.split('.')[0] in custom_vars:
+                    alias = tmp.split('.')[0]
+                    if alias in task_vars:
+                        tmp = get_value_from_json(tmp, task_vars[alias])
+                    else:
+                        extra_task.append(custom_vars[alias])
                 else:
                     query_list.append(tmp)
                 tmp_dict[symbol] = tmp
@@ -173,6 +204,12 @@ class CalculatorCore(BaseInnerCore):
                     extra_task.append(custom_vars[symbol])
                 elif self.pattern['number'].search(symbol):
                     exp.append(json.loads(symbol))
+                elif symbol.split('.')[0] in custom_vars:
+                    alias = symbol.split('.')[0]
+                    if alias in task_vars:
+                        exp.append(get_value_from_json(symbol, task_vars[alias]))
+                    else:
+                        extra_task.append(custom_vars[alias])
                 else:
                     query_list.append(symbol)
 
@@ -229,6 +266,12 @@ class ScriptCore(BaseInnerCore):
                     params[symbol] = task_vars[symbol]
                 elif custom_vars.has_key(symbol):
                     extra_task.append(custom_vars[symbol])
+                elif symbol.split('.')[0] in custom_vars:
+                    alias = symbol.split('.')[0]
+                    if alias in task_vars:
+                        params[symbol] = get_value_from_json(symbol, task_vars[alias])
+                    else:
+                        extra_task.append(custom_vars[alias])
                 else:
                     query_list.append(symbol)
 
@@ -254,6 +297,66 @@ class ScriptCore(BaseInnerCore):
         response = requests.post(url, data=json.dumps(data), headers=headers)
         return json.loads(response.content)['result']
 
+
+class JsonCore(BaseInnerCore):
+    '''
+    execute script task
+    '''
+
+    core_name = 'json'
+    params = ['source', 'params', 'content', 'name']
+    index = settings.INDEX['json']
+
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+        result = False
+        while task_list:
+            task = task_list.pop(0)
+            if self.core_name != task[0]:
+                task_list[0:0] = [task]
+                result = True
+                break
+
+            extra_task = []
+            query_list = []
+            params = {}
+            tmp_dict = {x: task[self.index[x]] for x in self.params}
+            for symbol in tmp_dict['params']:
+                if task_vars.has_key(symbol):
+                    params[symbol] = task_vars[symbol]
+                elif custom_vars.has_key(symbol):
+                    extra_task.append(custom_vars[symbol])
+                elif symbol.split('.')[0] in custom_vars:
+                    alias = symbol.split('.')[0]
+                    if alias in task_vars:
+                        params[symbol] = get_value_from_json(symbol, task_vars[alias])
+                    else:
+                        extra_task.append(custom_vars[alias])
+                else:
+                    query_list.append(symbol)
+
+            if extra_task or query_list:
+                task_list[0:0] = ([['que', 'q', list(set(query_list)), False]] if query_list else []) + extra_task + [task]
+                result = True
+                break
+
+            task_vars[tmp_dict['name']] = self.get_json(tmp_dict['content'])
+            result = True
+
+        return result
+
+    def get_json(self, content):
+        url = content['url']
+        headers = content.get('headers', {})
+        data = content.get('data', {})
+        method = content.get('method', 'get')
+        if 'get' == method:
+            query_string = '&'.join(map(lambda x: '{0}={1}'.format(*x), data.items())) if data else ''
+            url = (url + '?' + query_string) if query_string else url
+            response = requests.get(url, headers=headers)
+        elif 'post' == method:
+            response = requests.post(url, data=json.dumps(data), headers=headers)
+
+        return json.loads(response.content)
 
 
 class QueryCore(BaseInnerCore):
@@ -329,7 +432,7 @@ class QueryCore(BaseInnerCore):
         result = {}
         prefix = list(set([x.split('.')[0] for x in params_list]))
 
-        if 'data' in prefix:
+        if 'data' in prefix or 'common.location' in params_list:
             result.update(self._query_data(task_vars))
 
         if 'display' in prefix:
@@ -349,6 +452,7 @@ class QueryCore(BaseInnerCore):
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
             result['offline.status'] = 0 if status['is_online'] else 1
+            result['common.location'] = status.get('location', '')
         except KeyError:
             result = {}
 
@@ -488,6 +592,8 @@ class TriggerCore(BaseCore):
                 if not task_vars.has_key(symbol):
                     if custom_vars.has_key(symbol):
                         extra_task.append(custom_vars[symbol])
+                    elif symbol.split('.')[0] in custom_vars and symbol.split('.')[0] not in task_vars:
+                        extra_task.append(custom_vars[symbol.split('.')[0]])
                     else:
                         query_list.append(symbol)
 
@@ -506,7 +612,7 @@ class TriggerCore(BaseCore):
                     'did': task_vars.get('did', ''),
                     'mac': task_vars.get('mac', ''),
                     'ts': time.time(),
-                    'params': {x: task_vars[x] for x in tmp_dict['params']},
+                    'params': {x: get_value_from_task(x, task_vars) for x in tmp_dict['params']},
                     'extern_params': extern_params,
                     'content': tmp_dict['action_content']
                 }

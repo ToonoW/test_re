@@ -12,10 +12,13 @@ Options:
   --only-tmp-consumer            start as a tmp consumer
   --only-http-consumer           start as a http consumer
   --only-gdmshttp-consumer       start as a gdms_http consumer
+  --only-devctrl-consumer        start as a devctrl consumer
+  --only-es-consumer             start as a es consumer
   --main=<main>                  set num of main core
   --sel=<sel>                    set num of sel core
   --cal=<cal>                    set num of cal core
   --script=<script>              set num of script core
+  --json=<script>                set num of json core
   --que=<que>                    set num of que core
   --log=<log>                    set num of log core
   --tri=<log>                    set num of log core
@@ -35,7 +38,7 @@ from gevent.queue import Queue
 from docopt import docopt
 
 from re_processor import settings
-from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer
+from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer, DevCtrlConsumer, ESConsumer
 from re_processor.container import get_container
 
 
@@ -47,9 +50,16 @@ if '__main__' == __name__:
     elif args['--only-http-consumer']:
         HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start()
     elif args['--only-gdmshttp-consumer']:
-        GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start()
         greenlet_list = []
         greenlet_list.extend([gevent.spawn(GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start) for i in range(10)])
+        gevent.joinall(greenlet_list)
+    elif args['--only-devctrl-consumer']:
+        greenlet_list = []
+        greenlet_list.extend([gevent.spawn(DevCtrlConsumer(settings.PUBLISH_ROUTING_KEY['devctrl']).start) for i in range(10)])
+        gevent.joinall(greenlet_list)
+    elif args['--only-es-consumer']:
+        greenlet_list = []
+        greenlet_list.extend([gevent.spawn(ESConsumer(settings.PUBLISH_ROUTING_KEY['es']).start) for i in range(10)])
         gevent.joinall(greenlet_list)
     else:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'

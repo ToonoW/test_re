@@ -21,6 +21,7 @@ START_UNIT = {
     'sel': 'internal',
     'cal': 'internal',
     'script': 'internal',
+    'json': 'internal',
     'que': 'internal',
     'log': 'output',
     'tri': 'output'
@@ -56,7 +57,9 @@ PUBLISH_ROUTING_KEY = {
     'gdms_http': 'gw_gdms_http_message',
     'tmp': 'gw_tmp_message',
     'email': 'gw_email_message',
-    'sms': 'gw_sms_message'
+    'sms': 'gw_sms_message',
+    'devctrl': 'gw_devctrl_message',
+    'es': 'gw_es_message'
 }
 
 DEBUG_ROUTING_KEY = {
@@ -66,7 +69,9 @@ DEBUG_ROUTING_KEY = {
     'tmp': 'rules_engine_debug',
     'log': 'rules_engine_debug',
     'email': 'rules_engine_debug',
-    'sms': 'rules_engine_debug'
+    'sms': 'rules_engine_debug',
+    'devctrl': 'rules_engine_debug',
+    'es': 'rules_engine_debug'
 }
 
 # where msg to send
@@ -128,6 +133,7 @@ CORE_MAP = {
         'sel': 'SelectorCore',
         'cal': 'CalculatorCore',
         'script': 'ScriptCore',
+        'json': 'JsonCore',
         'que': 'QueryCore',
         'tri': 'TriggerCore',
         'log': 'LoggerCore'
@@ -171,6 +177,9 @@ INNER_API_TOKEN = env('INNER_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 # host_run_script
 SCRIPT_HOST = env('SCRIPT_HOST', 'script.gwdev.com')
 SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
+
+# ES tmp url
+ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1.pk1/data'
 
 # logging
 LOGGING = {
@@ -217,6 +226,12 @@ INDEX = {
         'script_id': 1,
         'params': 2,
         'name': 3
+    },
+    'json': {
+        'source': 1,
+        'params': 2,
+        'content': 3,
+        'name': 4
     },
     'que': {
         'type': 1,
