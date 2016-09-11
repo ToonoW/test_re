@@ -21,10 +21,10 @@ class ESConsumer(BaseRabbitmqConsumer):
         for key, val in params.items():
             content = content.replace('"${'+key+'}"', json.dumps(val))
         content = json.loads(content)
-        
+
         resp = requests.post(settings.ES_URL, data=json.dumps(content['value']), verify=False)
 
-        print resp.content
-        print resp.status_code
+        #print resp.content
+        #print resp.status_code
         log['resp_content'] = resp.content
         log['status_code'] = resp.status_code
