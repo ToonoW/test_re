@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import json, operator, re, time, copy, requests
+import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, get_mysql
+from re_processor.connections import get_mongodb, get_mysql, redis_pool
 from re_processor.common import _log
 
 
@@ -58,7 +58,7 @@ class BaseInnerCore(object):
         #print 'running {}'.format(self.core_name)
         task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
 
-        result = self._process(task_list, task_vars, custom_vars, para_task, extern_params)
+        result = self._process(task_list, task_vars, custom_vars, para_task, extern_params, msg['rule_id'])
 
         if result is False and para_task:
             task_list = para_task.pop()
@@ -113,7 +113,7 @@ class SelectorCore(BaseInnerCore):
         'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
     }
 
-    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = True
         while result and task_list:
             task = task_list.pop(0)
@@ -182,7 +182,7 @@ class CalculatorCore(BaseInnerCore):
         'hex': re.compile(r'^0(x|X)[0-9a-fA-F]+$')
     }
 
-    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = False
         while task_list:
             task = task_list.pop(0)
@@ -247,7 +247,7 @@ class ScriptCore(BaseInnerCore):
     params = ['script_id', 'params', 'name']
     index = settings.INDEX['script']
 
-    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = False
         while task_list:
             task = task_list.pop(0)
@@ -304,10 +304,10 @@ class JsonCore(BaseInnerCore):
     '''
 
     core_name = 'json'
-    params = ['source', 'params', 'content', 'name']
+    params = ['source', 'params', 'refresh', 'content', 'name']
     index = settings.INDEX['json']
 
-    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = False
         while task_list:
             task = task_list.pop(0)
@@ -339,24 +339,64 @@ class JsonCore(BaseInnerCore):
                 result = True
                 break
 
-            task_vars[tmp_dict['name']] = self.get_json(tmp_dict['content'])
+            task_vars[tmp_dict['name']] = self.get_json(tmp_dict['content'], params, tmp_dict['refresh'], tmp_dict['name'], rule_id, task_vars['sys.timestamp_ms'])
             result = True
 
         return result
 
-    def get_json(self, content):
-        url = content['url']
-        headers = content.get('headers', {})
-        data = content.get('data', {})
-        method = content.get('method', 'get')
-        if 'get' == method:
-            query_string = '&'.join(map(lambda x: '{0}={1}'.format(*x), data.items())) if data else ''
-            url = (url + '?' + query_string) if query_string else url
-            response = requests.get(url, headers=headers)
-        elif 'post' == method:
-            response = requests.post(url, data=json.dumps(data), headers=headers)
+    def get_json(self, content, params, refresh, name, rule_id, now_ts):
+        cache_key = 're_core_{0}_{1}'.format(rule_id, name)
+        cache = redis.Redis(connection_pool=redis_pool)
+        result = {}
+        do_refresh = True
+        try:
+            lock_ts = cache.get(cache_key + '_lock')
+            if not lock_ts:
+                is_success = cache.setnx(cache_key + '_lock', now_ts)
+                if is_success:
+                    do_refresh = True
+                else:
+                    do_refresh = False
+            elif now_ts > lock_ts + refresh * 1000:
+                lock_ts_new = cache.getset(cache_key + '_lock', now_ts)
+                if now_ts > lock_ts_new + refresh * 1000:
+                    do_refresh = True
+                else:
+                    do_refresh = False
+            else:
+                do_refresh = False
+        except:
+            pass
 
-        return json.loads(response.content)
+        if do_refresh:
+            _content = json.dumps(content)
+            for key, val in params.items():
+                _content = _content.replace('"${'+key+'}"', json.dumps(val))
+            content = json.loads(_content)
+            url = content['url']
+            headers = content.get('headers', {})
+            data = content.get('data', {})
+            method = content.get('method', 'get')
+            if 'get' == method:
+                query_string = '&'.join(map(lambda x: '{0}={1}'.format(*x), data.items())) if data else ''
+                url = (url + '?' + query_string) if query_string else url
+                response = requests.get(url, headers=headers)
+            elif 'post' == method:
+                response = requests.post(url, data=json.dumps(data), headers=headers)
+
+            result = json.loads(response.content)
+            try:
+                cache.set(cache_key, response.content, refresh * 2)
+            except:
+                pass
+        else:
+            try:
+                result = cache.get(cache_key)
+                result = json.loads(result)
+            except:
+                pass
+
+        return result
 
 
 class QueryCore(BaseInnerCore):
@@ -368,7 +408,7 @@ class QueryCore(BaseInnerCore):
     index = settings.INDEX['que']
     params = ['type', 'target', 'pass']
 
-    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params):
+    def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = False
         params_list = []
         extern_list = []
@@ -600,6 +640,8 @@ class TriggerCore(BaseCore):
             if extra_task or query_list:
                 new_task_list[0:0] = ([['que', 'q', list(set(query_list)), True]] if query_list else []) + extra_task
                 new_task_list.append(task)
+                new_task_list.extend(task_list)
+                break
             else:
                 log_flag = True
                 msg['action_id_list'].append(str(tmp_dict['action_id']))

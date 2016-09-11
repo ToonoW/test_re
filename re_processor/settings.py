@@ -230,8 +230,9 @@ INDEX = {
     'json': {
         'source': 1,
         'params': 2,
-        'content': 3,
-        'name': 4
+        'refresh': 3,
+        'content': 4,
+        'name': 5
     },
     'que': {
         'type': 1,
