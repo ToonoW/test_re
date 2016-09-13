@@ -339,7 +339,7 @@ class JsonCore(BaseInnerCore):
                 result = True
                 break
 
-            task_vars[tmp_dict['name']] = self.get_json(tmp_dict['content'], params, tmp_dict['refresh'], tmp_dict['name'], rule_id, task_vars['sys.timestamp_ms'])
+            task_vars[tmp_dict['name']] = self.get_json(tmp_dict['content'], params, int(tmp_dict['refresh']), tmp_dict['name'], rule_id, task_vars['sys.timestamp_ms'])
             result = True
 
         return result
@@ -350,21 +350,15 @@ class JsonCore(BaseInnerCore):
         result = {}
         do_refresh = True
         try:
-            lock_ts = cache.get(cache_key + '_lock')
-            if not lock_ts:
-                is_success = cache.setnx(cache_key + '_lock', now_ts)
-                if is_success:
-                    do_refresh = True
-                else:
-                    do_refresh = False
-            elif now_ts > lock_ts + refresh * 1000:
-                lock_ts_new = cache.getset(cache_key + '_lock', now_ts)
-                if now_ts > lock_ts_new + refresh * 1000:
-                    do_refresh = True
-                else:
-                    do_refresh = False
-            else:
+            if cache.get(cache_key + '_lock'):
                 do_refresh = False
+            else:
+                is_success = cache.setnx(cache_key + '_lock', json.dumps(now_ts))
+                if is_success:
+                    cache.setex(cache_key + '_lock', json.dumps(now_ts), refresh)
+                    do_refresh = True
+                else:
+                    do_refresh = False
         except:
             pass
 
@@ -383,10 +377,13 @@ class JsonCore(BaseInnerCore):
                 response = requests.get(url, headers=headers)
             elif 'post' == method:
                 response = requests.post(url, data=json.dumps(data), headers=headers)
+            else:
+                raise Exception('invalid method: {}'.format(method))
 
             result = json.loads(response.content)
+
             try:
-                cache.set(cache_key, response.content, refresh * 2)
+                cache.set(cache_key, response.content)
             except:
                 pass
         else:
