@@ -25,6 +25,7 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
 
         for key, val in params.items():
             content = content.replace('"${'+key+'}"', json.dumps(val))
+        log['content'] = content
         content = json.loads(content)
 
         resp = requests.post(url, data=json.dumps(content['value']), headers=headers)
