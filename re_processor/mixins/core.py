@@ -31,8 +31,9 @@ def get_value_from_json(name, json_obj):
     return ''
 
 def get_value_from_task(name, task_vars):
-    value = task_vars.get(name, None)
-    if value is None:
+    if task_vars.has_key(name):
+        value = task_vars.get(name, None)
+    else:
         value = get_value_from_json(name, task_vars.get(name.split('.')[0], {}))
     return value
 
@@ -632,8 +633,9 @@ class TriggerCore(BaseCore):
                 if not task_vars.has_key(symbol):
                     if custom_vars.has_key(symbol):
                         extra_task.append(custom_vars[symbol])
-                    elif symbol.split('.')[0] in custom_vars and symbol.split('.')[0] not in task_vars:
-                        extra_task.append(custom_vars[symbol.split('.')[0]])
+                    elif symbol.split('.')[0] in custom_vars:
+                        if symbol.split('.')[0] not in task_vars:
+                            extra_task.append(custom_vars[symbol.split('.')[0]])
                     else:
                         query_list.append(symbol)
 
