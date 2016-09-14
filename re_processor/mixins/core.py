@@ -18,7 +18,7 @@ def get_value_from_json(name, json_obj):
         elif type(_obj) is list:
             try:
                 field = int(field)
-            except ValueError, e:
+            except ValueError:
                 break
             if field > len(_obj):
                 break
@@ -31,7 +31,10 @@ def get_value_from_json(name, json_obj):
     return ''
 
 def get_value_from_task(name, task_vars):
-    return task_vars.get(name, '') or get_value_from_json(name, task_vars.get(name.split('.')[0], {}))
+    value = task_vars.get(name, None)
+    if value is None:
+        value = get_value_from_json(name, task_vars.get(name.split('.')[0], {}))
+    return value
 
 class BaseCore(object):
     '''
@@ -489,7 +492,7 @@ class QueryCore(BaseInnerCore):
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
             result['offline.status'] = 0 if status['is_online'] else 1
-            result['common.location'] = status.get('location', '')
+            result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
             result = {}
 
