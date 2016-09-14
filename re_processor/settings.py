@@ -179,7 +179,7 @@ SCRIPT_HOST = env('SCRIPT_HOST', 'script.gwdev.com')
 SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # ES tmp url
-ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1.pk1/data'
+ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
 
 # logging
 LOGGING = {
