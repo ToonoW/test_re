@@ -16,6 +16,7 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
         if 'devctrl' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
 
+        log['action_type'] = msg['action_type']
         params = msg.get('params', {})
         content = msg.get('content', '{}')
         url = ''.join(['http://', settings.HOST_GET_BINDING, '/v1/device/{}/control'.format(msg['did'])])

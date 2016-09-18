@@ -10,12 +10,12 @@ from re_processor.consumer.BaseConsumer import BaseRabbitmqConsumer
 class ESConsumer(BaseRabbitmqConsumer):
 
     def process(self, body, log=None):
-        print body
         msg = json.loads(body)
 
         if 'es' != msg['action_type']:
             raise Exception('Invalid action_type: {}'.format(msg['action_type']))
 
+        log['action_type'] = msg['action_type']
         params = msg.get('params', {})
         content = msg.get('content', '{}')
         for key, val in params.items():
