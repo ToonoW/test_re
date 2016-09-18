@@ -493,7 +493,7 @@ class QueryCore(BaseInnerCore):
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
             result['offline.status'] = 0 if status['is_online'] else 1
-            result['common.location'] = status.get('city', 'guangzhou')
+            result['common.location'] = status.get('city', '')
         except KeyError:
             result = {}
 
