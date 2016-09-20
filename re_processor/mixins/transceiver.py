@@ -140,8 +140,8 @@ class BaseRabbitmqConsumer(object):
             else:
                 msg.update({'.'.join(['data', k]): v for k, v in data.items()})
 
-        msg['sys.timestamp_ms'] = int(time.time() * 1000)
-        msg['sys.timestamp'] = int(time.time())
+        msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
+        msg['sys.timestamp'] = int(log['ts'])
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
         msg['common.product_key'] = msg['product_key']
         msg['common.did'] = msg['did']
@@ -170,7 +170,6 @@ class BaseRabbitmqConsumer(object):
         else:
             msg['bind.status'] = 0
             msg['unbind.status'] = 0
-
 
         db = get_mysql()
         sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
@@ -202,8 +201,6 @@ class BaseRabbitmqConsumer(object):
                         'event': msg['event_type'],
                         'rule_id': rule_id,
                         'action_id_list': [],
-                        'debug': msg.get('debug', False),
-                        'test_id': msg.get('test_id', ''),
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
                         'action_sel': True,
@@ -221,8 +218,6 @@ class BaseRabbitmqConsumer(object):
                         'event': msg['event_type'],
                         'rule_id': rule_id,
                         'action_id_list': [],
-                        'debug': msg.get('debug', False),
-                        'test_id': msg.get('test_id', ''),
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
                         'action_sel': False,

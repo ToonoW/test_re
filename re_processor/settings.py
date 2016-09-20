@@ -74,7 +74,7 @@ DEBUG_ROUTING_KEY = {
     'es': 'rules_engine_debug'
 }
 
-# where msg to send
+# where to send msg
 MSG_TO = {
     #'internal': 'redis',
     'internal': 'default',
@@ -129,7 +129,16 @@ CONTAINER_MAP = {
 
 # processor core_map
 CORE_MAP = {
-    'internal': {
+    'v1': {
+        'sel': 'SelectorCore',
+        'cal': 'CalculatorCore',
+        'script': 'ScriptCore',
+        'json': 'JsonCore',
+        'que': 'QueryCore',
+        'tri': 'TriggerCore',
+        'log': 'LoggerCore'
+    },
+    'v2': {
         'sel': 'SelectorCore',
         'cal': 'CalculatorCore',
         'script': 'ScriptCore',

@@ -5,7 +5,7 @@ import time, json
 
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
-from re_processor.common import debug_logger as logger
+from re_processor.common import debug_logger as logger, _log
 
 
 class CommonProcessor(object):
@@ -13,7 +13,7 @@ class CommonProcessor(object):
     common processor
     '''
 
-    def init_processor(self, pos='internal'):
+    def init_processor(self, pos='v1'):
         core_map = settings.CORE_MAP.get(pos, None)
         self.core = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
 
@@ -23,10 +23,7 @@ class CommonProcessor(object):
         '''
 
         log['running_status'] = 'process'
-        if not getattr(self, 'core', None):
-            return [msg]
         msg_list = []
-        p_log = []
         task_type = 'type_error'
         error_message = ''
         try:
@@ -64,6 +61,6 @@ class CommonProcessor(object):
             if msg.get('debug') is True and self.debug is True:
                 p_log['debug'] = True
                 p_log['test_id'] = msg.get('test_id', '')
-            msg_list.append(p_log)
+            _log(p_log)
 
         return msg_list

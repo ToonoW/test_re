@@ -583,7 +583,6 @@ class TriggerCore(BaseCore):
                             (time_hour and time_now[2] not in time_hour) or \
                             (time_week and time_now[3] % 7 not in time_week):
                         p_log = {
-                            'msg_to': settings.MSG_TO['internal'],
                             'module': 're_processor',
                             'rule_id': msg.get('rule_id', ''),
                             'action_id': action_id,
@@ -591,13 +590,12 @@ class TriggerCore(BaseCore):
                             'product_key': msg['task_vars'].get('product_key', ''),
                             'did': msg['task_vars'].get('did', ''),
                             'mac': msg['task_vars'].get('mac', ''),
-                            'current': 'log',
                             'time_now': 'month: {0}, day: {1}, hour: {2}, week: {3}'.format(*time_now),
                             'result': 'failed',
                             'handling': 'action',
                             'error_message': 'time now is not in list of allow_time'
                         }
-                        msg_list.append(p_log)
+                        _log(p_log)
                         continue
 
                 action_task = ['tri', tmp_dict['action_type'], tmp_dict['params'], extern_params_db, tmp_dict['action_content'], action_id]
@@ -660,10 +658,6 @@ class TriggerCore(BaseCore):
                     'extern_params': extern_params,
                     'content': tmp_dict['action_content']
                 }
-                if msg.get('debug') is True and msg['debug'] is True:
-                    _msg['debug'] = True
-                    _msg['test_id'] = msg.get('test_id', '')
-                    _msg['action_id'] = tmp_dict['action_id']
 
                 msg_list.append(_msg)
 
@@ -687,9 +681,5 @@ class LoggerCore(BaseCore):
         msg.pop('msg_to')
         msg.pop('current')
         _log(msg)
-
-        if msg.get('debug', False) is True:
-            msg['msg_to'] = settings.MSG_TO['external']
-            return True, [msg], False
 
         return True, [], False
