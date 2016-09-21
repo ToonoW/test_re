@@ -23,6 +23,7 @@ class BaseRabbitmqConsumer(object):
 
     def mq_initial(self):
         # connect rabbitmq
+        self.connecting = False
         try:
             self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
         except AMQPConnectionError, e:
@@ -42,6 +43,7 @@ class BaseRabbitmqConsumer(object):
         # reconnect rabbitmq
         while True:
             try:
+                self.connecting = True
                 time.sleep(5)
                 self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
             except AMQPConnectionError, e:
@@ -49,6 +51,7 @@ class BaseRabbitmqConsumer(object):
                 continue
             else:
                 self.channel = self.m2m_conn.channel()
+                self.connecting = False
                 break
 
     def consume(self, ch, method, properties, body):
@@ -99,6 +102,9 @@ class BaseRabbitmqConsumer(object):
                 }
                 while True:
                     try:
+                        if self.connecting:
+                            time.sleep(5)
+                            continue
                         self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
                         console_logger.exception(e)
@@ -118,6 +124,9 @@ class BaseRabbitmqConsumer(object):
             }
             while True:
                 try:
+                    if self.connecting:
+                        time.sleep(5)
+                        continue
                     self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
                     console_logger.exception(e)
