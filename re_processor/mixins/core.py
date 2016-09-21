@@ -493,7 +493,7 @@ class QueryCore(BaseInnerCore):
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['online.status'] = 1 if status['is_online'] else 0
             result['offline.status'] = 0 if status['is_online'] else 1
-            result['common.location'] = status.get('city', '')
+            result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
             result = {}
 
@@ -668,18 +668,3 @@ class TriggerCore(BaseCore):
             msg_list.append(_msg)
 
         return True if msg_list else False, msg_list, log_flag
-
-
-class LoggerCore(BaseCore):
-    '''
-    execute tri task
-    '''
-
-    core_name = 'log'
-
-    def _process(self, msg):
-        msg.pop('msg_to')
-        msg.pop('current')
-        _log(msg)
-
-        return True, [], False

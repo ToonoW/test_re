@@ -44,30 +44,29 @@ class MainProcessor(object):
                 result = 'exception'
                 error_message = str(e)
                 logger.exception(e)
-            finally:
-                if log_flag:
-                    if 'exception' != result:
-                        result = 'success' if result else 'failed'
-                    ts = msg.get('ts', time.time())
-                    p_log = {
-                        'msg_to': settings.MSG_TO['internal'],
-                        'module': 're_processor',
-                        'rule_id': msg.get('rule_id', ''),
-                        'action_id_list': ','.join(msg.get('action_id_list', [])),
-                        'event': msg.get('event', ''),
-                        'product_key': msg['task_vars'].get('product_key', ''),
-                        'did': msg['task_vars'].get('did', ''),
-                        'mac': msg['task_vars'].get('mac', ''),
-                        'extern_params': msg.get('extern_params', ''),
-                        'task_vars': json.dumps(msg['task_vars']),
-                        'current': 'log',
-                        'result': result,
-                        'ts': ts,
-                        'proc_t': (time.time() - ts) * 1000,
-                        'error_message': error_message,
-                        'task_type': task_type,
-                        'handling': 'action' if 'tri' == task_type else 'rule'
-                    }
-                    _log(p_log)
+            if log_flag:
+                if 'exception' != result:
+                    result = 'success' if result else 'failed'
+                ts = msg.get('ts', time.time())
+                p_log = {
+                    'msg_to': settings.MSG_TO['internal'],
+                    'module': 're_processor',
+                    'rule_id': msg.get('rule_id', ''),
+                    'action_id_list': ','.join(msg.get('action_id_list', [])),
+                    'event': msg.get('event', ''),
+                    'product_key': msg['task_vars'].get('product_key', ''),
+                    'did': msg['task_vars'].get('did', ''),
+                    'mac': msg['task_vars'].get('mac', ''),
+                    'extern_params': msg.get('extern_params', ''),
+                    'task_vars': json.dumps(msg['task_vars']),
+                    'current': 'log',
+                    'result': result,
+                    'ts': ts,
+                    'proc_t': (time.time() - ts) * 1000,
+                    'error_message': error_message,
+                    'task_type': task_type,
+                    'handling': 'action' if 'tri' == task_type else 'rule'
+                }
+                _log(p_log)
 
         return msg_list

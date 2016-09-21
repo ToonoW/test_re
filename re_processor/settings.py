@@ -17,16 +17,6 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
-START_UNIT = {
-    'sel': 'internal',
-    'cal': 'internal',
-    'script': 'internal',
-    'json': 'internal',
-    'que': 'internal',
-    'log': 'output',
-    'tri': 'output'
-}
-
 TOPIC_MAP = {
     'device_online': 'online',
     'device_offline': 'offline',
@@ -81,52 +71,6 @@ MSG_TO = {
     'external': 'rabbitmq'
 }
 
-#
-TRANSCEIVER = {
-    'send': {
-        'redis': 'redis_publish',
-        'rabbitmq': 'mq_publish',
-        'default': 'default_publish'
-    },
-    'begin': {
-        'redis': 'redis_listen',
-        'rabbitmq': 'mq_listen',
-        'default': 'default_listen'
-    },
-    'unpack': {
-        'redis': 'redis_unpack',
-        'rabbitmq': 'mq_unpack',
-        'default': 'default_unpack'
-    },
-    'init': {
-        'redis': 'redis_initial',
-        'rabbitmq': 'mq_initial',
-        'default': 'default_initial'
-    },
-}
-
-# container map
-CONTAINER_MAP = {
-    'internal': {
-        #'queue': ['BaseRedismqConsumer'],
-        'queue': ['DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['InternalTransceiver']
-    },
-    'main': {
-        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['MainTransceiver']
-    },
-    'output': {
-        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['OutputTransceiver']
-    }
-}
-
 # processor core_map
 CORE_MAP = {
     'v1': {
@@ -135,8 +79,7 @@ CORE_MAP = {
         'script': 'ScriptCore',
         'json': 'JsonCore',
         'que': 'QueryCore',
-        'tri': 'TriggerCore',
-        'log': 'LoggerCore'
+        'tri': 'TriggerCore'
     },
     'v2': {
         'sel': 'SelectorCore',
@@ -144,8 +87,7 @@ CORE_MAP = {
         'script': 'ScriptCore',
         'json': 'JsonCore',
         'que': 'QueryCore',
-        'tri': 'TriggerCore',
-        'log': 'LoggerCore'
+        'tri': 'TriggerCore'
     }
 }
 
@@ -261,7 +203,6 @@ INDEX = {
         'action_type': 3,
         'params': 4,
         'action_content': 5
-    },
-    'log': {}
+    }
 }
 

@@ -2,18 +2,26 @@
 # coding=utf-8
 
 
-import time, json
+import time, json, copy
 
-from re_processor.mixins.tranceiver import BaseRabbitmqConsumer
+import gevent
+from gevent.pool import Pool
+
+from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
 from re_processor.common import debug_logger as logger, console_logger
-from re_processor.common import _log
+
+from processor import MainProcessor
 
 class MainDispatcher(BaseRabbitmqConsumer):
 
-    def __init__(self):
+    def __init__(self, mq_queue_name, product_key=None):
+        self.mq_queue_name = mq_queue_name
+        self.product_key = product_key or '*'
         self.mq_initial()
         self.sender = MainSender()
+        self.processor = MainProcessor(2, self.sender)
+        self.debug = settings.DEBUG
 
     def consume(self, ch, method, properties, body):
         log = {
@@ -23,18 +31,29 @@ class MainDispatcher(BaseRabbitmqConsumer):
         }
         try:
             #print body
-            lst = self.unpack(body, log)
+            gevent.spawn(self.dispatch, body, log)
         except Exception, e:
             console_logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
 
+    def dispatch(self, body, log):
+        lst = self.mq_unpack(body, log)
+        length = len(lst)
+        if length > 0:
+            Pool(length).map(lambda x: self.processor.process_msg(x, copy.deepcopy(log)), lst)
+
+    def begin(self):
+        self.mq_listen(self.mq_queue_name, self.product_key)
+
 
 class MainSender(BaseRabbitmqConsumer):
 
-    def __init__(self):
+    def __init__(self, product_key=None):
+        self.product_key = product_key or '*'
         self.mq_initial()
+        self.debug = settings.DEBUG
 
     def send(self, msg):
-        pass
+        self.mq_publish(self.product_key, [msg])

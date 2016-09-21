@@ -34,12 +34,11 @@ import sys, os
 sys.path.append(os.environ.get('SYS_PATH', '.'))
 
 import gevent
-from gevent.queue import Queue
 from docopt import docopt
 
 from re_processor import settings
 from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer, DevCtrlConsumer, ESConsumer
-from re_processor.container import get_container
+from re_processor.main import MainDispatcher
 
 
 if '__main__' == __name__:
@@ -65,17 +64,4 @@ if '__main__' == __name__:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
         product_key = args['--product_key'] if args.has_key('--product_key') else '*'
 
-        start_unit = settings.START_UNIT
-        default_queue = {x: Queue() for x in start_unit}
-        start_unit[mq_queue_name] = 'main'
-
-        greenlet_list = []
-        for name, c_type in settings.START_UNIT.items():
-            if 'main' == c_type and args['--main']:
-                greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--main']))])
-            elif 'main' != c_type and args['--{}'.format(name)]:
-                greenlet_list.extend([gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin) for i in range(int(args['--{}'.format(name)]))])
-            else:
-                greenlet_list.append(gevent.spawn(get_container(name, default_queue, product_key=product_key, container_type=c_type).begin))
-
-        gevent.joinall(greenlet_list)
+        MainDispatcher(mq_queue_name, product_key=product_key).begin()
