@@ -5,7 +5,6 @@
 import time, json, copy
 
 import gevent
-from gevent.pool import Pool
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
@@ -39,9 +38,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def dispatch(self, body, log):
         lst = self.mq_unpack(body, log)
-        length = len(lst)
-        if length > 0:
-            Pool(length).map(lambda x: self.processor.process_msg(x, copy.deepcopy(log)), lst)
+        if lst:
+            map(lambda x: gevent.spawn(self.processor.process_msg, x, copy.deepcopy(log)), lst)
 
     def begin(self):
         self.mq_listen(self.mq_queue_name, self.product_key)
