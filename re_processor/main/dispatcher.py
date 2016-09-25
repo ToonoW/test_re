@@ -18,7 +18,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
         self.mq_initial()
-        self.processor = MainProcessor(2, MainSender(self.product_key))
+        self.processor = MainProcessor(MainSender(self.product_key))
         self.debug = settings.DEBUG
 
     def consume(self, ch, method, properties, body):
