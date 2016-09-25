@@ -88,6 +88,11 @@ CORE_MAP = {
         'json': 'JsonCore',
         'que': 'QueryCore',
         'tri': 'TriggerCore'
+    },
+    'v3': {
+        'input': 'InputCore',
+        'function': 'FuncCore',
+        'output': 'OutputCore'
     }
 }
 

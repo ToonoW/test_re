@@ -192,11 +192,27 @@ class BaseRabbitmqConsumer(object):
                 continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
-            __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
-            if __rule_tree_list:
-                tmp_msg = copy.copy(msg)
-                tmp_msg['common.rule_id'] = rule_id
-                if 2 == ver:
+
+            tmp_msg = copy.copy(msg)
+            tmp_msg['common.rule_id'] = rule_id
+            if 3 == ver:
+                for __task in rule_tree['event'][event]:
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'action_id_list': [],
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'current': __task,
+                        'task_list': rule_tree['task_list'],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
+            elif 2 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
                     _task = __rule_tree_list[0].pop(0)
                     triggled = []
                     while __rule_tree_list[0]:
@@ -207,6 +223,7 @@ class BaseRabbitmqConsumer(object):
                             _task = __rule_tree_list[0].pop(0)
 
                     __rule_tree = {
+                        'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
                         'action_id_list': [],
@@ -222,8 +239,12 @@ class BaseRabbitmqConsumer(object):
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
-                elif 1 == ver:
+                    msg_list.append(__rule_tree)
+            elif 1 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
                     __rule_tree = {
+                        'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
                         'action_id_list': [],
@@ -239,7 +260,7 @@ class BaseRabbitmqConsumer(object):
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
-                msg_list.append(__rule_tree)
+                    msg_list.append(__rule_tree)
 
         db.close()
 

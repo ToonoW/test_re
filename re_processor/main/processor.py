@@ -14,11 +14,13 @@ class MainProcessor(object):
     main processor
     '''
 
-    def __init__(self, ver, sender):
-        core_map = settings.CORE_MAP.get('v{}'.format(ver), None)
-        if core_map is None:
-            raise Exception(u'start processor failed: error version "{}"'.format(ver))
-        self.core = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
+    def __init__(self, sender):
+        self.core = {}
+        for i in range(1, 4):
+            core_map = settings.CORE_MAP.get('v{}'.format(i), None)
+            if core_map is None:
+                raise Exception(u'start processor failed: error version "{}"'.format(ver))
+            self.core[i] = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
         self.sender = sender
 
     def process_msg(self, src_msg, log={}):
@@ -36,8 +38,8 @@ class MainProcessor(object):
                 if settings.MSG_TO['external'] == msg['msg_to']:
                     self.sender.send(msg)
                     continue
-                task_type = msg['current']
-                result, _msg_list, log_flag = self.core[task_type].process(msg)
+                task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
+                result, _msg_list, log_flag = self.core[msg['ver']][task_type].process(msg)
                 msg_list.extend(_msg_list)
             except Exception, e:
                 log_flag = True
