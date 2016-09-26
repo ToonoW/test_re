@@ -229,7 +229,10 @@ class FuncCore(BaseCore):
                     tmp = get_value_from_json(tmp, msg['task_vars'][alias])
                     tmp_list.append(tmp)
                 else:
-                    return []
+                    next_node = copy.deepcopy(msg['custom_vars'][alias])
+                    next_node['ports'] = [0]
+                    next_node['wires'] = [[msg['current']['id']]]
+                    return [dict(copy.deepcopy(msg), current=next_node)]
             elif tmp.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(tmp)
             else:
@@ -281,7 +284,10 @@ class FuncCore(BaseCore):
                 if alias in msg['task_vars']:
                     exp.append(get_value_from_json(symbol, msg['task_vars'][alias]))
                 else:
-                    return []
+                    next_node = copy.deepcopy(msg['custom_vars'][alias])
+                    next_node['ports'] = [0]
+                    next_node['wires'] = [[msg['current']['id']]]
+                    return [dict(copy.deepcopy(msg), current=next_node)]
 
             elif symbol.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(symbol)
@@ -340,7 +346,10 @@ class FuncCore(BaseCore):
                 if alias in msg['task_vars']:
                     params[symbol] = get_value_from_json(symbol, msg['task_vars'][alias])
                 else:
-                    return []
+                    next_node = copy.deepcopy(msg['custom_vars'][alias])
+                    next_node['ports'] = [0]
+                    next_node['wires'] = [[msg['current']['id']]]
+                    return [dict(copy.deepcopy(msg), current=next_node)]
             elif symbol.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(symbol)
             else:
@@ -440,7 +449,10 @@ class OutputCore(BaseCore):
                 if alias in msg['task_vars']:
                     params[symbol] = get_value_from_json(symbol, msg['task_vars'][alias])
                 else:
-                    params[symbol] = ''
+                    next_node = copy.deepcopy(msg['custom_vars'][alias])
+                    next_node['ports'] = [0]
+                    next_node['wires'] = [[msg['current']['id']]]
+                    return [dict(copy.deepcopy(msg), current=next_node)], False
             elif symbol.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(symbol)
             else:
