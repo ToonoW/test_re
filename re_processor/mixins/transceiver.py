@@ -196,17 +196,17 @@ class BaseRabbitmqConsumer(object):
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule_id
             if 3 == ver:
-                for __task in rule_tree['event'][event]:
+                for __task in rule_tree['event'].get(event, []):
                     __rule_tree = {
                         'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
-                        'action_id_list': [],
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
                         'current': __task,
                         'task_list': rule_tree['task_list'],
                         'task_vars': tmp_msg,
+                        'extern_params': {},
                         'custom_vars': custom_vars
                     }
                     msg_list.append(__rule_tree)

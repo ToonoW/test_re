@@ -19,7 +19,7 @@ class MainProcessor(object):
         for i in range(1, 4):
             core_map = settings.CORE_MAP.get('v{}'.format(i), None)
             if core_map is None:
-                raise Exception(u'start processor failed: error version "{}"'.format(ver))
+                raise Exception(u'start processor failed: error version "{}"'.format(i))
             self.core[i] = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
         self.sender = sender
 
@@ -27,7 +27,6 @@ class MainProcessor(object):
         '''
         return a list of msg
         '''
-
         log['running_status'] = 'process'
         msg_list = [src_msg]
         task_type = 'type_error'
@@ -66,8 +65,8 @@ class MainProcessor(object):
                     'ts': ts,
                     'proc_t': (time.time() - ts) * 1000,
                     'error_message': error_message,
-                    'task_type': task_type,
-                    'handling': 'action' if 'tri' == task_type else 'rule'
+                    'task_type': msg['current']['type'] if 3 == msg['ver'] else task_type,
+                    'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }
                 _log(p_log)
 
