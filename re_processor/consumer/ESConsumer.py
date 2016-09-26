@@ -22,9 +22,9 @@ class ESConsumer(BaseRabbitmqConsumer):
             content = content.replace('"${'+key+'}"', json.dumps(val))
         content = json.loads(content)
 
-        print '======================插入数据============================'
-        print content['value']
-        print '=========================================================='
+        #print '======================插入数据============================'
+        #print content['value']
+        #print '=========================================================='
         resp = requests.post(settings.ES_URL, data=json.dumps(content['value']), verify=False)
 
         #print resp.content
