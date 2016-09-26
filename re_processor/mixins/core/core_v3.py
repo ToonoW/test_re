@@ -4,10 +4,10 @@
 import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, get_mysql, redis_pool
+from re_processor.connections import get_mongodb, redis_pool
 from re_processor.common import _log
 
-from core_v1 import get_value_from_json, get_value_from_task
+from core_v1 import get_value_from_json
 
 
 class BaseCore(object):
@@ -35,7 +35,10 @@ class InputCore(BaseCore):
 
     def device_data(self, msg):
         content = msg['current']['content']
-        if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != content['attr_type']:
+        try:
+            if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != int(content['attr_type']):
+                return []
+        except ValueError:
             return []
         params = msg['current'].get('params', [])
         if params:
