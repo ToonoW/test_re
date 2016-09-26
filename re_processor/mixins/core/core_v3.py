@@ -129,10 +129,12 @@ class InputCore(BaseCore):
 
     def custom_json(self, msg):
         content = msg['current']['content']
-        if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != content['attr_type']:
+        try:
+            if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != int(content['attr_type']):
+                return []
+        except ValueError:
             return []
-        content = msg['current']['content']
-        msg['task_vars'][content['alias']] = self.get_json(content, {}, int(content['refresh']), content['alias'], msg['rule_id'], msg['task_vars']['sys.timestamp_ms'])
+        msg['task_vars'][content['alias']] = self.get_json(content['content'], {}, int(content['refresh']), content['alias'], msg['rule_id'], msg['task_vars']['sys.timestamp_ms'])
 
         return self.next(msg)
 
