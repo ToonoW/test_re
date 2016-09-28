@@ -10,8 +10,9 @@ RUN /env-gw_re_processor/bin/pip install -i http://172.32.1.187:3141/root/gizwit
 VOLUME /data/supervisor
 
 ADD . /gw_re_processor
-
 WORKDIR /gw_re_processor
+ADD supervisord.conf.pro supervisord.conf
+
 
 EXPOSE 80
 

@@ -11,7 +11,7 @@ import json
 from docopt import docopt
 
 from re_processor.connections import get_mongodb, get_mysql
-from re_processor.consumer import BaseRabbitmqConsumer
+from re_processor.consumer.BaseConsumer import BaseRabbitmqConsumer
 from re_processor import settings
 
 
@@ -51,9 +51,9 @@ class ConsumeEvent(BaseRabbitmqConsumer):
 if '__main__' == __name__:
     #args = docopt(__doc__, version='Gizwits Data Recorder 0.0')
     #print args
-    product_key = '8345956355714fe19e074a241837accd'
+    product_key = '8ab607683fa14e58aa17c6ed95b34556'
     routing_key = settings.ROUTING_KEY['data'].format(product_key)
-    did = 'xB6nh4FR5f25MaqdA7rTuU'
+    did = 'WMJpRTHfXDqqtU94ymidjL'
 
     #red = get_redis()
     #print red.rpop('rules_engine.log.*')
@@ -64,16 +64,16 @@ if '__main__' == __name__:
     #test_consumer.start()
     #test_consumer.fetch_publish_msg('rules_engine_debug')
 
-    #db = get_mongodb()
-    #ds = db['device_status']
+    db = get_mongodb()
+    ds = db['device_status']
 
-    #status = ds.find_one({'did': did})
-    #result = status['attr']['0']
-    #print '\n'
-    #for key, val in status.items():
-    #    print key, val
-    #    print '\n'
-    #print result
+    status = ds.find_one({'did': did})
+    result = status['attr']['0']
+    print '\n'
+    for key, val in status.items():
+        print key, val
+        print '\n'
+    print result
 
     #db = get_mongodb('core')
     #ds = db['datapoints']
@@ -87,58 +87,58 @@ if '__main__' == __name__:
     #status.pop('_id')
     #print json.dumps(status)
 
-    db = get_mongodb('core')
+    #db = get_mongodb('core')
     #print db.collection_names()
-    ds = db['parsers']
+    #ds = db['parsers']
 
-    jsn = [
-        {
-            'name': 'leakage',
-            'display_name': u'漏水报警',
-            'type': 'alert',
-            'data_type': 'bool'
-        },
-        {
-            'name': 'life1',
-            'display_name': u'滤芯1寿命',
-            'val': 1,
-            'type': 'alert',
-            'data_type': 'bool'
-        },
-        {
-            'name': 'life2',
-            'display_name': u'滤芯2寿命',
-            'val': 1,
-            'type': 'alert',
-            'data_type': 'bool'
-        },
-        {
-            'name': 'life3',
-            'display_name': u'滤芯3寿命',
-            'val': 1,
-            'type': 'alert',
-            'data_type': 'bool'
-        }
-    ]
-    ds.update({'product_key': product_key}, {"$set": {"ext_data_points": jsn}})
+    #jsn = [
+    #    {
+    #        'name': 'leakage',
+    #        'display_name': u'漏水报警',
+    #        'type': 'alert',
+    #        'data_type': 'bool'
+    #    },
+    #    {
+    #        'name': 'life1',
+    #        'display_name': u'滤芯1寿命',
+    #        'val': 1,
+    #        'type': 'alert',
+    #        'data_type': 'bool'
+    #    },
+    #    {
+    #        'name': 'life2',
+    #        'display_name': u'滤芯2寿命',
+    #        'val': 1,
+    #        'type': 'alert',
+    #        'data_type': 'bool'
+    #    },
+    #    {
+    #        'name': 'life3',
+    #        'display_name': u'滤芯3寿命',
+    #        'val': 1,
+    #        'type': 'alert',
+    #        'data_type': 'bool'
+    #    }
+    #]
+    #ds.update({'product_key': product_key}, {"$set": {"ext_data_points": jsn}})
 
-    status = ds.find_one({'product_key': product_key})
-    print '\n'
-    dp = []
+    #status = ds.find_one({'product_key': product_key})
+    #print '\n'
+    #dp = []
     #status.pop('_id')
     #print json.dumps(status)
-    print status
-    if status and status['ext_data_points']:
-        for attr in status['ext_data_points']:
-            dp.append({
-                'display_name': attr['display_name'],
-                'name': attr['name'],
-                'detail': attr['type'],
-                'type': attr['data_type'],
-                'enum': attr['range'].split(',') if 'enum' == attr['data_type'] else []
-            })
+    #print status
+    #if status and status['ext_data_points']:
+    #    for attr in status['ext_data_points']:
+    #        dp.append({
+    #            'display_name': attr['display_name'],
+    #            'name': attr['name'],
+    #            'detail': attr['type'],
+    #            'type': attr['data_type'],
+    #            'enum': attr['range'].split(',') if 'enum' == attr['data_type'] else []
+    #        })
 
-    print json.dumps(dp)
+    #print json.dumps(dp)
 
     #db = get_mysql()
     #sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(

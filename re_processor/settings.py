@@ -17,14 +17,6 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
-START_UNIT = {
-    'sel': 'internal',
-    'cal': 'internal',
-    'que': 'internal',
-    'log': 'output',
-    'tri': 'output'
-}
-
 TOPIC_MAP = {
     'device_online': 'online',
     'device_offline': 'offline',
@@ -53,7 +45,11 @@ PUBLISH_ROUTING_KEY = {
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
     'gdms_http': 'gw_gdms_http_message',
-    'tmp': 'gw_tmp_message'
+    'tmp': 'gw_tmp_message',
+    'email': 'gw_email_message',
+    'sms': 'gw_sms_message',
+    'devctrl': 'gw_devctrl_message',
+    'es': 'gw_es_message'
 }
 
 DEBUG_ROUTING_KEY = {
@@ -61,70 +57,42 @@ DEBUG_ROUTING_KEY = {
     'http': 'rules_engine_debug',
     'gdms_http': 'rules_engine_debug',
     'tmp': 'rules_engine_debug',
-    'log': 'rules_engine_debug'
+    'log': 'rules_engine_debug',
+    'email': 'rules_engine_debug',
+    'sms': 'rules_engine_debug',
+    'devctrl': 'rules_engine_debug',
+    'es': 'rules_engine_debug'
 }
 
-# where msg to send
+# where to send msg
 MSG_TO = {
     #'internal': 'redis',
     'internal': 'default',
     'external': 'rabbitmq'
 }
 
-#
-TRANSCEIVER = {
-    'send': {
-        'redis': 'redis_publish',
-        'rabbitmq': 'mq_publish',
-        'default': 'default_publish'
-    },
-    'begin': {
-        'redis': 'redis_listen',
-        'rabbitmq': 'mq_listen',
-        'default': 'default_listen'
-    },
-    'unpack': {
-        'redis': 'redis_unpack',
-        'rabbitmq': 'mq_unpack',
-        'default': 'default_unpack'
-    },
-    'init': {
-        'redis': 'redis_initial',
-        'rabbitmq': 'mq_initial',
-        'default': 'default_initial'
-    },
-}
-
-# container map
-CONTAINER_MAP = {
-    'internal': {
-        #'queue': ['BaseRedismqConsumer'],
-        'queue': ['DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['InternalTransceiver']
-    },
-    'main': {
-        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['MainTransceiver']
-    },
-    'output': {
-        #'queue': ['BaseRabbitmqConsumer', 'BaseRedismqConsumer'],
-        'queue': ['BaseRabbitmqConsumer', 'DefaultQueueConsumer'],
-        'processor': ['CommonProcessor'],
-        'transceiver': ['OutputTransceiver']
-    }
-}
-
 # processor core_map
 CORE_MAP = {
-    'internal': {
+    'v1': {
         'sel': 'SelectorCore',
         'cal': 'CalculatorCore',
+        'script': 'ScriptCore',
+        'json': 'JsonCore',
         'que': 'QueryCore',
-        'tri': 'TriggerCore',
-        'log': 'LoggerCore'
+        'tri': 'TriggerCore'
+    },
+    'v2': {
+        'sel': 'SelectorCore',
+        'cal': 'CalculatorCore',
+        'script': 'ScriptCore',
+        'json': 'JsonCore',
+        'que': 'QueryCore',
+        'tri': 'TriggerCore'
+    },
+    'v3': {
+        'input': 'InputCore',
+        'function': 'FuncCore',
+        'output': 'OutputCore'
     }
 }
 
@@ -161,6 +129,13 @@ LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 # host_get_bindings
 HOST_GET_BINDING = env('HOST_GET_BINDING', 'innerapi.gwdev.com')
 INNER_API_TOKEN = env('INNER_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
+
+# host_run_script
+SCRIPT_HOST = env('SCRIPT_HOST', 'script.gwdev.com')
+SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
+
+# ES tmp url
+ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
 
 # logging
 LOGGING = {
@@ -203,6 +178,18 @@ INDEX = {
         'exp': 1,
         'name': 2
     },
+    'script': {
+        'script_id': 1,
+        'params': 2,
+        'name': 3
+    },
+    'json': {
+        'source': 1,
+        'params': 2,
+        'refresh': 3,
+        'content': 4,
+        'name': 5
+    },
     'que': {
         'type': 1,
         'target': 2,
@@ -221,7 +208,6 @@ INDEX = {
         'action_type': 3,
         'params': 4,
         'action_content': 5
-    },
-    'log': {}
+    }
 }
 

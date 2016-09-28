@@ -23,6 +23,7 @@ class BaseRabbitmqConsumer(object):
 
     def mq_initial(self):
         # connect rabbitmq
+        self.connecting = False
         try:
             self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
         except AMQPConnectionError, e:
@@ -42,6 +43,7 @@ class BaseRabbitmqConsumer(object):
         # reconnect rabbitmq
         while True:
             try:
+                self.connecting = True
                 time.sleep(5)
                 self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
             except AMQPConnectionError, e:
@@ -49,6 +51,7 @@ class BaseRabbitmqConsumer(object):
                 continue
             else:
                 self.channel = self.m2m_conn.channel()
+                self.connecting = False
                 break
 
     def consume(self, ch, method, properties, body):
@@ -87,17 +90,22 @@ class BaseRabbitmqConsumer(object):
 
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
+            msg_pub = json.dumps(msg)
             if self.debug is True:
                 routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
                 log = {
                     'module': 're_processor',
                     'action': 'pub',
                     'ts': time.time(),
-                    'topic': routing_key
+                    'topic': routing_key,
+                    'msg': msg_pub
                 }
                 while True:
                     try:
-                        self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                        if self.connecting:
+                            time.sleep(5)
+                            continue
+                        self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
                         console_logger.exception(e)
                         self.mq_reconnect()
@@ -111,11 +119,15 @@ class BaseRabbitmqConsumer(object):
                 'module': 're_processor',
                 'action': 'pub',
                 'ts': time.time(),
-                'topic': routing_key
+                'topic': routing_key,
+                'msg': msg_pub
             }
             while True:
                 try:
-                    self.channel.basic_publish(settings.EXCHANGE, routing_key, json.dumps(msg))
+                    if self.connecting:
+                        time.sleep(5)
+                        continue
+                    self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
                     console_logger.exception(e)
                     self.mq_reconnect()
@@ -137,7 +149,8 @@ class BaseRabbitmqConsumer(object):
             else:
                 msg.update({'.'.join(['data', k]): v for k, v in data.items()})
 
-        msg['sys.timestamp'] = int(time.time())
+        msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
+        msg['sys.timestamp'] = int(log['ts'])
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
         msg['common.product_key'] = msg['product_key']
         msg['common.did'] = msg['did']
@@ -167,35 +180,87 @@ class BaseRabbitmqConsumer(object):
             msg['bind.status'] = 0
             msg['unbind.status'] = 0
 
-
         db = get_mysql()
-        sql = 'select `id`, `rule_tree`, `custom_vars` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+        sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
             settings.MYSQL_TABLE['rule']['table'],
             msg['did'],
             msg['product_key'])
         db.execute(sql)
         msg_list = []
-        for rule_id, rule_tree, custom_vars in db.fetchall():
+        for rule_id, rule_tree, custom_vars, enabled, ver in db.fetchall():
+            if 1 != enabled:
+                continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
-            __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event'] and x['task_list']]
-            if __rule_tree_list:
-                tmp_msg = copy.copy(msg)
-                tmp_msg['common.rule_id'] = rule_id
-                __rule_tree = {
-                    'event': msg['event_type'],
-                    'rule_id': rule_id,
-                    'debug': msg.get('debug', False),
-                    'test_id': msg.get('test_id', ''),
-                    'msg_to': settings.MSG_TO['internal'],
-                    'ts': log['ts'],
-                    'current': __rule_tree_list[0][0][0],
-                    'task_list': __rule_tree_list[0],
-                    'para_task': __rule_tree_list[1:],
-                    'task_vars': tmp_msg,
-                    'custom_vars': custom_vars
-                }
-                msg_list.append(__rule_tree)
+
+            tmp_msg = copy.copy(msg)
+            tmp_msg['common.rule_id'] = rule_id
+            if 3 == ver:
+                for __task in rule_tree['event'].get(event, []):
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'current': __task,
+                        'task_list': rule_tree['task_list'],
+                        'task_vars': tmp_msg,
+                        'extern_params': {},
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
+            elif 2 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
+                    _task = __rule_tree_list[0].pop(0)
+                    triggled = []
+                    while __rule_tree_list[0]:
+                        if _task['task_list']:
+                            break
+                        else:
+                            triggled += _task['can_tri']
+                            _task = __rule_tree_list[0].pop(0)
+
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'action_id_list': [],
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'action_sel': True,
+                        'can_tri': _task['action'],
+                        'triggle': triggled if _task['task_list'] else triggled + _task['action'],
+                        'current': 'tri' if not __rule_tree_list[0] and not _task['task_list'] else _task['task_list'][0][0],
+                        'task_list': _task['task_list'],
+                        'para_task': [],
+                        'todo_task': __rule_tree_list[0],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
+            elif 1 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'action_id_list': [],
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'action_sel': False,
+                        'can_tri': [],
+                        'triggle': [],
+                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+                        'task_list': __rule_tree_list[0],
+                        'para_task': __rule_tree_list[1:],
+                        'todo_task': [],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
 
         db.close()
 
@@ -280,56 +345,3 @@ class DefaultQueueConsumer(object):
 
     def default_unpack(self, body, log=None):
         log['running_status'] = 'unpack'
-
-
-class CommonTransceiver(object):
-    '''
-    mixins transceiver
-    '''
-
-    def send(self, body, log=None):
-        log['running_status'] = 'send'
-        for _type, method in settings.TRANSCEIVER['send'].items():
-            msg_list = filter(lambda x: _type == x['msg_to'], body)
-            if msg_list:
-                getattr(self, method)(self.product_key, msg_list)
-
-    def unpack(self, body, log=None):
-        log['running_status'] = 'unpack'
-        return getattr(self, self.unpack_method)(body, log)
-
-    def begin(self):
-        self.unpack_method = settings.TRANSCEIVER['unpack'][self.receiver_type]
-        self.begin_method = settings.TRANSCEIVER['begin'][self.receiver_type]
-        getattr(self, self.begin_method)(self.mq_queue_name, self.product_key)
-
-class InternalTransceiver(CommonTransceiver):
-    '''
-    mixins transceiver
-    '''
-
-    def init_queue(self):
-        self.receiver_type = settings.MSG_TO['internal']
-        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
-
-
-class MainTransceiver(CommonTransceiver):
-    '''
-    mixins transceiver
-    '''
-
-    def init_queue(self):
-        self.receiver_type = settings.MSG_TO['external']
-        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['external']])()
-        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
-
-
-class OutputTransceiver(CommonTransceiver):
-    '''
-    mixins transceiver
-    '''
-
-    def init_queue(self):
-        self.receiver_type = settings.MSG_TO['internal']
-        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['external']])()
-        getattr(self, settings.TRANSCEIVER['init'][settings.MSG_TO['internal']])()
