@@ -506,19 +506,16 @@ class OutputCore(BaseCore):
         return result
 
     def extern_alias(self, task_vars, content):
-        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'])
+        app_id = content.get('app_id', '')
+        if not app_id:
+            return {}
+        url = "http://{0}/v1/bindings/{1}?appids={2}".format(settings.HOST_GET_BINDING, task_vars['did'], app_id)
         headers = {
             'Authorization': settings.INNER_API_TOKEN
         }
         try:
-            app_id = content.get('app_id', '')
-            if app_id:
-                response = requests.get(url, headers=headers)
-                resp_data = json.loads(response.content)
-                data = {app_id: resp_data[app_id]}
-            else:
-                data = {}
-
+            response = requests.get(url, headers=headers)
+            data = json.loads(response.content)
         except:
             data = {}
 
