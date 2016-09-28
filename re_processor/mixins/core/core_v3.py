@@ -441,7 +441,7 @@ class OutputCore(BaseCore):
             extern_list = [x for x in msg['current']['extern_params'] if x not in msg['extern_params']]
 
         if extern_list:
-            extern_result = self._query_extern(msg['task_vars'], extern_list)
+            extern_result = self._query_extern(msg['task_vars'], extern_list, content)
             msg['extern_params'].update(extern_result)
 
         params = {}
@@ -500,19 +500,25 @@ class OutputCore(BaseCore):
 
         return [_msg], True
 
-    def _query_extern(self, task_vars, extern_list):
+    def _query_extern(self, task_vars, extern_list, content):
         extern_list = list(set(extern_list))
-        result = {x: getattr(self, 'extern_' + x)(task_vars) for x in extern_list}
+        result = {x: getattr(self, 'extern_' + x)(task_vars, content) for x in extern_list}
         return result
 
-    def extern_alias(self, task_vars):
+    def extern_alias(self, task_vars, content):
         url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'])
         headers = {
             'Authorization': settings.INNER_API_TOKEN
         }
         try:
-            response = requests.get(url, headers=headers)
-            data = json.loads(response.content)
+            app_id = content.get('app_id', '')
+            if app_id:
+                response = requests.get(url, headers=headers)
+                resp_data = json.loads(response.content)
+                data = {app_id: resp_data[app_id]}
+            else:
+                data = {}
+
         except:
             data = {}
 
