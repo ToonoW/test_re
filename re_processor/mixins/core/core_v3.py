@@ -6,6 +6,7 @@ import json, operator, re, time, copy, requests, redis
 from re_processor import settings
 from re_processor.connections import get_mongodb, redis_pool
 from re_processor.common import _log
+from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
 
@@ -139,7 +140,7 @@ class InputCore(BaseCore):
         return self.next(msg)
 
     def get_json(self, content, params, refresh, name, rule_id, now_ts):
-        cache_key = 're_core_{0}_{1}'.format(rule_id, name)
+        cache_key = 're_core_{0}_{1}_custom_json'.format(rule_id, name)
         cache = redis.Redis(connection_pool=redis_pool)
         result = {}
         do_refresh = True
@@ -186,6 +187,59 @@ class InputCore(BaseCore):
                 result = json.loads(result)
             except:
                 pass
+
+        return result
+
+    def device_sequence(self, msg):
+        content = msg['current']['content']
+        try:
+            if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != int(content['attr_type']):
+                return []
+        except ValueError:
+            return []
+
+        if content['data'] not in msg['task_vars']:
+            next_node = {
+                "id": "uuid",
+                "params": [content['data']],
+                "category": "input",
+                "type": "device_data",
+                "inputs": 0,
+                "outputs": 1,
+                "ports": [0],
+                "wires": [
+                    [msg['current']['id']]
+                ],
+                "content": {
+                    "event": "data",
+                    "data_type": "device_data",
+                    "refresh": 3600,
+                    "interval": 10
+                }
+            }
+            return [dict(copy.deepcopy(msg), current=next_node)]
+
+        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['rule_id'])
+
+        return self.next(msg)
+
+    def get_sequence(self, data, content, rule_id):
+        cache_key = 're_core_{0}_{1}_device_sequence'.format(rule_id, content['alias'])
+        cache = redis.Redis(connection_pool=redis_pool)
+
+        result = []
+        try:
+            result = cache.get(cache_key)
+            result = json.loads(result)
+        except:
+            pass
+
+        if result:
+            result = result[1:] + [data]
+        else:
+            result = [data] * content['length']
+
+        cache.set(cache_key, json.dumps(result))
 
         return result
 
@@ -396,6 +450,22 @@ class FuncCore(BaseCore):
         }
         response = requests.post(url, data=json.dumps(data), headers=headers)
         return json.loads(response.content)['result']
+
+    def transformation(self, msg):
+        content = msg['current']['content']
+
+        if content['data'] not in msg['task_vars']:
+            if content['alias'] in msg['custom_vars']:
+                next_node = copy.deepcopy(msg['custom_vars'][content['alias']])
+                next_node['ports'] = [0]
+                next_node['wires'] = [[msg['current']['id']]]
+                return [dict(copy.deepcopy(msg), current=next_node)]
+            else:
+                return []
+
+        msg['task_vars'][content['alias']] = DataTransformer(msg['task_vars'][content['data']]).run(content['func'])
+
+        return self.next(msg)
 
 
 class OutputCore(BaseCore):
