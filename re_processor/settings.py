@@ -193,7 +193,8 @@ INDEX = {
     'que': {
         'type': 1,
         'target': 2,
-        'pass': 3
+        'pass': 3,
+        'app_id': 4
     },
     'tri': {
         'action_type': 1,

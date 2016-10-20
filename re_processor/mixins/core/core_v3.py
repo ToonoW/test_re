@@ -436,14 +436,6 @@ class OutputCore(BaseCore):
                 _log(p_log)
                 return [], True
 
-        extern_list = []
-        if 'extern_params' in msg['current']:
-            extern_list = [x for x in msg['current']['extern_params'] if x not in msg['extern_params']]
-
-        if extern_list:
-            extern_result = self._query_extern(msg['task_vars'], extern_list, content)
-            msg['extern_params'].update(extern_result)
-
         params = {}
         query_list = []
         for symbol in msg['current']['params']:
@@ -462,6 +454,27 @@ class OutputCore(BaseCore):
                 query_list.append(symbol)
             else:
                 params[symbol] = ''
+
+        extern_list = []
+        if 'extern_params' in msg['current']:
+            extern_list = [x for x in msg['current']['extern_params'] if x not in msg['extern_params']]
+
+        if extern_list:
+            extern_result = self._query_extern(msg['task_vars'], extern_list, content)
+            msg['extern_params'].update(extern_result)
+
+        if 'alias' in msg['extern_params']:
+            for values in msg['extern_params']['alias'].values():
+                emp = filter(lambda x: not x.get('dev_alias', ''), values)
+                if emp:
+                    if 'common.product_name' in msg['task_vars']:
+                        for v in values:
+                            if not v.get('dev_alias', ''):
+                                v['dev_alias'] = msg['task_vars']['common.product_name']
+                    else:
+                        query_list.append('common.product_name')
+                        break
+
 
         if query_list:
             next_node = {
