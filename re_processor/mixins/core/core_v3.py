@@ -235,7 +235,12 @@ class InputCore(BaseCore):
             pass
 
         if result:
-            result = result[1:] + [data]
+            result.insert(0, data)
+            res_len = len(result)
+            if res_len < content['length']:
+                result.extend([copy.deepcopy(result[0])] * (content['length'] - res_len))
+            else:
+                result = result[:content['length']]
         else:
             result = [data] * content['length']
 
