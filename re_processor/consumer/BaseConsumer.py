@@ -45,10 +45,12 @@ class BaseRabbitmqConsumer(object):
             self.process(body, log)
         except Exception, e:
             logger.exception(e)
-            log['exception'] = str(e)
-        self.channel.basic_ack(delivery_tag=method.delivery_tag)
-        log['proc_t'] = int((time.time() - log['ts']) * 1000)
-        logger.info(json.dumps(log))
+            #log['exception'] = str(e)
+        else:
+            log['proc_t'] = int((time.time() - log['ts']) * 1000)
+            logger.info(json.dumps(log))
+        finally:
+            self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def process(self, body, log=None):
         print body
