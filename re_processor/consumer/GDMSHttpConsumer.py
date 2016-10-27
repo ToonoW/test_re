@@ -30,7 +30,7 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
                             expires_at = resp_content['expires_at'].split('.')
                             expires_at = int(time.mktime(time.strptime(expires_at[0],'%Y-%m-%dT%H:%M:%S')))# * 1000 + int(expires_at[1][0:-1])
                             p.set(key, token)
-                            p.expire(key, expires_at - int(time.time) - 5)
+                            p.expire(key, expires_at - int(time.time()) - 5)
                             p.execute()
 
                         elif 429 == resp_token.status_code:
@@ -50,7 +50,7 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
                 if lock:
                     cache.delete(key + '_lock')
 
-        log['retry_cnt_token'] = cnt % 4
+        log['retry_cnt_token'] = cnt % 4 - 1
 
         return token
 
@@ -103,6 +103,6 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
         log['token'] = token
         log['status'] = resp.status_code
         log['message'] = resp.content
-        log['retry_cnt'] = cnt
+        log['retry_cnt'] = cnt - 1
         #print resp.status_code
         #print resp.content
