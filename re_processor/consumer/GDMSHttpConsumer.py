@@ -56,6 +56,7 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
 
     def process(self, body, log=None):
         msg = json.loads(body)
+        print msg
         if 'gdms_http' != msg['action_type']:
             log['exception'] = 'Invalid action_type: {}'.format(msg['action_type'])
             return False

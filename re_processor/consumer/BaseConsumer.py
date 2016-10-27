@@ -49,6 +49,7 @@ class BaseRabbitmqConsumer(object):
         else:
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
+            print log
         finally:
             self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
