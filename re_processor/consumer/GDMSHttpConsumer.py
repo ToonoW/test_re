@@ -65,7 +65,7 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
         content = json.loads(msg['content'])
         log['app_id'] = content['app_id']
         log['secret_key'] = content['secret_key']
-        key = 'rules_engine_gdms_token_{}'.format(hash(content['app_id'] + content['secret_key']))
+        key = 'rules_engine_gdms_apitoken_{}'.format(hash(content['app_id'] + content['secret_key']))
         url = content['url']
         data = content.get('data', {})
         headers = content.get('headers', {})
