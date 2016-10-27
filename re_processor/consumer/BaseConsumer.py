@@ -45,7 +45,7 @@ class BaseRabbitmqConsumer(object):
             self.process(body, log)
         except Exception, e:
             logger.exception(e)
-            #log['exception'] = str(e)
+            log['exception'] = str(e)
         else:
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
         finally:
