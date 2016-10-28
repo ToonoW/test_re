@@ -24,8 +24,8 @@ class GDMSHttpConsumer(BaseRabbitmqConsumer):
                     if lock:
                         token_url = content['token_url'] + '?app_id={}&secret_key={}'.format(content['app_id'], content['secret_key'])
                         resp_token = requests.get(token_url)
-                        resp_content = json.loads(resp_token.content)
                         if 200 == resp_token.status_code:
+                            resp_content = json.loads(resp_token.content)
                             token = resp_content['token']
                             expires_at = resp_content['expires_at'].split('.')
                             expires_at = int(time.mktime(time.strptime(expires_at[0],'%Y-%m-%dT%H:%M:%S')))# * 1000 + int(expires_at[1][0:-1])
