@@ -17,6 +17,9 @@ M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
+# reapi
+REAPI_HOST = env('REAPI_HOST', 'reapi.gwdev.com')
+
 TOPIC_MAP = {
     'device_online': 'online',
     'device_offline': 'offline',
