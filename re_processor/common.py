@@ -19,7 +19,40 @@ def debug_log(log):
     debug_logger.info(json.dumps(log))
 
 def new_virtual_device_log(product_key, rule_id):
-    pass
+    url = 'http://{}/log'.format(settings.REAPI_HOST)
+    headers = {
+        'X-Gizwits-Rulesengine-Token': settings.REAPI_TOKEN
+    }
+    data = {
+        'product_key': product_key,
+        'rule_id': rule_id
+    }
+    log_id = ''
+    try:
+        resp = requests.post(url, data=json.dumps(data), headers=headers)
+        if 201 == resp.status_code:
+            log_id = json.loads(resp.content)['log_id']
+    except Exception, e:
+        logger.warning(str(e))
+
+    return log_id
 
 def update_virtual_device_log(log_id, field, value):
-    pass
+    if not log_id:
+        return None
+    url = 'http://{}/log'.format(settings.REAPI_HOST)
+    headers = {
+        'X-Gizwits-Rulesengine-Token': settings.REAPI_TOKEN
+    }
+    data = {
+        'log_id': log_id,
+        'field': field,
+        'value': value
+    }
+
+    try:
+        requests.put(url, data=json.dumps(data), headers=headers)
+    except Exception, e:
+        logger.warning(str(e))
+
+    return log_id

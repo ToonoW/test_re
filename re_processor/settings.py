@@ -19,6 +19,7 @@ EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 # reapi
 REAPI_HOST = env('REAPI_HOST', 'reapi.gwdev.com')
+REAPI_TOKEN = env('REAPI_TOKEN', 'cWExcmVhcGl0ZXN0MQ==')
 
 TOPIC_MAP = {
     'device_online': 'online',

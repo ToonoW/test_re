@@ -5,7 +5,7 @@ import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, redis_pool
-from re_processor.common import _log
+from re_processor.common import _log, update_virtual_device_log
 from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
@@ -509,6 +509,8 @@ class OutputCore(BaseCore):
                     'error_message': 'time now is not in list of allow_time'
                 }
                 _log(p_log)
+                if 'virtual:site' == msg['task_vars'].get('mac', ''):
+                    update_virtual_device_log(msg.get('log_id'), 'triggle', 2)
                 return [], True
 
         params = {}
@@ -585,6 +587,13 @@ class OutputCore(BaseCore):
             'extern_params': msg['extern_params'],
             'content': json.dumps(content)
         }
+
+        if 'virtual:site' == msg['task_vars'].get('mac', ''):
+            _msg['log_data'] = {
+                'log_id': msg.get('log_id'),
+                'field': 'action',
+                'value': _msg['action_type']
+            }
 
         return [_msg], True
 
