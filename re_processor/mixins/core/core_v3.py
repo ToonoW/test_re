@@ -510,7 +510,7 @@ class OutputCore(BaseCore):
                 }
                 _log(p_log)
                 if 'virtual:site' == msg['task_vars'].get('mac', ''):
-                    update_virtual_device_log(msg.get('log_id'), 'triggle', 2)
+                    update_virtual_device_log(msg.get('log_id'), 'triggle', 2, 'time now is not allowed')
                 return [], True
 
         params = {}

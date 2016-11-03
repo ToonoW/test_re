@@ -37,17 +37,19 @@ def new_virtual_device_log(product_key, rule_id):
 
     return log_id
 
-def update_virtual_device_log(log_id, field, value):
+def update_virtual_device_log(log_id, field, value, exception=''):
     if not log_id:
         return None
     url = 'http://{}/log'.format(settings.REAPI_HOST)
     headers = {
         'X-Gizwits-Rulesengine-Token': settings.REAPI_TOKEN
     }
+    err_msg = (exception or 'not match') if 1 != value else exception
     data = {
         'log_id': log_id,
         'field': field,
-        'value': value
+        'value': value,
+        'exception': err_msg
     }
 
     try:

@@ -76,6 +76,6 @@ class MainProcessor(object):
                 }
                 _log(p_log)
                 if 'virtual:site' == msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
-                    update_virtual_device_log(msg.get('log_id'), 'triggle', log_status[result])
+                    update_virtual_device_log(msg.get('log_id'), 'triggle', log_status[result], error_message)
 
         return msg_list
