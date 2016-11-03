@@ -5,6 +5,7 @@ import json, requests
 
 from re_processor import settings
 from re_processor.consumer.BaseConsumer import BaseRabbitmqConsumer
+from re_processor.common import update_virtual_device_log
 
 
 class DevCtrlConsumer(BaseRabbitmqConsumer):
@@ -36,3 +37,6 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
 
         log['resp_content'] = resp.content
         log['status_code'] = resp.status_code
+
+        if 'log_data' in msg:
+            update_virtual_device_log(**msg['log_data'])
