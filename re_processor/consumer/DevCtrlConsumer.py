@@ -30,17 +30,19 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
         log['content'] = content
         try:
             content = json.loads(content)
-
             resp = requests.post(url, data=json.dumps(content['value']), headers=headers)
         except Exception, e:
             if 'log_data' in msg:
                 msg['log_data']['exception'] = str(e)
+                update_virtual_device_log(**msg['log_data'])
+        else:
+            #print resp.content
+            #print resp.status_code
+            log['resp_content'] = resp.content
+            log['status_code'] = resp.status_code
 
-        #print resp.content
-        #print resp.status_code
+            if 'log_data' in msg:
+                if 200 != resp.status_code:
+                    msg['log_data']['exception'] = resp.content
 
-        log['resp_content'] = resp.content
-        log['status_code'] = resp.status_code
-
-        if 'log_data' in msg:
-            update_virtual_device_log(**msg['log_data'])
+                update_virtual_device_log(**msg['log_data'])

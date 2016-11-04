@@ -44,12 +44,11 @@ def update_virtual_device_log(log_id, field, value, exception=''):
     headers = {
         'X-Gizwits-Rulesengine-Token': settings.REAPI_TOKEN
     }
-    err_msg = (exception or 'not match') if 1 != value else exception
     data = {
         'log_id': log_id,
         'field': field,
         'value': value,
-        'exception': err_msg
+        'exception': exception
     }
 
     try:
