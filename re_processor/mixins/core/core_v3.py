@@ -150,12 +150,12 @@ class InputCore(BaseCore):
             else:
                 is_success = cache.setnx(cache_key + '_lock', json.dumps(now_ts))
                 if is_success:
-                    cache.setex(cache_key + '_lock', json.dumps(now_ts), refresh)
+                    cache.expire(cache_key + '_lock', refresh)
                     do_refresh = True
                 else:
                     do_refresh = False
-        except:
-            pass
+        except redis.exceptions.RedisError, e:
+            result = {'error_message': 'redis error: {}'.format(str(e))}
 
         if do_refresh:
             _content = json.dumps(content)
@@ -167,9 +167,7 @@ class InputCore(BaseCore):
             data = content.get('data', {})
             method = content.get('method', 'get')
             if 'get' == method:
-                query_string = '&'.join(map(lambda x: '{0}={1}'.format(*x), data.items())) if data else ''
-                url = (url + '?' + query_string) if query_string else url
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=headers, params=data)
             elif 'post' == method:
                 response = requests.post(url, data=json.dumps(data), headers=headers)
             else:
@@ -178,15 +176,18 @@ class InputCore(BaseCore):
             result = json.loads(response.content)
 
             try:
-                cache.set(cache_key, response.content)
-            except:
-                pass
+                p = cache.pipeline()
+                p.set(cache_key, response.content)
+                p.expire(key, refresh + 5)
+                p.execute()
+            except redis.exceptions.RedisError, e:
+                result = {'error_message': 'redis error: {}'.format(str(e))}
         else:
             try:
                 result = cache.get(cache_key)
                 result = json.loads(result)
-            except:
-                pass
+            except redis.exceptions.RedisError, e:
+                result = {'error_message': 'redis error: {}'.format(str(e))}
 
         return result
 
