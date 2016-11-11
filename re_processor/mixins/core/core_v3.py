@@ -219,12 +219,12 @@ class InputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['rule_id'])
+        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['product_key'])
 
         return self.next(msg)
 
-    def get_sequence(self, data, content, rule_id):
-        cache_key = 're_core_{0}_{1}_device_sequence'.format(rule_id, content['alias'])
+    def get_sequence(self, data, content, product_key):
+        cache_key = 're_core_{0}_{1}_device_sequence'.format(product_key, content['data'])
         cache = redis.Redis(connection_pool=redis_pool)
 
         result = []
@@ -604,6 +604,7 @@ class OutputCore(BaseCore):
 
     def extern_alias(self, task_vars, content):
         app_id = content.get('app_id', '')
+        uids = content.get('uids', [])
         if not app_id:
             return {}
         url = "http://{0}/v1/bindings/{1}?appids={2}".format(settings.HOST_GET_BINDING, task_vars['did'], app_id)
@@ -616,4 +617,4 @@ class OutputCore(BaseCore):
         except:
             data = {}
 
-        return data
+        return {k: filter(lambda x: x['uid'] in uids, v) for k, v in data.items()} if uids else data
