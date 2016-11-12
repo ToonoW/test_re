@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import logging, json, requests
+import logging, json, requests, redis, copy
 import logging.config
 
 from re_processor import settings
+from re_processor.connections import redis_pool
 
 logging.config.dictConfig(settings.LOGGING)
 
@@ -57,3 +58,32 @@ def update_virtual_device_log(log_id, field, value, exception=''):
         logger.warning(str(e))
 
     return log_id
+
+def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
+    try:
+        cache = redis.Redis(connection_pool=redis_pool)
+        p = cache.pipeline()
+        p.lpush(key, data)
+        p.expire(key, expire)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        return {'error_message': 'redis error: {}'.format(str(e))}
+    else:
+        return True
+
+def get_sequence(key, start, length):
+    try:
+        cache = redis.Redis(connection_pool=redis_pool)
+        result = cache.lrange(start, start+length-1)
+        if result:
+            res_len = len(result)
+            if res_len < length:
+                result.extend([copy.deepcopy(result[0])] * (length - res_len))
+            else:
+                result = result[:length]
+        else:
+            result = []
+    except redis.exceptions.RedisError, e:
+        result = {'error_message': 'redis error: {}'.format(str(e))}
+
+    return result

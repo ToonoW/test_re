@@ -220,12 +220,12 @@ class InputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['product_key'])
+        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['did'])
 
         return self.next(msg)
 
-    def get_sequence(self, data, content, product_key):
-        cache_key = 're_core_{0}_{1}_device_sequence'.format(product_key, content['data'])
+    def get_sequence(self, data, content, did):
+        cache_key = 're_core_{0}_{1}_device_sequence'.format(did, content['data'])
         cache = redis.Redis(connection_pool=redis_pool)
 
         result = []

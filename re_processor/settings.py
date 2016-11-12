@@ -126,6 +126,7 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
+SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 
 #############################################
