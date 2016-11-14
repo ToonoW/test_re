@@ -13,7 +13,12 @@ from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import debug_logger as logger, console_logger, new_virtual_device_log
+from re_processor.common import (
+    debug_logger as logger,
+    console_logger,
+    new_virtual_device_log,
+    update_several_sequence,
+    _log)
 
 
 class BaseRabbitmqConsumer(object):
@@ -196,10 +201,14 @@ class BaseRabbitmqConsumer(object):
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule_id
             log_id = ''
+            sequence_dict = {}
             if 3 == ver:
                 for __task in rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule_id)
+
+                    if 'data' == event and 'device_sequence' == __task['type']:
+                        sequence_dict['re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data'])] = tmp_msg.get(__task['content']['data'], '')
                     __rule_tree = {
                         'ver': ver,
                         'event': msg['event_type'],
@@ -269,6 +278,11 @@ class BaseRabbitmqConsumer(object):
                     msg_list.append(__rule_tree)
 
         db.close()
+
+        if sequence_dict:
+            result = update_several_sequence(sequence_dict)
+            if result is not True:
+                _log(dict(log, **result))
 
         return msg_list
 

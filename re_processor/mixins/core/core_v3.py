@@ -5,7 +5,7 @@ import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, redis_pool
-from re_processor.common import _log, update_virtual_device_log
+from re_processor.common import _log, update_virtual_device_log, get_sequence
 from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
@@ -220,34 +220,17 @@ class InputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['did'])
+        result = get_sequence('re_core_{0}_{1}_device_sequence'.format(msg['task_vars']['did'], content['data']), content['length'])
+        if type(result) is dict:
+            msg.updata(result)
+            msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+        elif not result:
+            msg['error_message'] = 'empty stream'
+            msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+        else:
+            msg['task_vars'][content['alias']] = result
 
         return self.next(msg)
-
-    def get_sequence(self, data, content, did):
-        cache_key = 're_core_{0}_{1}_device_sequence'.format(did, content['data'])
-        cache = redis.Redis(connection_pool=redis_pool)
-
-        result = []
-        try:
-            result = cache.get(cache_key)
-            result = json.loads(result)
-        except:
-            pass
-
-        if result:
-            result.insert(0, data)
-            res_len = len(result)
-            if res_len < content['length']:
-                result.extend([copy.deepcopy(result[0])] * (content['length'] - res_len))
-            else:
-                result = result[:content['length']]
-        else:
-            result = [data] * content['length']
-
-        cache.set(cache_key, json.dumps(result))
-
-        return result
 
 
 class FuncCore(BaseCore):

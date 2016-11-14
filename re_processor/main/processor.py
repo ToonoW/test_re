@@ -70,7 +70,7 @@ class MainProcessor(object):
                     'result': result,
                     'ts': ts,
                     'proc_t': (time.time() - ts) * 1000,
-                    'error_message': error_message,
+                    'error_message': error_message or msg.get('error_message', ''),
                     'task_type': msg['current']['type'] if 3 == msg['ver'] else task_type,
                     'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }

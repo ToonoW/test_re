@@ -63,7 +63,7 @@ def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
     try:
         cache = redis.Redis(connection_pool=redis_pool)
         p = cache.pipeline()
-        p.lpush(key, data)
+        p.lpush(key, json.dumps(data))
         p.expire(key, expire)
         p.execute()
     except redis.exceptions.RedisError, e:
@@ -71,18 +71,30 @@ def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
     else:
         return True
 
-def get_sequence(key, start, length):
+def update_several_sequence(data, expire=settings.SEQUENCE_EXPIRE):
     try:
         cache = redis.Redis(connection_pool=redis_pool)
-        result = cache.lrange(start, start+length-1)
+        p = cache.pipeline()
+        for key, val in data.items():
+            p.lpush(key, json.dumps(val))
+            p.expire(key, expire)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        return {'error_message': 'redis error: {}'.format(str(e))}
+    else:
+        return True
+
+def get_sequence(key, length, start=0):
+    try:
+        cache = redis.Redis(connection_pool=redis_pool)
+        result = cache.lrange(key, start, start+length-1) or []
         if result:
+            result = map(lambda x: json.loads(x), result)
             res_len = len(result)
             if res_len < length:
-                result.extend([copy.deepcopy(result[0])] * (length - res_len))
+                result.extend([copy.deepcopy(result[-1])] * (length - res_len))
             else:
                 result = result[:length]
-        else:
-            result = []
     except redis.exceptions.RedisError, e:
         result = {'error_message': 'redis error: {}'.format(str(e))}
 
