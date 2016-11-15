@@ -256,7 +256,6 @@ class InputCore(BaseCore):
         return self.next(msg)
 
 
-
 class FuncCore(BaseCore):
     """FuncCore"""
     core_name = 'function'
