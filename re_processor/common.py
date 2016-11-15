@@ -78,6 +78,7 @@ def update_several_sequence(data, expire=settings.SEQUENCE_EXPIRE):
         for key, val in data.items():
             p.lpush(key, json.dumps(val))
             p.expire(key, expire)
+            p.ltrim(key, 0, settings.SEQUENCE_MAX_LEN-1)
         p.execute()
     except redis.exceptions.RedisError, e:
         return {'error_message': 'redis error: {}'.format(str(e))}

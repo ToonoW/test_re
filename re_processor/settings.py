@@ -126,7 +126,6 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
-SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 
 #############################################
@@ -141,6 +140,10 @@ SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # ES tmp url
 ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
+
+# sequence settings
+SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
+SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 
 # logging
 LOGGING = {

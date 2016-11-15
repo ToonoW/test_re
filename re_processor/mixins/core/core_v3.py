@@ -220,17 +220,41 @@ class InputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        result = get_sequence('re_core_{0}_{1}_device_sequence'.format(msg['task_vars']['did'], content['data']), content['length'])
-        if type(result) is dict:
-            msg.updata(result)
-            msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
-        elif not result:
-            msg['error_message'] = 'empty stream'
-            msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+        flag = True
+        if content['step'] > 1:
+            try:
+                _key = 're_core_{0}_{1}_device_sequence_counter'.format(msg['task_vars']['did'], content['data'])
+                cache = redis.Redis(connection_pool=redis_pool)
+                p = cache.pipeline()
+                p.incr(_key)
+                p.expire(_key, settings.SEQUENCE_EXPIRE)
+                res = p.execute()
+            except redis.exceptions.RedisError, e:
+                msg['error_message'] = 'redis error: {}'.format(str(e))
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+                flag = False
+            else:
+                if res[0] > content['step'] * 50:
+                    cache.incr(_key, -content['step']*50)
+
+                if 0 != res[0] % content['step']:
+                    flag = False
+
+        if flag:
+            result = get_sequence('re_core_{0}_{1}_device_sequence'.format(msg['task_vars']['did'], content['data']), content['length'])
+            if type(result) is dict:
+                msg.updata(result)
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+            elif not result:
+                msg['error_message'] = 'empty stream'
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+            else:
+                msg['task_vars'][content['alias']] = result
         else:
-            msg['task_vars'][content['alias']] = result
+            return []
 
         return self.next(msg)
+
 
 
 class FuncCore(BaseCore):
