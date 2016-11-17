@@ -5,9 +5,15 @@ import time, json
 
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
-from re_processor.common import debug_logger as logger
+from re_processor.common import debug_logger as logger, update_virtual_device_log
 from re_processor.common import _log
 
+
+log_status = {
+    'success': 1,
+    'failed': 2,
+    'exception': 3
+}
 
 class MainProcessor(object):
     '''
@@ -69,5 +75,7 @@ class MainProcessor(object):
                     'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }
                 _log(p_log)
+                if 'virtual:site' == msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
+                    update_virtual_device_log(msg.get('log_id'), 'triggle', log_status[result], error_message)
 
         return msg_list

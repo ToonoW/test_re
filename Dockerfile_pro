@@ -3,6 +3,8 @@ FROM 172.31.4.157:5000/gizwits2015/gizwits-python:latest
 MAINTAINER Jam Huang <jamhuang@gizwits.com>
 
 RUN virtualenv /env-gw_re_processor
+RUN apt-get install -y python-numpy \
+                       python-scipy
 RUN mkdir -p /gw_re_processor
 ADD deploy/requirement.txt.docker requirements.txt
 RUN /env-gw_re_processor/bin/pip install -i http://172.32.1.187:3141/root/gizwits -r requirements.txt

@@ -13,7 +13,7 @@ from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import debug_logger as logger, console_logger
+from re_processor.common import debug_logger as logger, console_logger, new_virtual_device_log
 
 
 class BaseRabbitmqConsumer(object):
@@ -195,12 +195,16 @@ class BaseRabbitmqConsumer(object):
 
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule_id
+            log_id = ''
             if 3 == ver:
                 for __task in rule_tree['event'].get(event, []):
+                    if 'virtual:site' == msg['mac'] and not log_id:
+                        log_id = new_virtual_device_log(msg['product_key'], rule_id)
                     __rule_tree = {
                         'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
+                        'log_id': log_id,
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
                         'current': __task,
@@ -226,6 +230,7 @@ class BaseRabbitmqConsumer(object):
                         'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
+                        'log_id': log_id,
                         'action_id_list': [],
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
@@ -247,6 +252,7 @@ class BaseRabbitmqConsumer(object):
                         'ver': ver,
                         'event': msg['event_type'],
                         'rule_id': rule_id,
+                        'log_id': log_id,
                         'action_id_list': [],
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
