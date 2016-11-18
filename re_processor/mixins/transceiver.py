@@ -154,7 +154,8 @@ class BaseRabbitmqConsumer(object):
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
         msg['common.product_key'] = msg['product_key']
         msg['common.did'] = msg['did']
-        msg['common.mac'] = msg['mac']
+        msg['common.mac'] = msg['mac'].lower()
+        msg['common.mac_upper'] = msg['mac'].upper()
 
         if 'online' == event:
             msg['online.status'] = 1
