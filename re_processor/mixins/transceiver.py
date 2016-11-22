@@ -108,7 +108,7 @@ class BaseRabbitmqConsumer(object):
                 while True:
                     try:
                         if self.connecting:
-                            time.sleep(5)
+                            time.sleep(3)
                             continue
                         self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
@@ -130,7 +130,7 @@ class BaseRabbitmqConsumer(object):
             while True:
                 try:
                     if self.connecting:
-                        time.sleep(5)
+                        time.sleep(3)
                         continue
                     self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
