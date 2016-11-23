@@ -193,6 +193,7 @@ class BaseRabbitmqConsumer(object):
             msg['product_key'])
         db.execute(sql)
         msg_list = []
+        sequence_dict = {}
         for rule_id, rule_tree, custom_vars, enabled, ver in db.fetchall():
             if 1 != enabled:
                 continue
@@ -202,14 +203,14 @@ class BaseRabbitmqConsumer(object):
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule_id
             log_id = ''
-            sequence_dict = {}
             if 3 == ver:
+                if 'data' == event:
+                    sequence_dict.update({'re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data']): tmp_msg.get(__task['content']['data'], '') for __task in rule_tree['sequence_list']})
+
                 for __task in rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule_id)
 
-                    if 'data' == event and 'device_sequence' == __task['type']:
-                        sequence_dict['re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data'])] = tmp_msg.get(__task['content']['data'], '')
                     __rule_tree = {
                         'ver': ver,
                         'event': msg['event_type'],
