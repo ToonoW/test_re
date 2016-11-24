@@ -225,6 +225,28 @@ class BaseRabbitmqConsumer(object):
                         'custom_vars': custom_vars
                     }
                     msg_list.append(__rule_tree)
+            elif 1 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'log_id': log_id,
+                        'action_id_list': [],
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'action_sel': False,
+                        'can_tri': [],
+                        'triggle': [],
+                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+                        'task_list': __rule_tree_list[0],
+                        'para_task': __rule_tree_list[1:],
+                        'todo_task': [],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
             elif 2 == ver:
                 __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
                 if __rule_tree_list:
@@ -252,28 +274,6 @@ class BaseRabbitmqConsumer(object):
                         'task_list': _task['task_list'],
                         'para_task': [],
                         'todo_task': __rule_tree_list[0],
-                        'task_vars': tmp_msg,
-                        'custom_vars': custom_vars
-                    }
-                    msg_list.append(__rule_tree)
-            elif 1 == ver:
-                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
-                if __rule_tree_list:
-                    __rule_tree = {
-                        'ver': ver,
-                        'event': msg['event_type'],
-                        'rule_id': rule_id,
-                        'log_id': log_id,
-                        'action_id_list': [],
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'action_sel': False,
-                        'can_tri': [],
-                        'triggle': [],
-                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
-                        'task_list': __rule_tree_list[0],
-                        'para_task': __rule_tree_list[1:],
-                        'todo_task': [],
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
