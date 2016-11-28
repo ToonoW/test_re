@@ -110,20 +110,20 @@ def update_device_status(product_key, did, mac, status, ts):
         mac)
     db.execute(sql)
     if db.fetchall():
-        sql = 'update `{0}` set `is_online`={1}, `ts`={2} where `did`="{3}" and `mac`="{4}" limit 1'.format(
+        sql = 'update `{0}` set `is_online`={1}, `ts`="{2}" where `did`="{3}" and `mac`="{4}" limit 1'.format(
             settings.MYSQL_TABLE['device_status']['table'],
             status,
-            ts,
+            str(ts),
             did,
             mac)
     else:
-        sql = 'insert into `{0}` set `product_key`="{1}", `did`="{2}", `mac`="{3}", `is_online`={4}, `ts`={5}'.format(
+        sql = 'insert into `{0}` set `product_key`="{1}", `did`="{2}", `mac`="{3}", `is_online`={4}, `ts`="{5}"'.format(
             settings.MYSQL_TABLE['device_status']['table'],
             product_key,
             did,
             mac,
             status,
-            ts)
+            str(ts))
     db.execute(sql)
     print db.fetchall()
     db.close()
