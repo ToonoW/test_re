@@ -117,6 +117,9 @@ MYSQL_TABLE = {
     },
     'action': {
         'table': 't_rulesengine_action'
+    },
+    'device_status': {
+        'table': 't_rulesengine_device_status'
     }
 }
 

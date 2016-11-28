@@ -18,6 +18,7 @@ from re_processor.common import (
     console_logger,
     new_virtual_device_log,
     update_several_sequence,
+    update_device_status,
     _log)
 
 
@@ -144,7 +145,7 @@ class BaseRabbitmqConsumer(object):
     def mq_unpack(self, body, log=None):
         log['running_status'] = 'unpack'
         msg = json.loads(body)
-        #print msg;
+        print msg;
         event =  settings.TOPIC_MAP[msg['event_type']]
         if msg.has_key('data'):
             data = msg.pop('data')
@@ -204,8 +205,16 @@ class BaseRabbitmqConsumer(object):
             tmp_msg['common.rule_id'] = rule_id
             log_id = ''
             if 3 == ver:
-                if 'data' == event:
-                    sequence_dict.update({'re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data']): tmp_msg.get(__task['content']['data'], '') for __task in rule_tree['sequence_list']})
+                if rule_tree.get('sequence_list', []):
+                    if 'data' == event:
+                        sequence_dict.update({'re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data']): tmp_msg.get(__task['content']['data'], '') for __task in rule_tree['sequence_list']})
+
+                elif rule_tree.get('schedule_list', []):
+                    if'online' == event:
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
+
+                    elif 'offline' == event:
+                        pass
 
                 for __task in rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
