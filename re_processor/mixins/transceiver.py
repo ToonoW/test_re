@@ -145,7 +145,7 @@ class BaseRabbitmqConsumer(object):
     def mq_unpack(self, body, log=None):
         log['running_status'] = 'unpack'
         msg = json.loads(body)
-        print msg;
+        #print msg;
         event =  settings.TOPIC_MAP[msg['event_type']]
         if msg.has_key('data'):
             data = msg.pop('data')
@@ -212,9 +212,20 @@ class BaseRabbitmqConsumer(object):
                 elif rule_tree.get('schedule_list', []):
                     if'online' == event:
                         update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
+                        msg_list.extend([{
+                            'action_type': 'schedule_wait',
+                            'ver': ver,
+                            'product_key': msg['product_key'],
+                            'did': msg['did'],
+                            'mac': msg['mac'],
+                            'rule_id': rule_id,
+                            'node_id': x['node'],
+                            'msg_to': settings.MSG_TO['external'],
+                            'ts': msg['sys.timestamp'] + 60*x['internal'],
+                        } for x in rule_tree['schedule_list']])
 
                     elif 'offline' == event:
-                        pass
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 0, msg['sys.timestamp_ms'])
 
                 for __task in rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:

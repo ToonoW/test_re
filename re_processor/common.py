@@ -125,5 +125,4 @@ def update_device_status(product_key, did, mac, status, ts):
             status,
             str(ts))
     db.execute(sql)
-    print db.fetchall()
     db.close()
