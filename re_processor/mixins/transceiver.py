@@ -61,25 +61,10 @@ class BaseRabbitmqConsumer(object):
                 break
 
     def consume(self, ch, method, properties, body):
-        log = {
-            'ts': time.time(),
-            'module': 're_processor_status',
-            'running_status': 'beginning'
-        }
-        try:
-            #print body
-            lst = self.unpack(body, log)
-            if lst:
-                msg = map(lambda m: self.process_msg(m, log), lst)
-                if msg:
-                    self.send(reduce(operator.__add__, msg), log)
-        except Exception, e:
-            console_logger.exception(e)
-            log['exception'] = str(e)
-            log['proc_t'] = int((time.time() - log['ts']) * 1000)
-            logger.info(json.dumps(log))
-
-        #self.channel.basic_ack(delivery_tag=method.delivery_tag)
+        '''
+        subclass implement
+        '''
+        print body
 
 
     def mq_listen(self, mq_queue_name, product_key):
@@ -97,7 +82,7 @@ class BaseRabbitmqConsumer(object):
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
             msg_pub = json.dumps(msg)
-            if self.debug is True:
+            if settings.DEBUG is True:
                 routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
                 log = {
                     'module': 're_processor',

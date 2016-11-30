@@ -42,7 +42,9 @@ ROUTING_KEY = {
     'unbind': 'products.{}.events.device.unbind',
     #'raw': 'products.{}.events.device.status.raw',
     'data': 'products.{}.events.device.status.kv',
-    #'changed': 'products.{}.events.datapoints.changed'
+    #'changed': 'products.{}.events.datapoints.changed',
+    'schedule': 'rules_engine_schedule',
+    'schedule_wait': 'rules_engine_schedule_wait'
 }
 
 PUBLISH_ROUTING_KEY = {
@@ -103,6 +105,10 @@ CORE_MAP = {
         'output': 'OutputCore'
     }
 }
+
+# schedule settings
+TASK_QUEUE_LEN = env('TASK_QUEUE_LEN', 1000)
+TASK_QUEUE_NUM = env('TASK_QUEUE_NUM', 1000)
 
 ###########databases settings################
 # mongo
