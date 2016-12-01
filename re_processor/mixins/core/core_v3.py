@@ -4,7 +4,7 @@
 import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, redis_pool
+from re_processor.connections import get_mongodb, redis_pool, get_redis
 from re_processor.common import _log, update_virtual_device_log, get_sequence
 from re_processor.data_transform import DataTransformer
 
@@ -224,7 +224,7 @@ class InputCore(BaseCore):
         if content['step'] > 1:
             try:
                 _key = 're_core_{0}_{1}_device_sequence_counter'.format(msg['task_vars']['did'], content['data'])
-                cache = redis.Redis(connection_pool=redis_pool)
+                cache = get_redis()
                 p = cache.pipeline()
                 p.incr(_key)
                 p.expire(_key, settings.SEQUENCE_EXPIRE)
