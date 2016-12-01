@@ -5,7 +5,7 @@ import logging, json, requests, redis, copy
 import logging.config
 
 from re_processor import settings
-from re_processor.connections import redis_pool, get_mysql
+from re_processor.connections import get_redis, get_mysql
 
 logging.config.dictConfig(settings.LOGGING)
 
@@ -61,7 +61,7 @@ def update_virtual_device_log(log_id, field, value, exception=''):
 
 def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
     try:
-        cache = redis.Redis(connection_pool=redis_pool)
+        cache = get_redis()
         p = cache.pipeline()
         p.lpush(key, json.dumps(data))
         p.expire(key, expire)
@@ -74,7 +74,7 @@ def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
 
 def update_several_sequence(data, expire=settings.SEQUENCE_EXPIRE):
     try:
-        cache = redis.Redis(connection_pool=redis_pool)
+        cache = get_redis()
         p = cache.pipeline()
         for key, val in data.items():
             p.lpush(key, json.dumps(val))
@@ -88,7 +88,7 @@ def update_several_sequence(data, expire=settings.SEQUENCE_EXPIRE):
 
 def get_sequence(key, length, start=0):
     try:
-        cache = redis.Redis(connection_pool=redis_pool)
+        cache = get_redis()
         result = cache.lrange(key, start, start+length-1) or []
         if result:
             result = map(lambda x: json.loads(x), result)
