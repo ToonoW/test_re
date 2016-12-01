@@ -107,8 +107,8 @@ CORE_MAP = {
 }
 
 # schedule settings
-TASK_QUEUE_LEN = env('TASK_QUEUE_LEN', 1000)
-TASK_QUEUE_NUM = env('TASK_QUEUE_NUM', 1000)
+SCHEDULE_FILE_DIR = env('SCHEDULE_FILE_DIR', '/mnt/workspace/gw_re_pocessor/tmp')
+DEVICE_HASH_GROUP = env('DEVICE_HASH_GROUP', 100)
 
 ###########databases settings################
 # mongo
