@@ -199,7 +199,6 @@ class BaseRabbitmqConsumer(object):
                         update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
                         msg_list.extend([{
                             'action_type': 'schedule_wait',
-                            'ver': ver,
                             'product_key': msg['product_key'],
                             'did': msg['did'],
                             'mac': msg['mac'],

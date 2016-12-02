@@ -87,6 +87,7 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
             logger.info(json.dumps(log))
 
     def begin(self):
+        self.id = ""
         self.mq_listen(self.mq_queue_name, self.product_key)
 
     def waiting(self, body, log):
@@ -94,7 +95,6 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
         msg:
         {
             "action_type": "schedule_wait",
-            "ver": 3,
             "product_key": <product_key string>,
             "did": <did string>,
             "mac": <mac string>,
@@ -106,26 +106,39 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
         log['running_status'] = 'waiting'
         msg = json.loads(body)
         print msg
+        self.persist(msg)
 
-        hour = msg['ts'] / 3600
-        minute = msg['ts'] / 60
-        file_dir = settings.SCHEDULE_FILE_DIR.rstrip('/') + '/{0}/{1}/{2}'.format(
-            hour,
-            minute,
-            hash(msg.get('did') or msg['product_key']) % settings.DEVICE_HASH_GROUP
-            )
-        if not os.path.exists(file_dir):
-            os.makedirs(file_dir, mode=777)
-        file_name = '{}/{0}_{1}_{2}'.format(file_dir, msg.get('did', ''), msg['rule_id'], msg['node_id'])
-        os.system(r'touch {}'.format(file_name))
 
-    def dispatch():
+    def dispatch(self):
         while True:
             try:
+                time_now = time.time()
                 log = {
-                    'ts': time.time(),
+                    'ts': time_now,
                     'module': 're_processor_status',
                     'running_status': 'dispatching'
                 }
             except:
                 pass
+
+    def persist(self, msg):
+        hour = msg['ts'] / 3600
+        minute = msg['ts'] / 60
+        file_dir = settings.SCHEDULE_FILE_DIR.rstrip('/') + '/{0}/{1}/{2}/{3}/{4}'.format(
+            self.id,
+            hour,
+            minute,
+            msg['ts'],
+            hash(msg.get('did') or msg['product_key']) % settings.DEVICE_HASH_GROUP
+            )
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir, mode=777)
+
+        file_name = '{0}/{1}_{2}_{3}_{4}'.format(
+            file_dir,
+            msg.get('did', ''),
+            msg['rule_id'],
+            msg['node_id'],
+            msg['ts']
+            )
+        os.system(r'touch {}'.format(file_name))
