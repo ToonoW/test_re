@@ -64,17 +64,20 @@ class MainProcessor(object):
                     'product_key': msg['task_vars'].get('product_key', ''),
                     'did': msg['task_vars'].get('did', ''),
                     'mac': msg['task_vars'].get('mac', ''),
-                    'extern_params': msg.get('extern_params', ''),
-                    'task_vars': json.dumps(msg['task_vars']),
                     'current': 'log',
                     'result': result,
                     'ts': ts,
                     'proc_t': (time.time() - ts) * 1000,
-                    'error_message': error_message,
-                    'task_type': msg['current']['type'] if 3 == msg['ver'] else task_type,
                     'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }
+                if settings.DEBUG is True or 'virtual:site' == msg['task_vars'].get('mac', '') or 'exception' == result:
+                    p_log['extern_params'] = msg.get('extern_params', '')
+                    p_log['task_vars'] = msg['task_vars']
+                    p_log['task_type'] = msg['current']['type'] if 3 == msg['ver'] else task_type
+                    p_log['error_message'] = error_message
+
                 _log(p_log)
+
                 if 'virtual:site' == msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
                     update_virtual_device_log(msg.get('log_id'), 'triggle', log_status[result], error_message)
 
