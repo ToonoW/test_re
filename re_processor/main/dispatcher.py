@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, copy, os
+import time, json, copy, os, uuid
 
 import gevent
 
@@ -89,10 +89,22 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
 
     def begin(self):
         fid_name = '{}/fid'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))
-        if not os.path.isfile(fid_name):
-            cache = get_redis()
-            lock_key = 're_core_fid_lock'
-
+        while True:
+            if not os.path.isfile(fid_name):
+                cache = get_redis()
+                lock_key = 're_core_fid_lock'
+                lock = cache.setnx(lock_key, 1)
+                if lock:
+                    with open(fid_name) as fp:
+                        self.id = str(uuid.uuid4())
+                        fp.write(self.id)
+                    break
+                else:
+                    time.sleep(1)
+            else:
+                with open(fid_name) as fp:
+                    self.id = fp.read()
+                break
 
         self.mq_listen(self.mq_queue_name, self.product_key)
 
