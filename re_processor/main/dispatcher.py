@@ -8,6 +8,7 @@ import gevent
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
 from re_processor.common import debug_logger as logger, console_logger
+from re_processor.connections import get_redis
 
 from processor import MainProcessor
 
@@ -87,7 +88,12 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
             logger.info(json.dumps(log))
 
     def begin(self):
-        self.id = ""
+        fid_name = '{}/fid'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))
+        if not os.path.isfile(fid_name):
+            cache = get_redis()
+            lock_key = 're_core_fid_lock'
+
+
         self.mq_listen(self.mq_queue_name, self.product_key)
 
     def waiting(self, body, log):
@@ -124,8 +130,7 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
     def persist(self, msg):
         hour = msg['ts'] / 3600
         minute = msg['ts'] / 60
-        file_dir = settings.SCHEDULE_FILE_DIR.rstrip('/') + '/{0}/{1}/{2}/{3}/{4}'.format(
-            self.id,
+        file_dir = settings.SCHEDULE_FILE_DIR.rstrip('/') + '/{0}/{1}/{2}/{3}'.format(
             hour,
             minute,
             msg['ts'],
