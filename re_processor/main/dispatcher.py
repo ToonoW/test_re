@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, copy, os, uuid
+import time, json, copy, os, uuid, shutil, math
 
 import gevent
 
@@ -70,7 +70,41 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
     def __init__(self, product_key=None):
         self.mq_queue_name = 'schedule_wait'
         self.product_key = product_key or '*'
+        self.retry_lst = []
         self.mq_initial()
+        self.sender = MainSender(self.product_key)
+
+        fid_name = '{}/fid'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))
+        while True:
+            if os.path.isfile(fid_name):
+                with open(fid_name) as fp:
+                    self.fid = fp.read()
+                break
+            else:
+                cache = get_redis()
+                lock_key = 're_core_fid_lock'
+                lock = cache.setnx(lock_key, 1)
+                if lock:
+                    with open(fid_name, 'w+') as fp:
+                        self.fid = str(uuid.uuid4())
+                        fp.write(self.fid)
+                    cache.delete(lock_key)
+                    break
+                else:
+                    print 'waiting for fid file...'
+                    cache.expire(lock_key, 60)
+                    time.sleep(1)
+
+        self.start_time = self.update_start_time()
+
+    def update_start_time(self):
+        try:
+            return reduce(lambda x, f_lst: min(x, map(lambda y: int(y.split('_')[-1]), f_lst[2])),
+                          os.walk('{}/task'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))),
+                          int(time.time()))
+        except:
+            return int(time.time())
+
 
     def consume(self, ch, method, properties, body):
         log = {
@@ -88,24 +122,6 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
             logger.info(json.dumps(log))
 
     def begin(self):
-        fid_name = '{}/fid'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))
-        while True:
-            if not os.path.isfile(fid_name):
-                cache = get_redis()
-                lock_key = 're_core_fid_lock'
-                lock = cache.setnx(lock_key, 1)
-                if lock:
-                    with open(fid_name) as fp:
-                        self.id = str(uuid.uuid4())
-                        fp.write(self.id)
-                    break
-                else:
-                    time.sleep(1)
-            else:
-                with open(fid_name) as fp:
-                    self.id = fp.read()
-                break
-
         self.mq_listen(self.mq_queue_name, self.product_key)
 
     def waiting(self, body, log):
@@ -136,13 +152,57 @@ class ScheduleDispatcher(BaseRabbitmqConsumer):
                     'module': 're_processor_status',
                     'running_status': 'dispatching'
                 }
-            except:
-                pass
+                ts = int(math.ceil(time_now))
+                if time_now > self.start_time:
+                    map(lambda x: gevent.spawn(self.scan_device, x, log), xrange(self.start_time, ts+1))
+                sleep_remain = ts + 1 - time.time()
+                if sleep_remain > 0:
+                    time.sleep(sleep_remain)
+            except Exception, e:
+                console_logger.exception(e)
+                log['exception'] = str(e)
+                log['proc_t'] = int((time.time() - log['ts']) * 1000)
+                logger.info(json.dumps(log))
+
+    def scan_device(self, ts, log):
+        log['running_status'] = 'scan_device'
+        hour = ts / 3600
+        minute = ts / 60
+        dir_name = '{0}/task/{1}/{2}/{3}'.format(
+            settings.SCHEDULE_FILE_DIR.rstrip('/'),
+            hour,
+            minute,
+            ts)
+        if os.path.isdir(dir_name):
+            cache = get_redis()
+            lock_key = 're_core_{0}_{1}_lock'.format(self.fid, ts)
+            lock = cache.setnx(lock_key, 1)
+            if lock:
+                msg = {
+                    'action_type': 'schedule',
+                    'event_type': 'device_schedule',
+                    'created_at': time.time()
+                }
+                msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
+                                  map(lambda x: dict(msg, **{
+                                      'did': x[0],
+                                      'rule_id': x[1],
+                                      'node_id': x[2]
+                                  }), map(lambda x: str.spl(x, '_'), f_lst[2])),
+                                  os.walk(dir_name),
+                                  [])
+                if msg_lsit:
+                    self.sender.send_msgs(msg_lsit)
+                cache.delete(lock_key)
+                shutil.rmtree(dir_name)
+            else:
+                cache.expire(lock_key, 60)
 
     def persist(self, msg):
         hour = msg['ts'] / 3600
         minute = msg['ts'] / 60
-        file_dir = settings.SCHEDULE_FILE_DIR.rstrip('/') + '/{0}/{1}/{2}/{3}'.format(
+        file_dir = '{0}/task/{1}/{2}/{3}/{4}'.format(
+            settings.SCHEDULE_FILE_DIR.rstrip('/'),
             hour,
             minute,
             msg['ts'],
