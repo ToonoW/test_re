@@ -67,8 +67,8 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
     store msgs waiting to be dispatched
     '''
 
-    def __init__(self, product_key=None):
-        self.mq_queue_name = 'schedule_wait'
+    def __init__(self, mq_queue_name, product_key=None):
+        self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
         self.mq_initial()
         self.sender = MainSender(self.product_key)
