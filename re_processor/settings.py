@@ -128,9 +128,12 @@ MYSQL_TABLE = {
     'action': {
         'table': 't_rulesengine_action'
     },
+    'schedule': {
+        'table': 't_rulesengine_schedule',
+    },
     'device_status': {
         'table': 't_rulesengine_device_status'
-    }
+    },
 }
 
 # redis

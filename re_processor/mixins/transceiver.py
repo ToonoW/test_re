@@ -50,7 +50,7 @@ class BaseRabbitmqConsumer(object):
         while True:
             try:
                 self.connecting = True
-                time.sleep(5)
+                time.sleep(1)
                 self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
             except AMQPConnectionError, e:
                 console_logger.exception(e)
@@ -67,13 +67,13 @@ class BaseRabbitmqConsumer(object):
         print body
 
 
-    def mq_listen(self, mq_queue_name, product_key):
+    def mq_listen(self, mq_queue_name, product_key, no_ack=True):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
         while True:
             try:
                 self.mq_subcribe(mq_queue_name, product_key)
                 self.channel.basic_qos(prefetch_count=1)
-                self.channel.basic_consume(self.consume, queue=name, no_ack=True)
+                self.channel.basic_consume(self.consume, queue=name, no_ack=no_ack)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:
                 console_logger.exception(e)
@@ -94,7 +94,7 @@ class BaseRabbitmqConsumer(object):
                 while True:
                     try:
                         if self.connecting:
-                            time.sleep(3)
+                            time.sleep(1)
                             continue
                         self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
@@ -116,7 +116,7 @@ class BaseRabbitmqConsumer(object):
             while True:
                 try:
                     if self.connecting:
-                        time.sleep(3)
+                        time.sleep(1)
                         continue
                     self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
@@ -206,6 +206,7 @@ class BaseRabbitmqConsumer(object):
                             'node_id': x['node'],
                             'msg_to': settings.MSG_TO['external'],
                             'ts': msg['sys.timestamp'] + 60*x['internal'],
+                            'flag': msg['sys.timestamp_ms']
                         } for x in rule_tree['schedule_list']])
 
                     elif 'offline' == event:
