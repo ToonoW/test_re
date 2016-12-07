@@ -22,6 +22,7 @@ REAPI_HOST = env('REAPI_HOST', 'reapi.gwdev.com')
 REAPI_TOKEN = env('REAPI_TOKEN', 'cWExcmVhcGl0ZXN0MQ==')
 
 TOPIC_MAP = {
+    'schedule': 'schedule',
     'device_online': 'online',
     'device_offline': 'offline',
     'device_bind': 'bind',

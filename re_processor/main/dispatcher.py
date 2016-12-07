@@ -124,13 +124,14 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
         if not os.path.exists(file_dir):
             os.makedirs(file_dir, mode=0777)
 
-        file_name = '{0}/{1}_{2}_{3}_{4}_{5}'.format(
+        file_name = '{0}/{1}_{2}_{3}_{4}_{5}_{6}'.format(
             file_dir,
             msg.get('did', ''),
             msg['rule_id'],
             msg['node_id'],
             msg['flag'],
-            msg['ts']
+            msg['ts'],
+            msg['mac']
             )
         os.system(r'touch {}'.format(file_name))
 
@@ -168,7 +169,7 @@ class DeviceScheduleScanner(object):
 
     def update_start_time(self):
         try:
-            return reduce(lambda x, f_lst: min(x, map(lambda y: int(y.split('_')[-1]), f_lst[2])),
+            return reduce(lambda x, f_lst: min(x, map(lambda y: int(y.split('_', 5)[-2]), f_lst[2])),
                           os.walk('{}/task'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))),
                           int(time.time()))
         except:
@@ -214,8 +215,8 @@ class DeviceScheduleScanner(object):
                     'created_at': time.time()
                 }
                 msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
-                                  map(lambda x: dict(msg, did=x[0], rule_id=x[1], node_id=x[2]),
-                                      map(lambda x: str.spl(x, '_'), f_lst[2])),
+                                  map(lambda x: dict(msg, did=x[0], rule_id=x[1], node_id=x[2], flag=x[3], mac=x[-1]),
+                                      map(lambda x: str.spl(x, '_', 5), f_lst[2])),
                                   os.walk(dir_name),
                                   [])
                 if msg_lsit:
@@ -277,7 +278,9 @@ class ProductScheduleScanner(object):
                 'action_type': 'schedule',
                 'event_type': 'device_schedule',
                 'created_at': log['ts'],
-                'did': ''
+                'did': '',
+                'mac': '',
+                'flag': ''
             }
             skip += limit
             msg_lsit = map(lambda res: dict(msg, rule_id=res[1], node_id=res[2]),
