@@ -189,6 +189,7 @@ class DeviceScheduleScanner(object):
                 sleep_remain = ts + 1 - time.time()
                 if sleep_remain > 0:
                     time.sleep(sleep_remain)
+                self.start_time = time_now
             except Exception, e:
                 console_logger.exception(e)
                 log['exception'] = str(e)
