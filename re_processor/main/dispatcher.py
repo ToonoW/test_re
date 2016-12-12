@@ -164,6 +164,7 @@ class DeviceScheduleScanner(object):
                     cache.expire(lock_key, 60)
                     time.sleep(1)
 
+        #print self.fid
         self.update_start_time()
 
     def update_start_time(self):
@@ -213,7 +214,7 @@ class DeviceScheduleScanner(object):
             cache = get_redis()
             lock_key = 're_core_{0}_{1}_lock'.format(self.fid, ts)
             lock = cache.setnx(lock_key, 1)
-            if lock:
+            if lock and os.path.isdir(dir_name):
                 msg = {
                     'action_type': 'schedule',
                     'event_type': 'device_schedule',
@@ -226,8 +227,10 @@ class DeviceScheduleScanner(object):
                                   [])
                 if msg_lsit:
                     self.sender.send_msgs(msg_lsit)
-                cache.delete(lock_key)
                 shutil.rmtree(dir_name)
+                cache.delete(lock_key)
+                log['dir_name'] = dir_name
+                logger.info(json.dumps(log))
             else:
                 cache.expire(lock_key, 60)
 
@@ -241,14 +244,15 @@ class ProductScheduleScanner(object):
         self.sender = MainSender(product_key)
 
     def begin(self):
-        log = {
-            'module': 're_processor',
-            'handling': 'scan',
-            'running_status': 'dispatching'
-        }
         while True:
             try:
                 time_now = time.time()
+                log = {
+                    'module': 're_processor',
+                    'handling': 'scan',
+                    'running_status': 'dispatching',
+                    'ts': time_now
+                }
                 min = int(time_now) / 60
                 gevent.spawn(self.scan, min, dict(log, ts=time_now))
                 sleep_remain = min * 60 + 60 - time.time()
