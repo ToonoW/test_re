@@ -475,7 +475,7 @@ class FuncCore(BaseCore):
             else:
                 return []
 
-        msg['task_vars'][content['alias']] = DataTransformer(msg['task_vars'][content['data']]).run(content['func'])
+        msg['task_vars'][content['alias']] = DataTransformer(msg['task_vars'][content['data']]).run(content['func'], content.get('params', {}))
 
         return self.next(msg)
 
