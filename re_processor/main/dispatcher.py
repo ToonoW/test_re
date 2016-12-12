@@ -76,7 +76,8 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
     def consume(self, ch, method, properties, body):
         log = {
             'ts': time.time(),
-            'module': 're_processor_status',
+            'handling': 'buffer',
+            'module': 're_processor',
             'running_status': 'beginning'
         }
         try:
@@ -87,8 +88,8 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
             console_logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
-            logger.info(json.dumps(log))
         finally:
+            logger.info(json.dumps(log))
             self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def begin(self):
@@ -110,13 +111,11 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
         '''
         log['running_status'] = 'waiting'
         msg = json.loads(body)
-        print msg
+        #print msg
 
-        hour = msg['ts'] / 3600
-        minute = msg['ts'] / 60
-        file_dir = '{0}/task/{1}/{2}/{3}/{4}'.format(
+        minute = msg['ts'] % 60
+        file_dir = '{0}/task/{1}/{2}/{3}'.format(
             settings.SCHEDULE_FILE_DIR.rstrip('/'),
-            hour,
             minute,
             msg['ts'],
             hash(msg.get('did') or msg['product_key']) % settings.DEVICE_HASH_GROUP
@@ -165,31 +164,38 @@ class DeviceScheduleScanner(object):
                     cache.expire(lock_key, 60)
                     time.sleep(1)
 
-        self.start_time = self.update_start_time()
+        self.update_start_time()
 
     def update_start_time(self):
         try:
-            return reduce(lambda x, f_lst: min(x, map(lambda y: int(y.split('_', 5)[-2]), f_lst[2])),
-                          os.walk('{}/task'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))),
-                          int(time.time()))
+            self.start_time = reduce(lambda x, f_lst: min([x]+map(lambda y: int(y.split('_', 5)[-2]), f_lst[2])),
+                                     os.walk('{}/task'.format(settings.SCHEDULE_FILE_DIR.rstrip('/'))),
+                                     int(time.time()))
         except:
-            return int(time.time())
+            self.start_time = int(time.time())
 
     def begin(self):
+        cnt = 1
         while True:
             try:
-                log = {
-                    'module': 're_processor_status',
-                    'running_status': 'dispatching'
-                }
                 time_now = time.time()
+                log = {
+                    'module': 're_processor',
+                    'handling': 'scan',
+                    'running_status': 'dispatching',
+                    'ts': time_now
+                }
                 ts = int(math.ceil(time_now))
                 if time_now > self.start_time:
                     map(lambda x: gevent.spawn(self.scan, x, dict(log, ts=time_now)), xrange(self.start_time, ts+1))
-                sleep_remain = ts + 1 - time.time()
+                sleep_remain = ts - time.time()
                 if sleep_remain > 0:
                     time.sleep(sleep_remain)
-                self.start_time = time_now
+                self.start_time = ts
+                cnt += 1
+                if cnt > 60:
+                    self.update_start_time()
+                    cnt = 1
             except Exception, e:
                 console_logger.exception(e)
                 log['exception'] = str(e)
@@ -198,11 +204,9 @@ class DeviceScheduleScanner(object):
 
     def scan(self, ts, log):
         log['running_status'] = 'scan_device'
-        hour = ts / 3600
-        minute = ts / 60
-        dir_name = '{0}/task/{1}/{2}/{3}'.format(
+        minute = ts % 60
+        dir_name = '{0}/task/{1}/{2}'.format(
             settings.SCHEDULE_FILE_DIR.rstrip('/'),
-            hour,
             minute,
             ts)
         if os.path.isdir(dir_name):
@@ -217,7 +221,7 @@ class DeviceScheduleScanner(object):
                 }
                 msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
                                   map(lambda x: dict(msg, did=x[0], rule_id=x[1], node_id=x[2], flag=x[3], mac=x[-1]),
-                                      map(lambda x: str.spl(x, '_', 5), f_lst[2])),
+                                      map(lambda x: str.split(x, '_', 5), f_lst[2])),
                                   os.walk(dir_name),
                                   [])
                 if msg_lsit:
@@ -238,7 +242,8 @@ class ProductScheduleScanner(object):
 
     def begin(self):
         log = {
-            'module': 're_processor_status',
+            'module': 're_processor',
+            'handling': 'scan',
             'running_status': 'dispatching'
         }
         while True:
@@ -253,23 +258,22 @@ class ProductScheduleScanner(object):
                 console_logger.exception(e)
                 log['exception'] = str(e)
                 log['proc_t'] = int((time.time() - log['ts']) * 1000)
+            finally:
                 logger.info(json.dumps(log))
+
 
     def scan(self, min, log):
         log['running_status'] = 'scan_product'
         db = get_mysql()
-        base_sql = 'select `id`, `rule_id_id`, `node` from `{0}` where `next`<={1} order by `id`'.format(
-            settings.MYSQL_TABLE['schedule']['table'],
-            min)
         update_sql = 'update `{0}` set `next`=`next`+`interval` where `id` in ({1})'
-        skip = 0
         limit = 100
+        id_max = 0
         while True:
-            sql = ' '.join([
-                base_sql,
-                ('skip {}'.format(skip) if skip > 0 else ''),
-                'limit {}'.format(limit)
-            ])
+            sql = 'select `id`, `rule_id_id`, `node` from `{0}` where `id`>{1} and `next`<={2} order by `id` limit {3}'.format(
+                settings.MYSQL_TABLE['schedule']['table'],
+                id_max,
+                min,
+                limit)
             db.execute(sql)
             result = db.fetchall()
             if not result:
@@ -283,7 +287,6 @@ class ProductScheduleScanner(object):
                 'mac': '',
                 'flag': ''
             }
-            skip += limit
             msg_lsit = map(lambda res: dict(msg, rule_id=res[1], node_id=res[2]),
                            result)
             if msg_lsit:
@@ -291,8 +294,9 @@ class ProductScheduleScanner(object):
 
             sql = update_sql.format(
                 settings.MYSQL_TABLE['schedule']['table'],
-                ','.join([x[0] for x in result])
+                ','.join([str(x[0]) for x in result])
                 )
             db.execute(sql)
+            id_max = result[-1][0]
 
         db.close()

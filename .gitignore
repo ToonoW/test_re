@@ -2,6 +2,7 @@
 __project__
 *.log
 CACHE
+tmp
 /static
 
 # python

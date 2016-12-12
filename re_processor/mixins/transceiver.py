@@ -139,7 +139,7 @@ class BaseRabbitmqConsumer(object):
         msg['common.mac'] = msg['mac'].lower()
         msg['common.mac_upper'] = msg['mac'].upper()
 
-        if 'schedule' == msg['event_type']:
+        if 'device_schedule' == msg['event_type']:
             return self.generate_msg_list_schedule(msg, log)
         else:
             return self.generate_msg_list(msg, log)
@@ -156,8 +156,14 @@ class BaseRabbitmqConsumer(object):
 
         rule_id, product_key, rule_tree, custom_vars, enabled, ver = result[0]
 
+        rule_tree = json.loads(rule_tree) if rule_tree else []
+        custom_vars = json.loads(custom_vars) if custom_vars else {}
+
         node = rule_tree['task_list'].get(msg['node_id'], {})
+        msg['product_key'] = product_key
+        msg['common.product_key'] = msg['product_key']
         msg_list = []
+        log_id = ''
 
         if msg['did']:
             if not node or \
@@ -192,7 +198,7 @@ class BaseRabbitmqConsumer(object):
                 'rule_id': rule_id,
                 'node_id': node['id'],
                 'msg_to': settings.MSG_TO['external'],
-                'ts': msg['sys.timestamp'] + 60*node['content']['internal'],
+                'ts': msg['sys.timestamp'] + 60*node['content']['interval'],
                 'flag': flag
             })
 
@@ -272,6 +278,7 @@ class BaseRabbitmqConsumer(object):
 
                 if rule_tree.get('schedule_list', []):
                     if 'online' == event:
+                        print rule_tree['schedule_list']
                         update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
                         msg_list.extend([{
                             'action_type': 'schedule_wait',
@@ -281,7 +288,7 @@ class BaseRabbitmqConsumer(object):
                             'rule_id': rule_id,
                             'node_id': x['node'],
                             'msg_to': settings.MSG_TO['external'],
-                            'ts': msg['sys.timestamp'] + 60*x['internal'],
+                            'ts': msg['sys.timestamp'] + 60*x['interval'],
                             'flag': msg['sys.timestamp_ms']
                         } for x in rule_tree['schedule_list']])
 
