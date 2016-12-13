@@ -580,7 +580,7 @@ class OutputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)], False
 
-        delay = msg.get('delay', 0)
+        delay = msg['current'].get('delay', 0)
         if delay > 30:
             _msg = {
                 'action_type': 'schedule_wait',
