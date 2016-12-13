@@ -581,19 +581,49 @@ class OutputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)], False
 
-        _msg = {
-            'msg_to': settings.MSG_TO['external'],
-            'action_type': msg['current']['type'],
-            'event': msg.get('event', ''),
-            'rule_id': msg.get('rule_id', ''),
-            'product_key': msg['task_vars'].get('product_key', ''),
-            'did': msg['task_vars'].get('did', ''),
-            'mac': msg['task_vars'].get('mac', ''),
-            'ts': time.time(),
-            'params': params,
-            'extern_params': msg['extern_params'],
-            'content': json.dumps(content)
-        }
+        delay = msg.get('delay', 0)
+        if delay > 30:
+            _msg = {
+                'action_type': 'schedule_wait',
+                'product_key': msg['product_key'],
+                'did': msg['did'],
+                'mac': msg['mac'],
+                'rule_id': msg['rule_id'],
+                'node_id': msg['current']['id'],
+                'msg_to': settings.MSG_TO['external'],
+                'ts': msg['sys.timestamp'] + delay,
+                'flag': '',
+                'once': True,
+                'msg': {
+                    'msg_to': settings.MSG_TO['external'],
+                    'action_type': msg['current']['type'],
+                    'event': msg.get('event', ''),
+                    'rule_id': msg.get('rule_id', ''),
+                    'product_key': msg['task_vars'].get('product_key', ''),
+                    'did': msg['task_vars'].get('did', ''),
+                    'mac': msg['task_vars'].get('mac', ''),
+                    'ts': time.time(),
+                    'params': params,
+                    'extern_params': msg['extern_params'],
+                    'content': json.dumps(content)
+                }
+            }
+        else:
+            if delay > 0:
+                time.sleep(delay)
+            _msg = {
+                'msg_to': settings.MSG_TO['external'],
+                'action_type': msg['current']['type'],
+                'event': msg.get('event', ''),
+                'rule_id': msg.get('rule_id', ''),
+                'product_key': msg['task_vars'].get('product_key', ''),
+                'did': msg['task_vars'].get('did', ''),
+                'mac': msg['task_vars'].get('mac', ''),
+                'ts': time.time(),
+                'params': params,
+                'extern_params': msg['extern_params'],
+                'content': json.dumps(content)
+            }
 
         if 'virtual:site' == msg['task_vars'].get('mac', ''):
             _msg['log_data'] = {

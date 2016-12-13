@@ -106,7 +106,8 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
             "rule_id": <rule_id int>,
             "node_id" <node_id string>,
             "ts": <timestamp_in_seconds int>,
-            "flag": <timestamp_in_ms int>
+            "flag": <timestamp_in_ms int>,
+            "once": <is_once boolean>
         }
         '''
         log['running_status'] = 'waiting'
@@ -123,16 +124,34 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
         if not os.path.exists(file_dir):
             os.makedirs(file_dir, mode=0777)
 
-        file_name = '{0}/{1}_{2}_{3}_{4}_{5}_{6}'.format(
+        file_name = '{0}/{1}_{2}_{3}_{4}'.format(
             file_dir,
             msg.get('did', ''),
             msg['rule_id'],
             msg['node_id'],
-            msg['flag'],
-            msg['ts'],
-            msg['mac']
+            msg['flag']
             )
-        os.system(r'touch {}'.format(file_name))
+        if 'msg' in msg:
+            s_msg = msg['msg']
+        else:
+            s_msg = {
+                'msg_to': settings.MSG_TO['external'],
+                'action_type': 'schedule',
+                'event_type': 'device_schedule',
+                'created_at': time.time(),
+                'product_key': msg['product_key'],
+                'did': msg['did'],
+                'mac': msg['mac'],
+                'rule_id': msg['rule_id'],
+                'node_id': msg['node_id'],
+                'flag': msg['flag'],
+                'once': msg['once']
+            }
+
+        with open(file_name, 'w+') as fp:
+            json.dump(s_msg, fp)
+
+        log['schedule_msg'] = s_msg
 
 
 class DeviceScheduleScanner(object):
@@ -215,16 +234,11 @@ class DeviceScheduleScanner(object):
             lock_key = 're_core_{0}_{1}_lock'.format(self.fid, ts)
             lock = cache.setnx(lock_key, 1)
             if lock and os.path.isdir(dir_name):
-                msg = {
-                    'action_type': 'schedule',
-                    'event_type': 'device_schedule',
-                    'created_at': time.time()
-                }
                 msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
-                                  map(lambda x: dict(msg, did=x[0], rule_id=x[1], node_id=x[2], flag=x[3], mac=x[-1]),
-                                      map(lambda x: str.split(x, '_', 5), f_lst[2])),
+                                  filter(lambda m: m, map(lambda x: self.read_msg('{0}/{1}'.format(f_lst[0], x)), f_lst[2])),
                                   os.walk(dir_name),
                                   [])
+
                 if msg_lsit:
                     self.sender.send_msgs(msg_lsit)
                 shutil.rmtree(dir_name)
@@ -233,6 +247,16 @@ class DeviceScheduleScanner(object):
                 logger.info(json.dumps(log))
             else:
                 cache.expire(lock_key, 60)
+
+    def read_msg(self, file_name):
+        if not os.path.isfile(file_name):
+            return {}
+
+        msg = {}
+        with open(file_name) as fp:
+            msg = json.load(fp)
+
+        return msg
 
 
 class ProductScheduleScanner(object):
@@ -289,7 +313,8 @@ class ProductScheduleScanner(object):
                 'created_at': log['ts'],
                 'did': '',
                 'mac': '',
-                'flag': ''
+                'flag': '',
+                'once': True
             }
             msg_lsit = map(lambda res: dict(msg, rule_id=res[1], node_id=res[2]),
                            result)

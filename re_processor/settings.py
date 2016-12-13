@@ -108,7 +108,7 @@ CORE_MAP = {
 }
 
 # schedule settings
-SCHEDULE_FILE_DIR = env('SCHEDULE_FILE_DIR', '/mnt/workspace/gw_re_pocessor/tmp')
+SCHEDULE_FILE_DIR = env('SCHEDULE_FILE_DIR', '/schedule')
 DEVICE_HASH_GROUP = env('DEVICE_HASH_GROUP', 100)
 
 ###########databases settings################
