@@ -4,8 +4,8 @@
 import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, redis_pool, get_redis
-from re_processor.common import _log, update_virtual_device_log, get_sequence
+from re_processor.connections import get_mongodb, get_redis
+from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock
 from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
@@ -140,51 +140,46 @@ class InputCore(BaseCore):
 
     def get_json(self, content, params, refresh, name, rule_id, now_ts):
         cache_key = 're_core_{0}_{1}_custom_json'.format(rule_id, name)
-        cache = redis.Redis(connection_pool=redis_pool)
+        cache = get_redis()
         result = {}
-        do_refresh = True
-        try:
-            if cache.get(cache_key + '_lock'):
-                do_refresh = False
-            else:
-                is_success = cache.setnx(cache_key + '_lock', json.dumps(now_ts))
-                if is_success:
-                    cache.expire(cache_key + '_lock', refresh)
-                    do_refresh = True
-                else:
-                    do_refresh = False
-        except redis.exceptions.RedisError, e:
-            result = {'error_message': 'redis error: {}'.format(str(e))}
 
-        if do_refresh:
-            _content = json.dumps(content)
-            for key, val in params.items():
-                _content = _content.replace('"${'+key+'}"', json.dumps(val))
-            content = json.loads(_content)
-            url = content['url']
-            headers = content.get('headers', {})
-            data = content.get('data', {})
-            method = content.get('method', 'get')
-            if 'get' == method:
-                response = requests.get(url, headers=headers, params=data)
-            elif 'post' == method:
-                response = requests.post(url, data=json.dumps(data), headers=headers)
-            else:
-                raise Exception('invalid method: {}'.format(method))
-
-            result = json.loads(response.content)
-
-            try:
-                p = cache.pipeline()
-                p.set(cache_key, response.content)
-                p.expire(key, refresh + 5)
-                p.execute()
-            except redis.exceptions.RedisError, e:
-                result = {'error_message': 'redis error: {}'.format(str(e))}
-        else:
+        while True:
             try:
                 result = cache.get(cache_key)
-                result = json.loads(result)
+                if result:
+                    result = json.loads(result)
+                    break
+                else:
+                    with RedisLock(cache_key) as lock:
+                        if lock:
+                            _content = json.dumps(content)
+                            for key, val in params.items():
+                                _content = _content.replace('"${'+key+'}"', json.dumps(val))
+                            content = json.loads(_content)
+                            url = content['url']
+                            headers = content.get('headers', {})
+                            data = content.get('data', {})
+                            method = content.get('method', 'get')
+                            if 'get' == method:
+                                response = requests.get(url, headers=headers, params=data)
+                            elif 'post' == method:
+                                response = requests.post(url, data=json.dumps(data), headers=headers)
+                            else:
+                                raise Exception(u'invalid http method: {}'.format(method))
+
+                            if response.status_code > 199 and response.status_code < 300:
+                                try:
+                                    result = json.loads(response.content)
+                                except ValueError:
+                                    raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                            else:
+                                raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                            p = cache.pipeline()
+                            p.set(cache_key, response.content)
+                            p.expire(cache_key, refresh + 5)
+                            p.execute()
+                            break
+                time.sleep(1)
             except redis.exceptions.RedisError, e:
                 result = {'error_message': 'redis error: {}'.format(str(e))}
 
@@ -460,7 +455,12 @@ class FuncCore(BaseCore):
             'context': params
         }
         response = requests.post(url, data=json.dumps(data), headers=headers)
-        return json.loads(response.content)['result']
+        if response.status_code > 199 and response.status_code < 300:
+            return response.json()['result']
+        elif 400 == response.status_code:
+            raise Exception(u'script error: {}'.format(response.json()['detail_message']))
+        else:
+            raise Exception(u'script error')
 
     def transformation(self, msg):
         content = msg['current']['content']

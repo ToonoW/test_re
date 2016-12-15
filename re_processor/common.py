@@ -126,3 +126,19 @@ def update_device_status(product_key, did, mac, status, ts):
             str(ts))
     db.execute(sql)
     db.close()
+
+
+class RedisLock(object):
+
+    def __init__(self, cache_key):
+        self.cache_key = cache_key
+
+    def __enter__(self):
+        self.cache = get_redis()
+        self.lock = self.cache.setnx(self.cache_key+'_lock', 1)
+        return self.lock
+
+    def __exit__(self, type, value, traceback):
+        if self.lock:
+            self.cache.delete(self.cache_key+'_lock')
+        return False

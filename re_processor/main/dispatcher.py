@@ -7,7 +7,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, console_logger
+from re_processor.common import debug_logger as logger, console_logger, RedisLock
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -169,19 +169,15 @@ class DeviceScheduleScanner(object):
                     self.fid = fp.read()
                 break
             else:
-                cache = get_redis()
-                lock_key = 're_core_fid_lock'
-                lock = cache.setnx(lock_key, 1)
-                if lock:
-                    with open(fid_name, 'w+') as fp:
-                        self.fid = str(uuid.uuid4())
-                        fp.write(self.fid)
-                    cache.delete(lock_key)
-                    break
-                else:
-                    print 'waiting for fid file...'
-                    cache.expire(lock_key, 60)
-                    time.sleep(1)
+                with RedisLock('re_core_fid') as lock:
+                    if lock:
+                        with open(fid_name, 'w+') as fp:
+                            self.fid = str(uuid.uuid4())
+                            fp.write(self.fid)
+                        break
+
+            print 'waiting for fid file...'
+            time.sleep(1)
 
         #print self.fid
         self.update_start_time()
@@ -231,22 +227,20 @@ class DeviceScheduleScanner(object):
             ts)
         if os.path.isdir(dir_name):
             cache = get_redis()
-            lock_key = 're_core_{0}_{1}_lock'.format(self.fid, ts)
-            lock = cache.setnx(lock_key, 1)
-            if lock and os.path.isdir(dir_name):
-                msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
-                                  filter(lambda m: m, map(lambda x: self.read_msg('{0}/{1}'.format(f_lst[0], x)), f_lst[2])),
-                                  os.walk(dir_name),
-                                  [])
+            lock_key = 're_core_{0}_{1}'.format(self.fid, ts)
+            with RedisLock(lock_key) as lock:
+                if lock and os.path.isdir(dir_name):
+                    msg_lsit = reduce(lambda m_lst, f_lst: m_lst + \
+                                      filter(lambda m: m, map(lambda x: self.read_msg('{0}/{1}'.format(f_lst[0], x)), f_lst[2])),
+                                      os.walk(dir_name),
+                                      [])
 
-                if msg_lsit:
-                    self.sender.send_msgs(msg_lsit)
-                shutil.rmtree(dir_name)
-                cache.delete(lock_key)
-                log['dir_name'] = dir_name
-                logger.info(json.dumps(log))
-            else:
-                cache.expire(lock_key, 60)
+                    if msg_lsit:
+                        self.sender.send_msgs(msg_lsit)
+                    shutil.rmtree(dir_name)
+                    cache.delete(lock_key)
+                    log['dir_name'] = dir_name
+                    logger.info(json.dumps(log))
 
     def read_msg(self, file_name):
         if not os.path.isfile(file_name):
