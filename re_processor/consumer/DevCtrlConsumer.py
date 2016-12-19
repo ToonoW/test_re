@@ -15,7 +15,8 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
         msg = json.loads(body)
 
         if 'devctrl' != msg['action_type']:
-            raise Exception('Invalid action_type: {}'.format(msg['action_type']))
+            log['exception'] = 'Invalid action_type: {}'.format(msg['action_type'])
+            return False
 
         log['action_type'] = msg['action_type']
         params = msg.get('params', {})

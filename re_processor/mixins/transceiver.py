@@ -13,7 +13,13 @@ from gevent.queue import Empty
 
 from re_processor import settings
 from re_processor.connections import get_mysql, get_redis
-from re_processor.common import debug_logger as logger, console_logger, new_virtual_device_log
+from re_processor.common import (
+    debug_logger as logger,
+    console_logger,
+    new_virtual_device_log,
+    update_several_sequence,
+    update_device_status,
+    _log)
 
 
 class BaseRabbitmqConsumer(object):
@@ -44,7 +50,7 @@ class BaseRabbitmqConsumer(object):
         while True:
             try:
                 self.connecting = True
-                time.sleep(5)
+                time.sleep(1)
                 self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
             except AMQPConnectionError, e:
                 console_logger.exception(e)
@@ -55,34 +61,19 @@ class BaseRabbitmqConsumer(object):
                 break
 
     def consume(self, ch, method, properties, body):
-        log = {
-            'ts': time.time(),
-            'module': 're_processor_status',
-            'running_status': 'beginning'
-        }
-        try:
-            #print body
-            lst = self.unpack(body, log)
-            if lst:
-                msg = map(lambda m: self.process_msg(m, log), lst)
-                if msg:
-                    self.send(reduce(operator.__add__, msg), log)
-        except Exception, e:
-            console_logger.exception(e)
-            log['exception'] = str(e)
-            log['proc_t'] = int((time.time() - log['ts']) * 1000)
-            logger.info(json.dumps(log))
-
-        #self.channel.basic_ack(delivery_tag=method.delivery_tag)
+        '''
+        subclass implement
+        '''
+        print body
 
 
-    def mq_listen(self, mq_queue_name, product_key):
+    def mq_listen(self, mq_queue_name, product_key, no_ack=True):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
         while True:
             try:
                 self.mq_subcribe(mq_queue_name, product_key)
                 self.channel.basic_qos(prefetch_count=1)
-                self.channel.basic_consume(self.consume, queue=name, no_ack=True)
+                self.channel.basic_consume(self.consume, queue=name, no_ack=no_ack)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:
                 console_logger.exception(e)
@@ -91,7 +82,7 @@ class BaseRabbitmqConsumer(object):
     def mq_publish(self, product_key, msg_list):
         for msg in msg_list:
             msg_pub = json.dumps(msg)
-            if self.debug is True:
+            if settings.DEBUG is True:
                 routing_key = settings.DEBUG_ROUTING_KEY[msg.get('action_type', 'log')]
                 log = {
                     'module': 're_processor',
@@ -103,7 +94,7 @@ class BaseRabbitmqConsumer(object):
                 while True:
                     try:
                         if self.connecting:
-                            time.sleep(5)
+                            time.sleep(1)
                             continue
                         self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                     except AMQPConnectionError, e:
@@ -125,7 +116,7 @@ class BaseRabbitmqConsumer(object):
             while True:
                 try:
                     if self.connecting:
-                        time.sleep(5)
+                        time.sleep(1)
                         continue
                     self.channel.basic_publish(settings.EXCHANGE, routing_key, msg_pub)
                 except AMQPConnectionError, e:
@@ -140,6 +131,99 @@ class BaseRabbitmqConsumer(object):
         log['running_status'] = 'unpack'
         msg = json.loads(body)
         #print msg;
+
+        msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
+        msg['sys.timestamp'] = int(log['ts'])
+        msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
+        msg['common.did'] = msg['did']
+        msg['common.mac'] = msg['mac'].lower()
+        msg['common.mac_upper'] = msg['mac'].upper()
+
+        if 'device_schedule' == msg['event_type']:
+            return self.generate_msg_list_schedule(msg, log)
+        else:
+            return self.generate_msg_list(msg, log)
+
+    def generate_msg_list_schedule(self, msg, log):
+        db = get_mysql()
+        sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `id`={1}'.format(
+            settings.MYSQL_TABLE['rule']['table'],
+            msg['rule_id'])
+        db.execute(sql)
+        result = db.fetchall()
+        if not result:
+            return []
+
+        rule_id, product_key, rule_tree, custom_vars, enabled, ver = result[0]
+
+        if 1 != enabled:
+            return []
+
+        rule_tree = json.loads(rule_tree) if rule_tree else []
+        custom_vars = json.loads(custom_vars) if custom_vars else {}
+
+        node = rule_tree['task_list'].get(msg['node_id'], {})
+        msg['product_key'] = product_key
+        msg['common.product_key'] = msg['product_key']
+        msg_list = []
+        log_id = ''
+
+        if msg['did'] and msg['once'] is False:
+            if not node or \
+               'schedule' != node['content']['event'] or \
+               bool(msg['did']) != node['content']['is_device']:
+                db.close()
+                return []
+
+            sql = 'select `ts`, `is_online` from `{0}` where `did`="{1}" and `mac`="{2}" limit 1'.format(
+                settings.MYSQL_TABLE['device_status']['table'],
+                msg['did'],
+                msg['mac'])
+
+            db.execute(sql)
+            res = db.fetchall()
+            if not res:
+                db.close()
+                return []
+
+            flag, is_online = res[0]
+            if flag != msg['flag']:
+                db.close()
+                return []
+
+            log_id = new_virtual_device_log(product_key, rule_id) if 'virtual:site' == msg['mac'] else ''
+
+            msg_list.append({
+                'action_type': 'schedule_wait',
+                'product_key': product_key,
+                'did': msg['did'],
+                'mac': msg['mac'],
+                'rule_id': rule_id,
+                'node_id': node['id'],
+                'msg_to': settings.MSG_TO['external'],
+                'ts': msg['sys.timestamp'] + 60*node['content']['interval'],
+                'flag': flag,
+                'once': False
+            })
+
+        msg_list.append({
+            'ver': ver,
+            'event': msg['event_type'],
+            'rule_id': rule_id,
+            'log_id': log_id,
+            'msg_to': settings.MSG_TO['internal'],
+            'ts': log['ts'],
+            'current': node,
+            'task_list': rule_tree['task_list'],
+            'task_vars': copy.copy(msg),
+            'extern_params': {},
+            'custom_vars': custom_vars
+        })
+        db.close()
+
+        return msg_list
+
+    def generate_msg_list(self, msg, log):
         event =  settings.TOPIC_MAP[msg['event_type']]
         if msg.has_key('data'):
             data = msg.pop('data')
@@ -149,13 +233,7 @@ class BaseRabbitmqConsumer(object):
             else:
                 msg.update({'.'.join(['data', k]): v for k, v in data.items()})
 
-        msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
-        msg['sys.timestamp'] = int(log['ts'])
-        msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
         msg['common.product_key'] = msg['product_key']
-        msg['common.did'] = msg['did']
-        msg['common.mac'] = msg['mac'].lower()
-        msg['common.mac_upper'] = msg['mac'].upper()
 
         if 'online' == event:
             msg['online.status'] = 1
@@ -188,6 +266,7 @@ class BaseRabbitmqConsumer(object):
             msg['product_key'])
         db.execute(sql)
         msg_list = []
+        sequence_dict = {}
         for rule_id, rule_tree, custom_vars, enabled, ver in db.fetchall():
             if 1 != enabled:
                 continue
@@ -198,9 +277,32 @@ class BaseRabbitmqConsumer(object):
             tmp_msg['common.rule_id'] = rule_id
             log_id = ''
             if 3 == ver:
+                if rule_tree.get('sequence_list', []) and 'data' == event:
+                    sequence_dict.update({'re_core_{0}_{1}_device_sequence'.format(msg['did'], __task['content']['data']): tmp_msg.get(__task['content']['data'], '') for __task in rule_tree['sequence_list']})
+
+                if rule_tree.get('schedule_list', []):
+                    if 'online' == event:
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
+                        msg_list.extend([{
+                            'action_type': 'schedule_wait',
+                            'product_key': msg['product_key'],
+                            'did': msg['did'],
+                            'mac': msg['mac'],
+                            'rule_id': rule_id,
+                            'node_id': x['node'],
+                            'msg_to': settings.MSG_TO['external'],
+                            'ts': msg['sys.timestamp'] + 60*x['interval'],
+                            'flag': str(msg['sys.timestamp_ms']),
+                            'once': False
+                        } for x in rule_tree['schedule_list']])
+
+                    elif 'offline' == event:
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 0, msg['sys.timestamp_ms'])
+
                 for __task in rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule_id)
+
                     __rule_tree = {
                         'ver': ver,
                         'event': msg['event_type'],
@@ -212,37 +314,6 @@ class BaseRabbitmqConsumer(object):
                         'task_list': rule_tree['task_list'],
                         'task_vars': tmp_msg,
                         'extern_params': {},
-                        'custom_vars': custom_vars
-                    }
-                    msg_list.append(__rule_tree)
-            elif 2 == ver:
-                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
-                if __rule_tree_list:
-                    _task = __rule_tree_list[0].pop(0)
-                    triggled = []
-                    while __rule_tree_list[0]:
-                        if _task['task_list']:
-                            break
-                        else:
-                            triggled += _task['can_tri']
-                            _task = __rule_tree_list[0].pop(0)
-
-                    __rule_tree = {
-                        'ver': ver,
-                        'event': msg['event_type'],
-                        'rule_id': rule_id,
-                        'log_id': log_id,
-                        'action_id_list': [],
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'action_sel': True,
-                        'can_tri': _task['action'],
-                        'triggle': triggled if _task['task_list'] else triggled + _task['action'],
-                        'current': 'tri' if not __rule_tree_list[0] and not _task['task_list'] else _task['task_list'][0][0],
-                        'task_list': _task['task_list'],
-                        'para_task': [],
-                        'todo_task': __rule_tree_list[0],
-                        'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }
                     msg_list.append(__rule_tree)
@@ -270,6 +341,11 @@ class BaseRabbitmqConsumer(object):
                     msg_list.append(__rule_tree)
 
         db.close()
+
+        if sequence_dict:
+            result = update_several_sequence(sequence_dict)
+            if result is not True:
+                _log(dict(log, **result))
 
         return msg_list
 

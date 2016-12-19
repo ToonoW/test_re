@@ -74,7 +74,7 @@ class MainProcessor(object):
                     p_log['extern_params'] = msg.get('extern_params', '')
                     p_log['task_vars'] = msg['task_vars']
                     p_log['task_type'] = msg['current']['type'] if 3 == msg['ver'] else task_type
-                    p_log['error_message'] = error_message
+                    p_log['error_message'] = error_message or msg.get('error_message', '')
 
                 _log(p_log)
 

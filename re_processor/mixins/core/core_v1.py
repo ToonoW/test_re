@@ -20,7 +20,7 @@ def get_value_from_json(name, json_obj):
                 field = int(field)
             except ValueError:
                 break
-            if field > len(_obj):
+            if field >= len(_obj):
                 break
         else:
             break
