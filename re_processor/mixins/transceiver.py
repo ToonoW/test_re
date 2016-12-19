@@ -139,10 +139,108 @@ class BaseRabbitmqConsumer(object):
         msg['common.mac'] = msg['mac'].lower()
         msg['common.mac_upper'] = msg['mac'].upper()
 
-        if 'device_schedule' == msg['event_type']:
+        if msg['event_type'] in ['device_online', 'device_offline']:
+            return self.generate_msg_list_on_offline(msg, log)
+        elif 'device_schedule' == msg['event_type']:
             return self.generate_msg_list_schedule(msg, log)
         else:
             return self.generate_msg_list(msg, log)
+
+    def generate_msg_list_on_offline(self, msg, log):
+        event =  settings.TOPIC_MAP[msg['event_type']]
+
+        msg['common.product_key'] = msg['product_key']
+
+        if 'online' == event:
+            msg['online.status'], msg['offline.status'] = 1, 0
+        else:
+            msg['online.status'], msg['offline.status'] = 0, 1
+
+        db = get_mysql()
+        sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
+            settings.MYSQL_TABLE['rule']['table'],
+            msg['did'],
+            msg['product_key'])
+        db.execute(sql)
+
+        msg_list = []
+        cache_rule = []
+        for rule_id, rule_tree, custom_vars, enabled, ver, type, interval in db.fetchall():
+            if 1 != enabled:
+                continue
+            rule_tree = json.loads(rule_tree) if rule_tree else []
+            custom_vars = json.loads(custom_vars) if custom_vars else {}
+
+            tmp_msg = copy.copy(msg)
+            tmp_msg['common.rule_id'] = rule_id
+            log_id = ''
+            cache_rule.append({
+                'ver': ver,
+                'rule_id': rule_id,
+                'rule_tree': rule_tree,
+                'custom_vars': custom_vars,
+                'type': type,
+                'interval': interval
+            })
+            if 3 == ver:
+                if rule_tree.get('schedule_list', []):
+                    if 'online' == event:
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
+                        msg_list.extend([{
+                            'action_type': 'schedule_wait',
+                            'product_key': msg['product_key'],
+                            'did': msg['did'],
+                            'mac': msg['mac'],
+                            'rule_id': rule_id,
+                            'node_id': x['node'],
+                            'msg_to': settings.MSG_TO['external'],
+                            'ts': msg['sys.timestamp'] + 60*x['interval'],
+                            'flag': str(msg['sys.timestamp_ms']),
+                            'once': False
+                        } for x in rule_tree['schedule_list']])
+
+                    else:
+                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 0, msg['sys.timestamp_ms'])
+
+                if rule_tree['event'].get(event, []):
+                    if 'virtual:site' == msg['mac']:
+                        log_id = new_virtual_device_log(msg['product_key'], rule_id)
+                    msg_list.append([{
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'log_id': log_id,
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'current': __task,
+                        'task_list': rule_tree['task_list'],
+                        'task_vars': copy.copy(msg),
+                        'extern_params': {},
+                        'custom_vars': custom_vars
+                    } for __task in rule_tree['event'].get(event, [])])
+
+            elif 1 == ver:
+                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+                if __rule_tree_list:
+                    __rule_tree = {
+                        'ver': ver,
+                        'event': msg['event_type'],
+                        'rule_id': rule_id,
+                        'log_id': log_id,
+                        'action_id_list': [],
+                        'msg_to': settings.MSG_TO['internal'],
+                        'ts': log['ts'],
+                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+                        'task_list': __rule_tree_list[0],
+                        'para_task': __rule_tree_list[1:],
+                        'task_vars': tmp_msg,
+                        'custom_vars': custom_vars
+                    }
+                    msg_list.append(__rule_tree)
+
+        db.close()
+
+        return msg_list
 
     def generate_msg_list_schedule(self, msg, log):
         db = get_mysql()
