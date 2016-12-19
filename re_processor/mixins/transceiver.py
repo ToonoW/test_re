@@ -236,28 +236,17 @@ class BaseRabbitmqConsumer(object):
         msg['common.product_key'] = msg['product_key']
 
         if 'online' == event:
-            msg['online.status'] = 1
-            msg['offline.status'] = 0
-            msg['bind.status'] = 0
-            msg['unbind.status'] = 0
+            msg['online.status'], msg['offline.status'] = 1, 0
         elif 'offline' == event:
-            msg['online.status'] = 0
-            msg['offline.status'] = 1
-            msg['bind.status'] = 0
-            msg['unbind.status'] = 0
+            msg['online.status'], msg['offline.status'] = 0, 1
         elif 'bind' == event:
-            msg['bind.status'] = 1
-            msg['unbind.status'] = 0
+            msg['bind.status'], msg['unbind.status'] = 1, 0
             msg['bind.app_id'] = msg['app_id']
             msg['bind.uid'] = msg['uid']
         elif 'unbind' == event:
-            msg['bind.status'] = 0
-            msg['unbind.status'] = 1
+            msg['bind.status'], msg['unbind.status'] = 0, 1
             msg['unbind.app_id'] = msg['app_id']
             msg['unbind.uid'] = msg['uid']
-        else:
-            msg['bind.status'] = 0
-            msg['unbind.status'] = 0
 
         db = get_mysql()
         sql = 'select `id`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `obj_id`="{1}" or `obj_id`="{2}"'.format(
@@ -328,13 +317,9 @@ class BaseRabbitmqConsumer(object):
                         'action_id_list': [],
                         'msg_to': settings.MSG_TO['internal'],
                         'ts': log['ts'],
-                        'action_sel': False,
-                        'can_tri': [],
-                        'triggle': [],
                         'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
                         'task_list': __rule_tree_list[0],
                         'para_task': __rule_tree_list[1:],
-                        'todo_task': [],
                         'task_vars': tmp_msg,
                         'custom_vars': custom_vars
                     }

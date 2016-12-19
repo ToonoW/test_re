@@ -73,8 +73,6 @@ class InputCore(BaseCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
-            result['online.status'] = 1 if status['is_online'] else 0
-            result['offline.status'] = 0 if status['is_online'] else 1
             result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
             result = {}
