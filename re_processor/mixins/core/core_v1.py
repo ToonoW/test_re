@@ -438,7 +438,7 @@ class QueryCore(BaseInnerCore):
 
         if params_list:
             query_result = self._query(task_vars, params_list)
-            not_found = filter(lambda x: not query_result.has_key(x), params_list)
+            not_found = filter(lambda x: x not in query_result and x not in task_vars, params_list)
             if query_result and not not_found:
                 task_vars.update(query_result)
                 result = True
@@ -524,7 +524,6 @@ class QueryCore(BaseInnerCore):
             status = ds.find_one({'product_key': task_vars['product_key']})
             if status:
                 result = {'.'.join(['display', x['name']]): x['display_name'] for x in status['datas']['entities'][0]['attrs']}
-                result['common.product_name'] = status['datas']['name']
             else:
                 result = {}
         except KeyError:
