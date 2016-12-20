@@ -208,37 +208,10 @@ class BaseRabbitmqConsumer(object):
                 if rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac']:
                         log_id = new_virtual_device_log(msg['product_key'], rule_id)
-                    msg_list.extend([{
-                        'ver': ver,
-                        'event': msg['event_type'],
-                        'rule_id': rule_id,
-                        'log_id': log_id,
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __task,
-                        'task_list': rule_tree['task_list'],
-                        'task_vars': copy.copy(msg),
-                        'extern_params': {},
-                        'custom_vars': custom_vars
-                    } for __task in rule_tree['event'].get(event, [])])
+                    msg_list.extend(self.v3_msg(event, rule_tree, msg, custom_vars, rule_id, log_id, log))
 
             elif 1 == ver:
-                __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
-                if __rule_tree_list:
-                    msg_list.append({
-                        'ver': ver,
-                        'event': msg['event_type'],
-                        'rule_id': rule_id,
-                        'log_id': log_id,
-                        'action_id_list': [],
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
-                        'task_list': __rule_tree_list[0],
-                        'para_task': __rule_tree_list[1:],
-                        'task_vars': tmp_msg,
-                        'custom_vars': custom_vars
-                    })
+                msg_list.extend(self.v1_msg(event, rule_tree, msg, custom_vars, rule_id, log_id, log))
 
         db.close()
 
@@ -365,24 +338,12 @@ class BaseRabbitmqConsumer(object):
                     if reduce(lambda res, y: res and data.get(y, None) is not None and last_data.get(y, None) == data.get(y, None), rule['params'], True):
                         continue
 
-                for __task in rule['rule_tree']['event'].get(event, []):
+                if rule['rule_tree']['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id'])
 
-                    __rule_tree = {
-                        'ver': rule['ver'],
-                        'event': msg['event_type'],
-                        'rule_id': rule['rule_id'],
-                        'log_id': log_id,
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __task,
-                        'task_list': rule['rule_tree']['task_list'],
-                        'task_vars': tmp_msg,
-                        'extern_params': {},
-                        'custom_vars': rule['custom_vars']
-                    }
-                    msg_list.append(__rule_tree)
+                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+
             elif 1 == rule['ver']:
                 if 2 == rule['type']:
                     if last_data is None:
@@ -390,23 +351,7 @@ class BaseRabbitmqConsumer(object):
                     if reduce(lambda res, y: res and data.get(y, None) is not None and last_data.get(y, None) == data.get(y, None), rule['params'], True):
                         continue
 
-                __rule_tree_list = [x['task_list'] for x in rule['rule_tree'] if event == x['event']]
-                if __rule_tree_list:
-                    __rule_tree = {
-                        'ver': rule['ver'],
-                        'event': msg['event_type'],
-                        'rule_id': rule['rule_id'],
-                        'log_id': log_id,
-                        'action_id_list': [],
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
-                        'task_list': __rule_tree_list[0],
-                        'para_task': __rule_tree_list[1:],
-                        'task_vars': tmp_msg,
-                        'custom_vars': rule['custom_vars']
-                    }
-                    msg_list.append(__rule_tree)
+                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
 
         if sequence_dict:
             result = update_several_sequence(sequence_dict)
@@ -452,42 +397,48 @@ class BaseRabbitmqConsumer(object):
             tmp_msg['common.rule_id'] = rule['rule_id']
             log_id = ''
             if 3 == rule['ver']:
-                for __task in rule['rule_tree']['event'].get(event, []):
+                if rule['rule_tree']['event'].get(event, []):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id'])
 
-                    msg_list.append({
-                        'ver': rule['ver'],
-                        'event': msg['event_type'],
-                        'rule_id': rule['rule_id'],
-                        'log_id': log_id,
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __task,
-                        'task_list': rule['rule_tree']['task_list'],
-                        'task_vars': tmp_msg,
-                        'extern_params': {},
-                        'custom_vars': rule['custom_vars']
-                    })
+                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+
             elif 1 == rule['ver']:
-                __rule_tree_list = [x['task_list'] for x in rule['rule_tree'] if event == x['event']]
-                if __rule_tree_list:
-                    msg_list.append({
-                        'ver': rule['ver'],
-                        'event': msg['event_type'],
-                        'rule_id': rule['rule_id'],
-                        'log_id': log_id,
-                        'action_id_list': [],
-                        'msg_to': settings.MSG_TO['internal'],
-                        'ts': log['ts'],
-                        'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
-                        'task_list': __rule_tree_list[0],
-                        'para_task': __rule_tree_list[1:],
-                        'task_vars': tmp_msg,
-                        'custom_vars': rule['custom_vars']
-                    })
+                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
 
         return msg_list
+
+    def v3_msg(self, event, rule_tree, msg, custom_vars, rule_id, log_id, log):
+        return [{
+            'ver': 3,
+            'event': msg['event_type'],
+            'rule_id': rule_id,
+            'log_id': log_id,
+            'msg_to': settings.MSG_TO['internal'],
+            'ts': log['ts'],
+            'current': __task,
+            'task_list': rule_tree['task_list'],
+            'task_vars': dict(msg, **{'common.rule_id': rule_id}),
+            'extern_params': {},
+            'custom_vars': custom_vars
+        } for __task in rule_tree['event'].get(event, [])]
+
+    def v1_msg(self, event, rule_tree, msg, custom_vars, rule_id, log_id, log):
+        __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
+        return [{
+            'ver': 1,
+            'event': msg['event_type'],
+            'rule_id': rule_id,
+            'log_id': log_id,
+            'action_id_list': [],
+            'msg_to': settings.MSG_TO['internal'],
+            'ts': log['ts'],
+            'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+            'task_list': __rule_tree_list[0],
+            'para_task': __rule_tree_list[1:],
+            'task_vars': dict(msg, **{'common.rule_id': rule_id}),
+            'custom_vars': custom_vars
+        }] if __rule_tree_list else []
 
 
 class BaseRedismqConsumer(object):
