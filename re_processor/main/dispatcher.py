@@ -3,11 +3,13 @@
 
 import time, json, copy, os, uuid, shutil, math
 
+from collections import defaultdict
+
 import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, console_logger, RedisLock
+from re_processor.common import debug_logger as logger, console_logger, RedisLock, cache_rules
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -18,10 +20,53 @@ class MainDispatcher(BaseRabbitmqConsumer):
     '''
 
     def __init__(self, mq_queue_name, product_key=None):
+        self.product_key_set = set([])
         self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
         self.mq_initial()
         self.processor = MainProcessor(MainSender(self.product_key))
+
+    def init_rules_cache(self):
+        db = get_mysql()
+        id_max = 0
+        cache = get_redis()
+        cache.delete('re_core_product_key_set')
+
+        while True:
+            pk_set = set()
+            cache_rule = defaultdict(list)
+            sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 100'.format(
+                settings.MYSQL_TABLE['rule']['table'],
+                id_max)
+            db.execute(sql)
+            result = db.fetchall()
+            if not result:
+                break
+
+            for rule_id, product_key, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in result:
+                if 1 != enabled:
+                    continue
+                pk_set.add(product_key)
+                self.product_key_set.add(product_key)
+                rule_tree = json.loads(rule_tree) if rule_tree else []
+                custom_vars = json.loads(custom_vars) if custom_vars else {}
+
+                cache_rule[obj_id].append({
+                    'ver': ver,
+                    'rule_id': rule_id,
+                    'rule_tree': rule_tree,
+                    'custom_vars': custom_vars,
+                    'params': json.loads(params) if params else [],
+                    'type': type,
+                    'interval': interval
+                })
+
+            id_max = result[-1][0]
+
+            cache.sadd('re_core_product_key_set', *list(pk_set))
+            cache_rules(cache_rule)
+
+        return True
 
     def consume(self, ch, method, properties, body):
         log = {
@@ -31,7 +76,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
         }
         try:
             #print body
-            gevent.spawn(self.dispatch, body, log)
+            msg = json.loads(body)
+            if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
+                gevent.spawn(self.dispatch, msg, log)
         except Exception, e:
             console_logger.exception(e)
             log['exception'] = str(e)
@@ -40,13 +87,33 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
         #self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
-    def dispatch(self, body, log):
-        lst = self.mq_unpack(body, log)
+    def dispatch(self, msg, log):
+        lst = self.mq_unpack(msg, log)
         if lst:
             map(lambda x: gevent.spawn(self.processor.process_msg, x, copy.deepcopy(log)), lst)
 
     def begin(self):
+        cache = get_redis()
+        try:
+            pk_set = cache.smembers('re_core_product_key_set')
+            if pk_set:
+                self.product_key_set = pk_set
+        except:
+            pass
         self.mq_listen(self.mq_queue_name, self.product_key)
+
+    def update_product_key_set(self):
+        cache = get_redis()
+        while True:
+            try:
+                pk_set = cache.smembers('re_core_product_key_set')
+                print pk_set
+                if pk_set:
+                    self.product_key_set = pk_set
+            except:
+                pass
+            finally:
+                time.sleep(60)
 
 
 class MainSender(BaseRabbitmqConsumer):

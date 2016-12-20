@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import logging, json, requests, redis, copy
+import logging, json, requests, redis, copy, zlib
 import logging.config
 
 from re_processor import settings
@@ -126,6 +126,33 @@ def update_device_status(product_key, did, mac, status, ts):
             str(ts))
     db.execute(sql)
     db.close()
+
+def cache_rules(rules, product_key=None):
+    if rules:
+        try:
+            cache = get_redis()
+            p = cache.pipeline()
+            if product_key:
+                p.sadd('re_core_product_key_set', product_key)
+            for k, v in rules.items():
+                p.set('re_core_{0}_cache_rules'.format(k), zlib.compress(json.dumps(v)))
+            p.execute()
+        except redis.exceptions.RedisError:
+            pass
+
+def get_rules_from_cache(product_key, did):
+    cache = get_redis()
+    p = cache.pipeline()
+    p.get('re_core_{0}_cache_rules'.format(product_key))
+    p.get('re_core_{0}_cache_rules'.format(did))
+    result = p.execute()
+    return reduce(lambda rules, x: rules + (json.loads(zlib.decompress(x)) if x else []), result, [])
+
+def getset_last_data(data, did):
+    cache = get_redis()
+    last_data = cache.getset('re_core_{0}_dev_latest', zlib.compress(json.dumps(data)))
+    return json.loads(zlib.decompress(last_data)) if last_data else {}
+
 
 
 class RedisLock(object):
