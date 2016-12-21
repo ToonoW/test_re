@@ -65,5 +65,16 @@ if '__main__' == __name__:
 
         if 'schedule_wait' == mq_queue_name:
             ScheduleBufferConsumer(mq_queue_name, product_key=product_key).begin()
+        elif 'all' == mq_queue_name:
+            obj = MainDispatcher(mq_queue_name, product_key=product_key)
+            obj.init_rules_cache()
+            gevent.joinall([
+                gevent.spawn(obj.update_product_key_set),
+                gevent.spawn(obj.begin)
+            ])
         else:
-            MainDispatcher(mq_queue_name, product_key=product_key).begin()
+            obj = MainDispatcher(mq_queue_name, product_key=product_key)
+            gevent.joinall([
+                gevent.spawn(obj.begin),
+                gevent.spawn(obj.update_product_key_set)
+            ])
