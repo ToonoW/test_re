@@ -153,28 +153,28 @@ def getset_last_data(data, did):
     last_data = cache.getset('re_core_{}_dev_latest', zlib.compress(json.dumps(data)))
     return json.loads(zlib.decompress(last_data)) if last_data else {}
 
-def set_interval_lock(rule_id, interval):
+def set_interval_lock(rule_id, did, interval):
     if not rule_id or not interval:
         return {}
     lock = False
     result = {}
     try:
         cache = get_redis()
-        lock = cache.setnx('re_core_{}_rule_interval', 1)
+        lock = cache.setnx('re_core_{0}_{1}_rule_interval'.format(did, rule_id), 1)
     except redis.exceptions.RedisError, e:
         result = {'error_message': 'redis error: {}'.format(str(e))}
     except Exception, e:
         result = {'error_message': 'error: {}'.format(str(e))}
     finally:
         if lock:
-            cache.expire('re_core_{}_rule_interval', interval)
+            cache.expire('re_core_{0}_{1}_rule_interval'.format(did, rule_id), interval)
 
     return result
 
-def check_interval_locked(rule_id):
+def check_interval_locked(rule_id, did):
     try:
         cache = get_redis()
-        lock = cache.get('re_core_{}_rule_interval', 1)
+        lock = cache.get('re_core_{0}_{1}_rule_interval'.format(did, rule_id), 1)
         return bool(lock)
     except redis.exceptions.RedisError:
         return False

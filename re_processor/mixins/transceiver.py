@@ -170,7 +170,7 @@ class BaseRabbitmqConsumer(object):
         msg_list = []
         cache_rule = defaultdict(list)
         for rule_id, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in db.fetchall():
-            if 1 != enabled or check_interval_locked(rule_id):
+            if 1 != enabled or check_interval_locked(rule_id, msg['did']):
                 continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
@@ -326,7 +326,7 @@ class BaseRabbitmqConsumer(object):
         msg_list = []
         sequence_dict = {}
         for rule in rules_list:
-            if check_interval_locked(rule['rule_id']):
+            if check_interval_locked(rule['rule_id'], msg['did']):
                 continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']
@@ -396,7 +396,7 @@ class BaseRabbitmqConsumer(object):
 
         msg_list = []
         for rule in rules_list:
-            if check_interval_locked(rule['rule_id']):
+            if check_interval_locked(rule['rule_id'], msg['did']):
                 continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']

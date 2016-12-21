@@ -73,7 +73,7 @@ class MainProcessor(object):
                     'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }
                 if 'action' == p_log and 'success' == result and p_log['internal'] > 0:
-                    set_interval_lock(p_log['rule_id'], p_log['internal'])
+                    set_interval_lock(p_log['rule_id'], p_log['did'], p_log['internal'])
 
                 if settings.DEBUG is True or 'virtual:site' == msg['task_vars'].get('mac', '') or 'exception' == result:
                     p_log['extern_params'] = msg.get('extern_params', '')
