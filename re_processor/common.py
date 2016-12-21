@@ -135,7 +135,7 @@ def cache_rules(rules, product_key=None):
             if product_key:
                 p.sadd('re_core_product_key_set', product_key)
             for k, v in rules.items():
-                p.set('re_core_{0}_cache_rules'.format(k), zlib.compress(json.dumps(v)))
+                p.set('re_core_{}_cache_rules'.format(k), zlib.compress(json.dumps(v)))
             p.execute()
         except redis.exceptions.RedisError:
             pass
@@ -143,16 +143,41 @@ def cache_rules(rules, product_key=None):
 def get_rules_from_cache(product_key, did):
     cache = get_redis()
     p = cache.pipeline()
-    p.get('re_core_{0}_cache_rules'.format(product_key))
-    p.get('re_core_{0}_cache_rules'.format(did))
+    p.get('re_core_{}_cache_rules'.format(product_key))
+    p.get('re_core_{}_cache_rules'.format(did))
     result = p.execute()
     return reduce(lambda rules, x: rules + (json.loads(zlib.decompress(x)) if x else []), result, [])
 
 def getset_last_data(data, did):
     cache = get_redis()
-    last_data = cache.getset('re_core_{0}_dev_latest', zlib.compress(json.dumps(data)))
+    last_data = cache.getset('re_core_{}_dev_latest', zlib.compress(json.dumps(data)))
     return json.loads(zlib.decompress(last_data)) if last_data else {}
 
+def set_interval_lock(rule_id, interval):
+    if not rule_id or not interval:
+        return {}
+    lock = False
+    result = {}
+    try:
+        cache = get_redis()
+        lock = cache.setnx('re_core_{}_rule_interval', 1)
+    except redis.exceptions.RedisError, e:
+        result = {'error_message': 'redis error: {}'.format(str(e))}
+    except Exception, e:
+        result = {'error_message': 'error: {}'.format(str(e))}
+    finally:
+        if lock:
+            cache.expire('re_core_{}_rule_interval', interval)
+
+    return result
+
+def check_interval_locked(rule_id):
+    try:
+        cache = get_redis()
+        lock = cache.get('re_core_{}_rule_interval', 1)
+        return bool(lock)
+    except redis.exceptions.RedisError:
+        return False
 
 
 class RedisLock(object):

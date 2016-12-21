@@ -22,6 +22,7 @@ from re_processor.common import (
     cache_rules,
     get_rules_from_cache,
     getset_last_data,
+    check_interval_locked,
     _log)
 
 
@@ -169,7 +170,7 @@ class BaseRabbitmqConsumer(object):
         msg_list = []
         cache_rule = defaultdict(list)
         for rule_id, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in db.fetchall():
-            if 1 != enabled:
+            if 1 != enabled or check_interval_locked(rule_id):
                 continue
             rule_tree = json.loads(rule_tree) if rule_tree else []
             custom_vars = json.loads(custom_vars) if custom_vars else {}
@@ -208,10 +209,10 @@ class BaseRabbitmqConsumer(object):
                 if rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac']:
                         log_id = new_virtual_device_log(msg['product_key'], rule_id)
-                    msg_list.extend(self.v3_msg(event, rule_tree, msg, custom_vars, rule_id, log_id, log))
+                    msg_list.extend(self.v3_msg(event, rule_tree, msg, custom_vars, rule_id, interval, type, log_id, log))
 
             elif 1 == ver:
-                msg_list.extend(self.v1_msg(event, rule_tree, msg, custom_vars, rule_id, log_id, log))
+                msg_list.extend(self.v1_msg(event, rule_tree, msg, custom_vars, rule_id, interval, type, log_id, log))
 
         db.close()
 
@@ -325,6 +326,8 @@ class BaseRabbitmqConsumer(object):
         msg_list = []
         sequence_dict = {}
         for rule in rules_list:
+            if check_interval_locked(rule['rule_id']):
+                continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']
             log_id = ''
@@ -342,7 +345,7 @@ class BaseRabbitmqConsumer(object):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id'])
 
-                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
 
             elif 1 == rule['ver']:
                 if 2 == rule['type']:
@@ -351,7 +354,7 @@ class BaseRabbitmqConsumer(object):
                     if reduce(lambda res, y: res and data.get(y, None) is not None and last_data.get(y, None) == data.get(y, None), rule['params'], True):
                         continue
 
-                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
 
         if sequence_dict:
             result = update_several_sequence(sequence_dict)
@@ -393,6 +396,8 @@ class BaseRabbitmqConsumer(object):
 
         msg_list = []
         for rule in rules_list:
+            if check_interval_locked(rule['rule_id']):
+                continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']
             log_id = ''
@@ -401,14 +406,14 @@ class BaseRabbitmqConsumer(object):
                     if 'virtual:site' == msg['mac'] and not log_id:
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id'])
 
-                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+                    msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
 
             elif 1 == rule['ver']:
-                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], log_id, log))
+                msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
 
         return msg_list
 
-    def v3_msg(self, event, rule_tree, msg, custom_vars, rule_id, log_id, log):
+    def v3_msg(self, event, rule_tree, msg, custom_vars, rule_id, interval, rule_type, log_id, log):
         return [{
             'ver': 3,
             'event': msg['event_type'],
@@ -417,13 +422,15 @@ class BaseRabbitmqConsumer(object):
             'msg_to': settings.MSG_TO['internal'],
             'ts': log['ts'],
             'current': __task,
+            'type': rule_type,
+            'interval': interval,
             'task_list': rule_tree['task_list'],
             'task_vars': dict(msg, **{'common.rule_id': rule_id}),
             'extern_params': {},
             'custom_vars': custom_vars
         } for __task in rule_tree['event'].get(event, [])]
 
-    def v1_msg(self, event, rule_tree, msg, custom_vars, rule_id, log_id, log):
+    def v1_msg(self, event, rule_tree, msg, custom_vars, rule_id, interval, rule_type, log_id, log):
         __rule_tree_list = [x['task_list'] for x in rule_tree if event == x['event']]
         return [{
             'ver': 1,
@@ -434,6 +441,8 @@ class BaseRabbitmqConsumer(object):
             'msg_to': settings.MSG_TO['internal'],
             'ts': log['ts'],
             'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
+            'type': rule_type,
+            'interval': interval,
             'task_list': __rule_tree_list[0],
             'para_task': __rule_tree_list[1:],
             'task_vars': dict(msg, **{'common.rule_id': rule_id}),
