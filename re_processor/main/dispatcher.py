@@ -107,7 +107,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
         while True:
             try:
                 pk_set = cache.smembers('re_core_product_key_set')
-                print pk_set
                 if pk_set:
                     self.product_key_set = pk_set
             except:

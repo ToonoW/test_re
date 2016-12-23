@@ -174,7 +174,7 @@ def set_interval_lock(rule_id, did, interval):
 def check_interval_locked(rule_id, did):
     try:
         cache = get_redis()
-        lock = cache.get('re_core_{0}_{1}_rule_interval'.format(did, rule_id), 1)
+        lock = cache.get('re_core_{0}_{1}_rule_interval'.format(did, rule_id))
         return bool(lock)
     except redis.exceptions.RedisError:
         return False
