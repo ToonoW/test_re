@@ -136,6 +136,7 @@ def cache_rules(rules, product_key=None):
                 p.sadd('re_core_product_key_set', product_key)
             for k, v in rules.items():
                 p.set('re_core_{}_cache_rules'.format(k), zlib.compress(json.dumps(v)))
+                p.expire('re_core_{}_cache_rules'.format(k), 86400)
             p.execute()
         except redis.exceptions.RedisError:
             pass
