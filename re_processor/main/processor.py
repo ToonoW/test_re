@@ -65,15 +65,15 @@ class MainProcessor(object):
                     'did': msg['task_vars'].get('did', ''),
                     'mac': msg['task_vars'].get('mac', ''),
                     'type': msg.get('type', 1),
-                    'internal': msg.get('internal', 0),
+                    'interval': msg.get('interval', 0),
                     'current': 'log',
                     'result': result,
                     'ts': ts,
                     'proc_t': (time.time() - ts) * 1000,
                     'handling': 'action' if 'tri' == task_type or 'output' == task_type else 'rule'
                 }
-                if 'action' == p_log['handling'] and 'success' == result and p_log['internal'] > 0:
-                    set_interval_lock(p_log['rule_id'], p_log['did'], p_log['internal'])
+                if 'action' == p_log['handling'] and 'success' == result and p_log['interval'] > 0:
+                    set_interval_lock(p_log['rule_id'], p_log['did'], p_log['interval'])
 
                 if settings.DEBUG is True or 'virtual:site' == msg['task_vars'].get('mac', '') or 'exception' == result:
                     p_log['extern_params'] = msg.get('extern_params', '')
