@@ -46,10 +46,10 @@ class MainDispatcher(BaseRabbitmqConsumer):
                         break
 
                     for rule_id, product_key, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in result:
-                        if 1 != enabled:
-                            continue
                         pk_set.add(product_key)
                         self.product_key_set.add(product_key)
+                        if 1 != enabled:
+                            continue
                         rule_tree = json.loads(rule_tree) if rule_tree else []
                         custom_vars = json.loads(custom_vars) if custom_vars else {}
 
@@ -65,7 +65,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
                     id_max = result[-1][0]
 
-                    cache.sadd('re_core_product_key_set', *list(pk_set))
+                    if pk_set:
+                        cache.sadd('re_core_product_key_set', *list(pk_set))
                     cache_rules(cache_rule)
 
         return True
@@ -109,6 +110,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         while True:
             try:
                 pk_set = cache.smembers('re_core_product_key_set')
+                #print pk_set
                 if pk_set:
                     self.product_key_set = pk_set
             except:

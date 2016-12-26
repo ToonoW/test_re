@@ -306,7 +306,7 @@ class BaseRabbitmqConsumer(object):
         return msg_list
 
     def generate_msg_list_data(self, msg, log):
-        event =  'data'
+        event = 'data'
         rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
         if not rules_list:
             return []
