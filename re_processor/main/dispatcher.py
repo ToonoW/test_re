@@ -29,42 +29,44 @@ class MainDispatcher(BaseRabbitmqConsumer):
     def init_rules_cache(self):
         db = get_mysql()
         id_max = 0
-        cache = get_redis()
-        cache.delete('re_core_product_key_set')
+        with RedisLock('re_core_product_key_set') as lock:
+            if lock:
+                cache = get_redis()
+                cache.delete('re_core_product_key_set')
 
-        while True:
-            pk_set = set()
-            cache_rule = defaultdict(list)
-            sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 100'.format(
-                settings.MYSQL_TABLE['rule']['table'],
-                id_max)
-            db.execute(sql)
-            result = db.fetchall()
-            if not result:
-                break
+                while True:
+                    pk_set = set()
+                    cache_rule = defaultdict(list)
+                    sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 100'.format(
+                        settings.MYSQL_TABLE['rule']['table'],
+                        id_max)
+                    db.execute(sql)
+                    result = db.fetchall()
+                    if not result:
+                        break
 
-            for rule_id, product_key, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in result:
-                if 1 != enabled:
-                    continue
-                pk_set.add(product_key)
-                self.product_key_set.add(product_key)
-                rule_tree = json.loads(rule_tree) if rule_tree else []
-                custom_vars = json.loads(custom_vars) if custom_vars else {}
+                    for rule_id, product_key, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in result:
+                        if 1 != enabled:
+                            continue
+                        pk_set.add(product_key)
+                        self.product_key_set.add(product_key)
+                        rule_tree = json.loads(rule_tree) if rule_tree else []
+                        custom_vars = json.loads(custom_vars) if custom_vars else {}
 
-                cache_rule[obj_id].append({
-                    'ver': ver,
-                    'rule_id': rule_id,
-                    'rule_tree': rule_tree,
-                    'custom_vars': custom_vars,
-                    'params': json.loads(params) if params else [],
-                    'type': type,
-                    'interval': interval
-                })
+                        cache_rule[obj_id].append({
+                            'ver': ver,
+                            'rule_id': rule_id,
+                            'rule_tree': rule_tree,
+                            'custom_vars': custom_vars,
+                            'params': json.loads(params) if params else [],
+                            'type': type,
+                            'interval': interval
+                        })
 
-            id_max = result[-1][0]
+                    id_max = result[-1][0]
 
-            cache.sadd('re_core_product_key_set', *list(pk_set))
-            cache_rules(cache_rule)
+                    cache.sadd('re_core_product_key_set', *list(pk_set))
+                    cache_rules(cache_rule)
 
         return True
 
