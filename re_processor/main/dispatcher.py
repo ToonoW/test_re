@@ -69,6 +69,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
                         cache.sadd('re_core_product_key_set', *list(pk_set))
                     cache_rules(cache_rule)
 
+                cache.setnx('re_core_rule_cache_update', 1)
+                cache.expire('re_core_rule_cache_update', 82800)
+
         return True
 
     def consume(self, ch, method, properties, body):
@@ -109,6 +112,10 @@ class MainDispatcher(BaseRabbitmqConsumer):
         cache = get_redis()
         while True:
             try:
+                full_update = cache.get('re_core_rule_cache_update')
+                if 'all' == self.mq_queue_name and not full_update:
+                    self.init_rules_cache()
+
                 pk_set = cache.smembers('re_core_product_key_set')
                 #print pk_set
                 if pk_set:
