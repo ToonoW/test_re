@@ -154,8 +154,11 @@ def get_rules_from_cache(product_key, did):
 
 def getset_last_data(data, did):
     cache = get_redis()
-    last_data = cache.getset('re_core_{}_dev_latest', zlib.compress(json.dumps(data)))
-    return json.loads(zlib.decompress(last_data)) if last_data else {}
+    p = cache.pipeline()
+    p.getset('re_core_{}_dev_latest', zlib.compress(json.dumps(data)))
+    p.expire('re_core_{}_dev_latest', 86400)
+    result = p.execute()
+    return json.loads(zlib.decompress(result[0])) if result[0] else {}
 
 def set_interval_lock(rule_id, did, interval):
     if not rule_id or not interval:
