@@ -33,10 +33,10 @@ class MainDispatcher(BaseRabbitmqConsumer):
             if lock:
                 cache = get_redis()
                 cache.delete('re_core_product_key_set')
+                cache_rule = defaultdict(list)
 
                 while True:
                     pk_set = set()
-                    cache_rule = defaultdict(list)
                     sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 100'.format(
                         settings.MYSQL_TABLE['rule']['table'],
                         id_max)
@@ -67,7 +67,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
                     if pk_set:
                         cache.sadd('re_core_product_key_set', *list(pk_set))
-                    cache_rules(cache_rule)
+
+                cache_rules(cache_rule)
 
                 cache.setnx('re_core_rule_cache_update', 1)
                 cache.expire('re_core_rule_cache_update', 82800)
