@@ -32,7 +32,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
         with RedisLock('re_core_product_key_set') as lock:
             if lock:
                 cache = get_redis()
-                cache.delete('re_core_product_key_set')
                 cache_rule = defaultdict(list)
                 pk_set = set()
 
