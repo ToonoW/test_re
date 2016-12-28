@@ -14,14 +14,8 @@ Options:
   --only-gdmshttp-consumer       start as a gdms_http consumer
   --only-devctrl-consumer        start as a devctrl consumer
   --only-es-consumer             start as a es consumer
-  --main=<main>                  set num of main core
-  --sel=<sel>                    set num of sel core
-  --cal=<cal>                    set num of cal core
-  --script=<script>              set num of script core
-  --json=<script>                set num of json core
-  --que=<que>                    set num of que core
-  --log=<log>                    set num of log core
-  --tri=<log>                    set num of log core
+  --only-device-scanner          start as a device scanner
+  --only-product-scanner         start as a product scanner
 """
 
 from gevent import monkey
@@ -38,12 +32,14 @@ from docopt import docopt
 
 from re_processor import settings
 from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer, DevCtrlConsumer, ESConsumer
-from re_processor.main import MainDispatcher
+from re_processor.main import MainDispatcher, ScheduleBufferConsumer, DeviceScheduleScanner, ProductScheduleScanner
 
 
 if '__main__' == __name__:
-    args = docopt(__doc__, version='RulesEngine Processor 0.2.2')
+    args = docopt(__doc__, version='D3 Processor 0.3.5')
     print args
+    product_key = args['--product_key'] if args.has_key('--product_key') else '*'
+
     if args['--only-tmp-consumer']:
         TmpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
     elif args['--only-http-consumer']:
@@ -60,8 +56,25 @@ if '__main__' == __name__:
         greenlet_list = []
         greenlet_list.extend([gevent.spawn(ESConsumer(settings.PUBLISH_ROUTING_KEY['es']).start) for i in range(10)])
         gevent.joinall(greenlet_list)
+    elif args['--only-device-scanner']:
+        DeviceScheduleScanner(product_key).begin()
+    elif args['--only-product-scanner']:
+        ProductScheduleScanner(product_key).begin()
     else:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
-        product_key = args['--product_key'] if args.has_key('--product_key') else '*'
 
-        MainDispatcher(mq_queue_name, product_key=product_key).begin()
+        if 'schedule_wait' == mq_queue_name:
+            ScheduleBufferConsumer(mq_queue_name, product_key=product_key).begin()
+        elif 'all' == mq_queue_name:
+            obj = MainDispatcher(mq_queue_name, product_key=product_key)
+            obj.init_rules_cache()
+            gevent.joinall([
+                gevent.spawn(obj.update_product_key_set),
+                gevent.spawn(obj.begin)
+            ])
+        else:
+            obj = MainDispatcher(mq_queue_name, product_key=product_key)
+            gevent.joinall([
+                gevent.spawn(obj.begin),
+                gevent.spawn(obj.update_product_key_set)
+            ])

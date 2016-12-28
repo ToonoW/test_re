@@ -20,7 +20,7 @@ def get_value_from_json(name, json_obj):
                 field = int(field)
             except ValueError:
                 break
-            if field > len(_obj):
+            if field >= len(_obj):
                 break
         else:
             break
@@ -68,25 +68,7 @@ class BaseInnerCore(object):
             task_list = para_task.pop()
             result = True
 
-        if not result or not task_list:
-            if msg['action_sel'] and result:
-                msg['triggle'].extend(msg['can_tri'])
-            while msg['todo_task']:
-                todo_task = msg['todo_task'].pop(0)
-                if set(msg['triggle']) >= set(todo_task['action']):
-                    continue
-                if not todo_task['task_list']:
-                    msg['triggle'].extend(todo_task['action'])
-                    continue
-                task_list = todo_task['task_list']
-                msg['can_tri'] = todo_task['action']
-                result = True
-                break
-            if not result and msg['triggle']:
-                result = True
-                task_list = []
-
-        if (not result and not msg['todo_task'] and not para_task) or (result and not msg['todo_task'] and not task_list):
+        if (not result and not para_task) or (result and not task_list):
             log_flag = True
         else:
             log_flag = False
@@ -505,8 +487,6 @@ class QueryCore(BaseInnerCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
-            result['online.status'] = 1 if status['is_online'] else 0
-            result['offline.status'] = 0 if status['is_online'] else 1
             result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
             result = {}
@@ -576,14 +556,12 @@ class TriggerCore(BaseCore):
         msg_list = []
         log_flag = False
 
-        if not task_list and (msg['action_sel'] is False or msg['triggle']):
+        if not task_list:
             db = get_mysql()
             sql = 'select `id`, `action_tree`, `extern_params`, `name` from `{0}` where `rule_id_id`={1}'.format(
                 settings.MYSQL_TABLE['action']['table'], msg['rule_id'])
             db.execute(sql)
             for action_id, action_tree, extern_params_db, name in db.fetchall():
-                if msg['action_sel'] and name not in msg['triggle']:
-                    continue
                 action_tree = json.loads(action_tree)
                 extern_params_db = json.loads(extern_params_db) if extern_params_db else []
                 tmp_dict = {x: action_tree[self.db_index[x]] for x in self.db_params}

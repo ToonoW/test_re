@@ -13,8 +13,10 @@ redis_pool = redis.ConnectionPool(
     db=settings.REDIS_DB,
     password=settings.REDIS_PWD)
 
+cache = redis.Redis(connection_pool=redis_pool)
+
 def get_redis():
-    return redis.Redis(connection_pool=redis_pool)
+    return cache
 
 mongo_conn_data = MongoClient(settings.MONGO_GIZWITS_DATA)
 mongo_conn_core = MongoClient(settings.MONGO_GIZWITS_CORE)

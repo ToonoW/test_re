@@ -22,6 +22,7 @@ REAPI_HOST = env('REAPI_HOST', 'reapi.gwdev.com')
 REAPI_TOKEN = env('REAPI_TOKEN', 'cWExcmVhcGl0ZXN0MQ==')
 
 TOPIC_MAP = {
+    'device_schedule': 'schedule',
     'device_online': 'online',
     'device_offline': 'offline',
     'device_bind': 'bind',
@@ -42,10 +43,14 @@ ROUTING_KEY = {
     'unbind': 'products.{}.events.device.unbind',
     #'raw': 'products.{}.events.device.status.raw',
     'data': 'products.{}.events.device.status.kv',
-    #'changed': 'products.{}.events.datapoints.changed'
+    #'changed': 'products.{}.events.datapoints.changed',
+    'schedule': 'rules_engine_schedule',
+    'schedule_wait': 'rules_engine_schedule_wait'
 }
 
 PUBLISH_ROUTING_KEY = {
+    'schedule_wait': 'rules_engine_schedule_wait',
+    'schedule': 'rules_engine_schedule',
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
     'gdms_http': 'gw_gdms_http_message',
@@ -57,6 +62,8 @@ PUBLISH_ROUTING_KEY = {
 }
 
 DEBUG_ROUTING_KEY = {
+    'schedule_wait': 'rules_engine_debug',
+    'schedule': 'rules_engine_debug',
     'notification': 'rules_engine_debug',
     'http': 'rules_engine_debug',
     'gdms_http': 'rules_engine_debug',
@@ -100,6 +107,10 @@ CORE_MAP = {
     }
 }
 
+# schedule settings
+SCHEDULE_FILE_DIR = env('SCHEDULE_FILE_DIR', '/schedule')
+DEVICE_HASH_GROUP = env('DEVICE_HASH_GROUP', 100)
+
 ###########databases settings################
 # mongo
 MONGO_GIZWITS_DATA= env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
@@ -117,7 +128,13 @@ MYSQL_TABLE = {
     },
     'action': {
         'table': 't_rulesengine_action'
-    }
+    },
+    'schedule': {
+        'table': 't_rulesengine_schedule',
+    },
+    'device_status': {
+        'table': 't_rulesengine_device_status'
+    },
 }
 
 # redis
@@ -140,6 +157,10 @@ SCRIPT_API_TOKEN = env('SCRIPT_API_TOKEN', '6a13dd13db814217b987f649aa5763c2')
 
 # ES tmp url
 ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
+
+# sequence settings
+SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
+SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 
 # logging
 LOGGING = {

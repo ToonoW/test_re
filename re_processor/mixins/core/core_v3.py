@@ -4,8 +4,8 @@
 import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, redis_pool
-from re_processor.common import _log, update_virtual_device_log
+from re_processor.connections import get_mongodb, get_redis
+from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock
 from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
@@ -73,8 +73,6 @@ class InputCore(BaseCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
-            result['online.status'] = 1 if status['is_online'] else 0
-            result['offline.status'] = 0 if status['is_online'] else 1
             result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
             result = {}
@@ -140,51 +138,46 @@ class InputCore(BaseCore):
 
     def get_json(self, content, params, refresh, name, rule_id, now_ts):
         cache_key = 're_core_{0}_{1}_custom_json'.format(rule_id, name)
-        cache = redis.Redis(connection_pool=redis_pool)
+        cache = get_redis()
         result = {}
-        do_refresh = True
-        try:
-            if cache.get(cache_key + '_lock'):
-                do_refresh = False
-            else:
-                is_success = cache.setnx(cache_key + '_lock', json.dumps(now_ts))
-                if is_success:
-                    cache.expire(cache_key + '_lock', refresh)
-                    do_refresh = True
-                else:
-                    do_refresh = False
-        except redis.exceptions.RedisError, e:
-            result = {'error_message': 'redis error: {}'.format(str(e))}
 
-        if do_refresh:
-            _content = json.dumps(content)
-            for key, val in params.items():
-                _content = _content.replace('"${'+key+'}"', json.dumps(val))
-            content = json.loads(_content)
-            url = content['url']
-            headers = content.get('headers', {})
-            data = content.get('data', {})
-            method = content.get('method', 'get')
-            if 'get' == method:
-                response = requests.get(url, headers=headers, params=data)
-            elif 'post' == method:
-                response = requests.post(url, data=json.dumps(data), headers=headers)
-            else:
-                raise Exception('invalid method: {}'.format(method))
-
-            result = json.loads(response.content)
-
-            try:
-                p = cache.pipeline()
-                p.set(cache_key, response.content)
-                p.expire(key, refresh + 5)
-                p.execute()
-            except redis.exceptions.RedisError, e:
-                result = {'error_message': 'redis error: {}'.format(str(e))}
-        else:
+        while True:
             try:
                 result = cache.get(cache_key)
-                result = json.loads(result)
+                if result:
+                    result = json.loads(result)
+                    break
+                else:
+                    with RedisLock(cache_key) as lock:
+                        if lock:
+                            _content = json.dumps(content)
+                            for key, val in params.items():
+                                _content = _content.replace('"${'+key+'}"', json.dumps(val))
+                            content = json.loads(_content)
+                            url = content['url']
+                            headers = content.get('headers', {})
+                            data = content.get('data', {})
+                            method = content.get('method', 'get')
+                            if 'get' == method:
+                                response = requests.get(url, headers=headers, params=data)
+                            elif 'post' == method:
+                                response = requests.post(url, data=json.dumps(data), headers=headers)
+                            else:
+                                raise Exception(u'invalid http method: {}'.format(method))
+
+                            if response.status_code > 199 and response.status_code < 300:
+                                try:
+                                    result = json.loads(response.content)
+                                except ValueError:
+                                    raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                            else:
+                                raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                            p = cache.pipeline()
+                            p.set(cache_key, response.content)
+                            p.expire(cache_key, refresh + 5)
+                            p.execute()
+                            break
+                time.sleep(1)
             except redis.exceptions.RedisError, e:
                 result = {'error_message': 'redis error: {}'.format(str(e))}
 
@@ -219,34 +212,40 @@ class InputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.get_sequence(msg['task_vars'][content['data']], content, msg['product_key'])
+        flag = True
+        if content['step'] > 1:
+            try:
+                _key = 're_core_{0}_{1}_device_sequence_counter'.format(msg['task_vars']['did'], content['data'])
+                cache = get_redis()
+                p = cache.pipeline()
+                p.incr(_key)
+                p.expire(_key, settings.SEQUENCE_EXPIRE)
+                res = p.execute()
+            except redis.exceptions.RedisError, e:
+                msg['error_message'] = 'redis error: {}'.format(str(e))
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+                flag = False
+            else:
+                if res[0] > content['step'] * 50:
+                    cache.incr(_key, -content['step']*50)
+
+                if 0 != res[0] % content['step']:
+                    flag = False
+
+        if flag:
+            result = get_sequence('re_core_{0}_{1}_device_sequence'.format(msg['task_vars']['did'], content['data']), content['length'])
+            if type(result) is dict:
+                msg.updata(result)
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+            elif not result:
+                msg['error_message'] = 'empty stream'
+                msg['task_vars'][content['alias']] = [copy.deepcopy(msg['task_vars'][content['data']])] * content['length']
+            else:
+                msg['task_vars'][content['alias']] = result
+        else:
+            return []
 
         return self.next(msg)
-
-    def get_sequence(self, data, content, product_key):
-        cache_key = 're_core_{0}_{1}_device_sequence'.format(product_key, content['data'])
-        cache = redis.Redis(connection_pool=redis_pool)
-
-        result = []
-        try:
-            result = cache.get(cache_key)
-            result = json.loads(result)
-        except:
-            pass
-
-        if result:
-            result.insert(0, data)
-            res_len = len(result)
-            if res_len < content['length']:
-                result.extend([copy.deepcopy(result[0])] * (content['length'] - res_len))
-            else:
-                result = result[:content['length']]
-        else:
-            result = [data] * content['length']
-
-        cache.set(cache_key, json.dumps(result))
-
-        return result
 
 
 class FuncCore(BaseCore):
@@ -454,7 +453,12 @@ class FuncCore(BaseCore):
             'context': params
         }
         response = requests.post(url, data=json.dumps(data), headers=headers)
-        return json.loads(response.content)['result']
+        if response.status_code > 199 and response.status_code < 300:
+            return response.json()['result']
+        elif 400 == response.status_code:
+            raise Exception(u'script error: {}'.format(response.json()['detail_message']))
+        else:
+            raise Exception(u'script error')
 
     def transformation(self, msg):
         content = msg['current']['content']
@@ -468,7 +472,7 @@ class FuncCore(BaseCore):
             else:
                 return []
 
-        msg['task_vars'][content['alias']] = DataTransformer(msg['task_vars'][content['data']]).run(content['func'])
+        msg['task_vars'][content['alias']] = DataTransformer(msg['task_vars'][content['data']]).run(content['func'], content.get('params', {}))
 
         return self.next(msg)
 
@@ -574,19 +578,49 @@ class OutputCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)], False
 
-        _msg = {
-            'msg_to': settings.MSG_TO['external'],
-            'action_type': msg['current']['type'],
-            'event': msg.get('event', ''),
-            'rule_id': msg.get('rule_id', ''),
-            'product_key': msg['task_vars'].get('product_key', ''),
-            'did': msg['task_vars'].get('did', ''),
-            'mac': msg['task_vars'].get('mac', ''),
-            'ts': time.time(),
-            'params': params,
-            'extern_params': msg['extern_params'],
-            'content': json.dumps(content)
-        }
+        delay = msg['current'].get('delay', 0)
+        if delay > 30:
+            _msg = {
+                'action_type': 'schedule_wait',
+                'product_key': msg['product_key'],
+                'did': msg['did'],
+                'mac': msg['mac'],
+                'rule_id': msg['rule_id'],
+                'node_id': msg['current']['id'],
+                'msg_to': settings.MSG_TO['external'],
+                'ts': msg['sys.timestamp'] + delay,
+                'flag': '',
+                'once': True,
+                'msg': {
+                    'msg_to': settings.MSG_TO['external'],
+                    'action_type': msg['current']['type'],
+                    'event': msg.get('event', ''),
+                    'rule_id': msg.get('rule_id', ''),
+                    'product_key': msg['task_vars'].get('product_key', ''),
+                    'did': msg['task_vars'].get('did', ''),
+                    'mac': msg['task_vars'].get('mac', ''),
+                    'ts': time.time(),
+                    'params': params,
+                    'extern_params': msg['extern_params'],
+                    'content': json.dumps(content)
+                }
+            }
+        else:
+            if delay > 0:
+                time.sleep(delay)
+            _msg = {
+                'msg_to': settings.MSG_TO['external'],
+                'action_type': msg['current']['type'],
+                'event': msg.get('event', ''),
+                'rule_id': msg.get('rule_id', ''),
+                'product_key': msg['task_vars'].get('product_key', ''),
+                'did': msg['task_vars'].get('did', ''),
+                'mac': msg['task_vars'].get('mac', ''),
+                'ts': time.time(),
+                'params': params,
+                'extern_params': msg['extern_params'],
+                'content': json.dumps(content)
+            }
 
         if 'virtual:site' == msg['task_vars'].get('mac', ''):
             _msg['log_data'] = {
