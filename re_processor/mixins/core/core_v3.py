@@ -49,7 +49,16 @@ class InputCore(BaseCore):
             if not_found:
                 msg['task_vars'].update({x: '' for x in not_found})
 
+        if content.get('did', ''):
+            prefix = content.get('prefix', '')
+            msg['task_vars'].update({
+                '{0}.{1}'.format(prefix, k.split('.')[-1]): v for k, v in msg.items() if 'data' == k.split('.')[0]
+            } if msg['did'] == content['did'] else self._query_device_data(msg['task_vars'], content['did']))
+
         return self.next(msg)
+
+    def _query_device_data(self, task_vars, did):
+        pass
 
     def _query(self, task_vars, params_list):
         result = {}
