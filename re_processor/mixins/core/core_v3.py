@@ -77,8 +77,10 @@ class InputCore(BaseCore):
             data = cache_la.get('dev_latest:{}'.format(task_vars['did']))
             if data:
                 data = json.loads(data)
-                result.update({'.'.join(['data', k]): v for k, v in data.items()})
+                result.update({'.'.join(['data', k]): v for k, v in data['attr'].items()})
         except redis.exceptions.RedisError:
+            pass
+        except KeyError:
             pass
 
         return result
