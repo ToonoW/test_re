@@ -4,7 +4,7 @@
 import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
-from re_processor.connections import get_mongodb, get_redis
+from re_processor.connections import get_mongodb, get_redis, get_redis_la
 from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock
 from re_processor.data_transform import DataTransformer
 
@@ -55,8 +55,11 @@ class InputCore(BaseCore):
         result = {}
         prefix = list(set([x.split('.')[0] for x in params_list]))
 
-        if 'data' in prefix or 'common.location' in params_list:
+        if 'data' in prefix:
             result.update(self._query_data(task_vars))
+
+        if 'common.location' in params_list:
+            result.update(self._query_location(task_vars))
 
         if 'display' in prefix:
             result.update(self._query_display(task_vars))
@@ -67,15 +70,29 @@ class InputCore(BaseCore):
         return result
 
     def _query_data(self, task_vars):
+        result = {}
+
+        try:
+            cache_la = get_redis_la()
+            data = cache_la.get('dev_latest:{}'.format(task_vars['did']))
+            if data:
+                data = json.loads(data)
+                result.update({'.'.join(['data', k]): v for k, v in data.items()})
+        except redis.exceptions.RedisError:
+            pass
+
+        return result
+
+    def _query_location(self, task_vars):
         db = get_mongodb('data')
         ds = db['device_status']
+        result = {}
 
         try:
             status = ds.find_one({'did': task_vars['did']})
-            result = {'.'.join(['data', k]): v for k, v in status['attr']['0'].items()}
             result['common.location'] = status.get('city', 'guangzhou')
         except KeyError:
-            result = {}
+            pass
 
         return result
 
