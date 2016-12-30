@@ -75,6 +75,7 @@ class InputCore(BaseCore):
         try:
             cache_la = get_redis_la()
             data = cache_la.get('dev_latest:{}'.format(task_vars['did']))
+            task_vars['data'] = data
             if data:
                 data = json.loads(data)
                 result.update({'.'.join(['data', k]): v for k, v in data.items()})
