@@ -64,7 +64,7 @@ class MainProcessor(object):
                     'product_key': msg['task_vars'].get('product_key', ''),
                     'did': msg['task_vars'].get('did', ''),
                     'mac': msg['task_vars'].get('mac', ''),
-                    'type': msg.get('type', 1),
+                    'rule_type': msg.get('type', 1),
                     'interval': msg.get('interval', 0),
                     'current': 'log',
                     'result': result,
