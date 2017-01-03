@@ -51,14 +51,26 @@ class InputCore(BaseCore):
 
         if content.get('did', ''):
             prefix = content.get('prefix', '')
-            msg['task_vars'].update({
-                '{0}.{1}'.format(prefix, k.split('.')[-1]): v for k, v in msg.items() if 'data' == k.split('.')[0]
-            } if msg['did'] == content['did'] else self._query_device_data(msg['task_vars'], content['did']))
+            res = self._query_device_data(content['did'])
+            msg['task_vars'].update({'{0}.{1}'.format(prefix, k):v for k, v in res.items()})
 
         return self.next(msg)
 
-    def _query_device_data(self, task_vars, did):
-        pass
+    def _query_device_data(self, did):
+        result = {}
+
+        try:
+            cache_la = get_redis_la()
+            data = cache_la.get('dev_latest:{}'.format(did))
+            if data:
+                data = json.loads(data)
+                result = data['attr']
+        except redis.exceptions.RedisError:
+            pass
+        except KeyError:
+            pass
+
+        return result
 
     def _query(self, task_vars, params_list):
         result = {}
