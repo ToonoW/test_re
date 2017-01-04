@@ -50,9 +50,9 @@ class InputCore(BaseCore):
                 msg['task_vars'].update({x: '' for x in not_found})
 
         if content.get('did', ''):
-            prefix = content.get('prefix', '')
+            alias = content.get('alias', '')
             res = self._query_device_data(content['did'])
-            msg['task_vars'].update({'{0}.{1}'.format(prefix, k):v for k, v in res.items()})
+            msg['task_vars'].update({'{0}.{1}'.format(alias, k):v for k, v in res.items()})
 
         return self.next(msg)
 
