@@ -345,11 +345,11 @@ class BaseRabbitmqConsumer(object):
                         last_data = getset_last_data(data, msg['did'])
 
                     rule['rule_tree']['event']['change'] = filter(
-                        lambda _node: not reduce(lambda res, y: res and \
-                                                     data.get(y, None) is not None and \
-                                                     last_data.get(y, None) == data.get(y, None),
+                        lambda _node: reduce(lambda res, y: res or \
+                                                     (data.get(y, None) is not None and \
+                                                     last_data.get(y, None) != data.get(y, None)),
                                                  _node['content'].get('params', []),
-                                                 True),
+                                                 False),
                         rule['rule_tree']['event'].get('change', []))
 
                     if rule['rule_tree']['event']['change']:
@@ -368,7 +368,7 @@ class BaseRabbitmqConsumer(object):
                 if 2 == rule['type']:
                     if last_data is None:
                         last_data = getset_last_data(data, msg['did'])
-                    if reduce(lambda res, y: res and data.get(y, None) is not None and last_data.get(y, None) == data.get(y, None), rule['params'], True):
+                    if not reduce(lambda res, y: res or (data.get(y, None) is not None and last_data.get(y, None) != data.get(y, None)), rule['params'], True):
                         continue
 
                 msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
