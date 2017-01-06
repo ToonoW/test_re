@@ -22,7 +22,7 @@ class MainProcessor(object):
 
     def __init__(self, sender):
         self.core = {}
-        for i in range(1, 4):
+        for i in [1,3]:
             core_map = settings.CORE_MAP.get('v{}'.format(i), None)
             if core_map is None:
                 raise Exception(u'start processor failed: error version "{}"'.format(i))

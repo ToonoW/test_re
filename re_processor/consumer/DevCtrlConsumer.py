@@ -29,21 +29,24 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
         for key, val in params.items():
             content = content.replace('"${'+key+'}"', json.dumps(val))
         log['content'] = content
-        try:
-            content = json.loads(content)
-            resp = requests.post(url, data=json.dumps(content['value']), headers=headers)
-        except Exception, e:
-            if 'log_data' in msg:
-                msg['log_data']['exception'] = str(e)
-                update_virtual_device_log(**msg['log_data'])
+        if content.get('multi', False) is True:
+            pass
         else:
-            #print resp.content
-            #print resp.status_code
-            log['resp_content'] = resp.content
-            log['status_code'] = resp.status_code
+            try:
+                content = json.loads(content)
+                resp = requests.post(url, data=json.dumps(content['value']), headers=headers)
+            except Exception, e:
+                if 'log_data' in msg:
+                    msg['log_data']['exception'] = str(e)
+                    update_virtual_device_log(**msg['log_data'])
+            else:
+                #print resp.content
+                #print resp.status_code
+                log['resp_content'] = resp.content
+                log['status_code'] = resp.status_code
 
-            if 'log_data' in msg:
-                if 200 != resp.status_code:
-                    msg['log_data']['exception'] = resp.content
+                if 'log_data' in msg:
+                    if 200 != resp.status_code:
+                        msg['log_data']['exception'] = resp.content
 
-                update_virtual_device_log(**msg['log_data'])
+                    update_virtual_device_log(**msg['log_data'])

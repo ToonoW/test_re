@@ -51,12 +51,14 @@ class InputCore(BaseCore):
 
         if content.get('did', ''):
             alias = content.get('alias', '')
-            res = self._query_device_data(content['did'])
-            msg['task_vars'].update({'{0}.{1}'.format(alias, k):v for k, v in res.items()})
+            msg['task_vars'][alias] = self._query_device_data(msg['task_vars'], content['did'])
 
         return self.next(msg)
 
-    def _query_device_data(self, did):
+    def _query_device_data(self, task_vars, did):
+        if did in task_vars:
+            return task_vars[did]
+
         result = {}
 
         try:
@@ -65,6 +67,7 @@ class InputCore(BaseCore):
             if data:
                 data = json.loads(data)
                 result = data['attr']
+                task_vars[did] = result
         except redis.exceptions.RedisError:
             pass
         except KeyError:
