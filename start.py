@@ -45,17 +45,11 @@ if '__main__' == __name__:
     elif args['--only-http-consumer']:
         HttpConsumer(settings.PUBLISH_ROUTING_KEY['http']).start()
     elif args['--only-gdmshttp-consumer']:
-        greenlet_list = []
-        greenlet_list.extend([gevent.spawn(GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start) for i in range(10)])
-        gevent.joinall(greenlet_list)
+        GDMSHttpConsumer(settings.PUBLISH_ROUTING_KEY['gdms_http']).start()
     elif args['--only-devctrl-consumer']:
-        greenlet_list = []
-        greenlet_list.extend([gevent.spawn(DevCtrlConsumer(settings.PUBLISH_ROUTING_KEY['devctrl']).start) for i in range(10)])
-        gevent.joinall(greenlet_list)
+        DevCtrlConsumer(settings.PUBLISH_ROUTING_KEY['devctrl']).start()
     elif args['--only-es-consumer']:
-        greenlet_list = []
-        greenlet_list.extend([gevent.spawn(ESConsumer(settings.PUBLISH_ROUTING_KEY['es']).start) for i in range(10)])
-        gevent.joinall(greenlet_list)
+        ESConsumer(settings.PUBLISH_ROUTING_KEY['es']).start()
     elif args['--only-device-scanner']:
         DeviceScheduleScanner(product_key).begin()
     elif args['--only-product-scanner']:

@@ -329,6 +329,7 @@ class FuncCore(BaseCore):
                 tmp_list.append(tmp[1:-1])
             elif self.pattern['hex'].search(tmp):
                 hex_flag = True
+                tmp_list.append(tmp)
             elif tmp.split('.')[0] in msg['custom_vars']:
                 alias = tmp.split('.')[0]
                 if alias in msg['task_vars']:
