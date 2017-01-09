@@ -49,7 +49,31 @@ class InputCore(BaseCore):
             if not_found:
                 msg['task_vars'].update({x: '' for x in not_found})
 
+        if content.get('did', ''):
+            alias = content.get('alias', '')
+            msg['task_vars'][alias] = self._query_device_data(msg['task_vars'], content['did'])
+
         return self.next(msg)
+
+    def _query_device_data(self, task_vars, did):
+        if did in task_vars:
+            return task_vars[did]
+
+        result = {}
+
+        try:
+            cache_la = get_redis_la()
+            data = cache_la.get('dev_latest:{}'.format(did))
+            if data:
+                data = json.loads(data)
+                result = data['attr']
+                task_vars[did] = result
+        except redis.exceptions.RedisError:
+            pass
+        except KeyError:
+            pass
+
+        return result
 
     def _query(self, task_vars, params_list):
         result = {}
@@ -305,6 +329,7 @@ class FuncCore(BaseCore):
                 tmp_list.append(tmp[1:-1])
             elif self.pattern['hex'].search(tmp):
                 hex_flag = True
+                tmp_list.append(tmp)
             elif tmp.split('.')[0] in msg['custom_vars']:
                 alias = tmp.split('.')[0]
                 if alias in msg['task_vars']:

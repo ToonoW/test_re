@@ -9,7 +9,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, console_logger, RedisLock, cache_rules
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -86,7 +86,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
                 gevent.spawn(self.dispatch, msg, log)
         except Exception, e:
-            console_logger.exception(e)
+            logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
@@ -162,7 +162,7 @@ class ScheduleBufferConsumer(BaseRabbitmqConsumer):
             #gevent.spawn(self.waiting, body, log)
             self.waiting(body, log)
         except Exception, e:
-            console_logger.exception(e)
+            logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
         finally:
@@ -290,7 +290,7 @@ class DeviceScheduleScanner(object):
                     self.update_start_time()
                     cnt = 1
             except Exception, e:
-                console_logger.exception(e)
+                logger.exception(e)
                 log['exception'] = str(e)
                 log['proc_t'] = int((time.time() - log['ts']) * 1000)
                 logger.info(json.dumps(log))
@@ -354,7 +354,7 @@ class ProductScheduleScanner(object):
                 if sleep_remain > 0:
                     time.sleep(sleep_remain)
             except Exception, e:
-                console_logger.exception(e)
+                logger.exception(e)
                 log['exception'] = str(e)
                 log['proc_t'] = int((time.time() - log['ts']) * 1000)
             finally:

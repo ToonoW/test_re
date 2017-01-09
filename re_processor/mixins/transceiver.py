@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, operator, copy
+import time, json, copy
 from collections import defaultdict
 
 from pika import (
