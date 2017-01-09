@@ -155,8 +155,8 @@ def get_rules_from_cache(product_key, did):
 def getset_last_data(data, did):
     cache = get_redis()
     p = cache.pipeline()
-    p.getset('re_core_{}_dev_latest', zlib.compress(json.dumps(data)))
-    p.expire('re_core_{}_dev_latest', 86400)
+    p.getset('re_core_{}_dev_latest'.format(did), zlib.compress(json.dumps(data)))
+    p.expire('re_core_{}_dev_latest'.format(did), 86400)
     result = p.execute()
     return json.loads(zlib.decompress(result[0])) if result[0] else {}
 
