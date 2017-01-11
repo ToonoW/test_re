@@ -483,17 +483,18 @@ class FuncCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.run(content['script_id'], params)
+        msg['task_vars'][content['alias']] = self.run(content['lang'], content['src_code'], params)
 
         return self.next(msg)
 
-    def run(self, script_id, params):
+    def run(self, lang, src_code, params):
         url = "{0}{1}{2}".format('http://', settings.SCRIPT_HOST, '/run')
         headers = {
             'Authorization': settings.SCRIPT_API_TOKEN
         }
         data = {
-            'script_id': script_id,
+            'lang': lang,
+            'src_code': src_code,
             'context': params
         }
         response = requests.post(url, data=json.dumps(data), headers=headers)
