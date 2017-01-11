@@ -5,7 +5,7 @@ pika==0.10.0
 MySQL-python==1.2.3
 requests==2.8.1
 graypy==0.2.12
-pymongo==2.7
+pymongo==2.9
 gevent==1.1.0
 docopt==0.6.1
 amqplib==1.0.2
