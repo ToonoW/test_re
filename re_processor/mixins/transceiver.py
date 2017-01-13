@@ -454,7 +454,6 @@ class BaseRabbitmqConsumer(object):
             'event': msg['event_type'],
             'rule_id': rule_id,
             'log_id': log_id,
-            'action_id_list': [],
             'msg_to': settings.MSG_TO['internal'],
             'ts': log['ts'],
             'current': __rule_tree_list[0][0][0] if __rule_tree_list[0] else 'tri',
