@@ -20,7 +20,7 @@ class BaseCore(object):
         '''
         msg_list = getattr(self, msg['current']['type'])(msg)
 
-        return (True if msg_list else False), msg_list, (False if msg_list else True)
+        return (True if msg_list else False), msg_list
 
     def next(self, msg):
         return reduce(operator.__add__,
@@ -528,11 +528,11 @@ class OutputCore(BaseCore):
 
     def process(self, msg):
         '''
-        execute task, return a three-tuple (result, msg_list, log_flag)
+        execute task, return a three-tuple (result, msg_list)
         '''
-        msg_list, log_flag = self.output(msg)
+        msg_list = self.output(msg)
 
-        return (True if msg_list else False), msg_list, log_flag
+        return (True if msg_list else False), msg_list
 
     def output(self, msg):
         content = msg['current']['content']
@@ -560,7 +560,7 @@ class OutputCore(BaseCore):
                 _log(p_log)
                 if 'virtual:site' == msg['task_vars'].get('mac', ''):
                     update_virtual_device_log(msg.get('log_id'), 'triggle', 2, 'time now is not allowed')
-                return [], True
+                return []
 
         params = {}
         query_list = []
@@ -575,7 +575,7 @@ class OutputCore(BaseCore):
                     next_node = copy.deepcopy(msg['custom_vars'][alias])
                     next_node['ports'] = [0]
                     next_node['wires'] = [[msg['current']['id']]]
-                    return [dict(copy.deepcopy(msg), current=next_node)], False
+                    return [dict(copy.deepcopy(msg), current=next_node)]
             elif symbol.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(symbol)
             else:
@@ -621,7 +621,7 @@ class OutputCore(BaseCore):
                     "interval": 10
                 }
             }
-            return [dict(copy.deepcopy(msg), current=next_node)], False
+            return [dict(copy.deepcopy(msg), current=next_node)]
 
         delay = msg['current'].get('delay', 0)
         if delay > 30:
@@ -674,7 +674,7 @@ class OutputCore(BaseCore):
                 'value': _msg['action_type']
             }
 
-        return [_msg], True
+        return [_msg]
 
     def _query_extern(self, task_vars, extern_list, content):
         extern_list = list(set(extern_list))
