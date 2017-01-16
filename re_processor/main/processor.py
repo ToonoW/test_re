@@ -80,7 +80,8 @@ class MainProcessor(object):
                     error_message=(error_message or msg.get('error_message', ''))
                 ))
 
-            result = result or _result
+            if 'tri' == task_type or 'output' == task_type:
+                result = result or _result
 
         if 'exception' != result:
             result = 'success' if result else 'failed'
