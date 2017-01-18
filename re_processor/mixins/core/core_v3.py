@@ -503,7 +503,7 @@ class FuncCore(BaseCore):
         elif 400 == response.status_code:
             raise Exception(u'script error: {}'.format(response.json()['detail_message']))
         else:
-            raise Exception(u'script error')
+            raise Exception(u'script error: {}'.format(response.content))
 
     def transformation(self, msg):
         content = msg['current']['content']
