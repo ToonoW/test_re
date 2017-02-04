@@ -145,7 +145,7 @@ REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
 LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 
-LA_REDIS_URL = env("LA_REDIS_URL", "redis://user:huangJIAN1@localhost:6379/0")
+LA_REDIS_URL = env("LA_REDIS_URL", "redis://localhost:6380/0")
 
 #############################################
 

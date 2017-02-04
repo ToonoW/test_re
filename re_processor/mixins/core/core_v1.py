@@ -44,7 +44,7 @@ class BaseCore(object):
 
     def process(self, msg):
         '''
-        execute task, return a three-tuple (result, msg_list, log_flag)
+        execute task, return a three-tuple (result, msg_list)
         '''
         #print 'running {}'.format(self.core_name)
         return self._process(msg)
@@ -57,7 +57,7 @@ class BaseInnerCore(object):
 
     def process(self, msg):
         '''
-        execute task, return a three-tuple (result, msg_list, log_flag)
+        execute task, return a three-tuple (result, msg_list)
         '''
         #print 'running {}'.format(self.core_name)
         task_list, task_vars, custom_vars, para_task, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg['para_task'], msg.get('extern_params', {})
@@ -68,14 +68,9 @@ class BaseInnerCore(object):
             task_list = para_task.pop()
             result = True
 
-        if (not result and not para_task) or (result and not task_list):
-            log_flag = True
-        else:
-            log_flag = False
-
         msg['task_list'], msg['current'], msg['para_task'], msg['extern_params'] = task_list, (task_list[0][0] if task_list else 'tri'), (para_task if task_list else []), extern_params
 
-        return result, ([msg] if result else []), log_flag
+        return result, ([msg] if result else [])
 
 
 class SelectorCore(BaseInnerCore):
@@ -573,7 +568,6 @@ class TriggerCore(BaseCore):
     def _process(self, msg):
         task_list, task_vars, custom_vars, extern_params = msg['task_list'], msg['task_vars'], msg['custom_vars'], msg.get('extern_params', {})
         msg_list = []
-        log_flag = False
 
         if not task_list:
             db = get_mysql()
@@ -613,7 +607,7 @@ class TriggerCore(BaseCore):
                     tmp_dict['task_list'].append(action_task)
                     _msg = {}
                     _msg.update(msg)
-                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'], _msg['action_id_list'] = tmp_dict['task_list'], copy.copy(task_vars), custom_vars, tmp_dict['task_list'][0][0], []
+                    _msg['task_list'], _msg['task_vars'], _msg['custom_vars'], _msg['current'] = tmp_dict['task_list'], copy.copy(task_vars), custom_vars, tmp_dict['task_list'][0][0]
                     msg_list.append(_msg)
                 else:
                     task_list.append(action_task)
@@ -653,8 +647,6 @@ class TriggerCore(BaseCore):
                 new_task_list.extend(task_list)
                 break
             else:
-                log_flag = True
-                msg['action_id_list'].append(str(tmp_dict['action_id']))
                 _msg = {
                     'msg_to': settings.MSG_TO['external'],
                     'action_type': tmp_dict['action_type'],
@@ -674,7 +666,7 @@ class TriggerCore(BaseCore):
         if new_task_list:
             _msg = {}
             _msg.update(msg)
-            _msg['task_list'], _msg['task_vars'],  _msg['current'], _msg['action_id_list'] = new_task_list, copy.copy(task_vars), new_task_list[0][0], []
+            _msg['task_list'], _msg['task_vars'],  _msg['current'] = new_task_list, copy.copy(task_vars), new_task_list[0][0]
             msg_list.append(_msg)
 
-        return True if msg_list else False, msg_list, log_flag
+        return True if msg_list else False, msg_list

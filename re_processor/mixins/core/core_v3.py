@@ -20,7 +20,7 @@ class BaseCore(object):
         '''
         msg_list = getattr(self, msg['current']['type'])(msg)
 
-        return (True if msg_list else False), msg_list, (False if msg_list else True)
+        return (True if msg_list else False), msg_list
 
     def next(self, msg):
         return reduce(operator.__add__,
@@ -49,7 +49,31 @@ class InputCore(BaseCore):
             if not_found:
                 msg['task_vars'].update({x: '' for x in not_found})
 
+        if content.get('did', ''):
+            alias = content.get('alias', '')
+            msg['task_vars'][alias] = self._query_device_data(msg['task_vars'], content['did'])
+
         return self.next(msg)
+
+    def _query_device_data(self, task_vars, did):
+        if did in task_vars:
+            return task_vars[did]
+
+        result = {}
+
+        try:
+            cache_la = get_redis_la()
+            data = cache_la.get('dev_latest:{}'.format(did))
+            if data:
+                data = json.loads(data)
+                result = data['attr']
+                task_vars[did] = result
+        except redis.exceptions.RedisError:
+            pass
+        except KeyError:
+            pass
+
+        return result
 
     def _query(self, task_vars, params_list):
         result = {}
@@ -305,6 +329,7 @@ class FuncCore(BaseCore):
                 tmp_list.append(tmp[1:-1])
             elif self.pattern['hex'].search(tmp):
                 hex_flag = True
+                tmp_list.append(tmp)
             elif tmp.split('.')[0] in msg['custom_vars']:
                 alias = tmp.split('.')[0]
                 if alias in msg['task_vars']:
@@ -458,17 +483,18 @@ class FuncCore(BaseCore):
             }
             return [dict(copy.deepcopy(msg), current=next_node)]
 
-        msg['task_vars'][content['alias']] = self.run(content['script_id'], params)
+        msg['task_vars'][content['alias']] = self.run(content['lang'], content['src_code'], params)
 
         return self.next(msg)
 
-    def run(self, script_id, params):
+    def run(self, lang, src_code, params):
         url = "{0}{1}{2}".format('http://', settings.SCRIPT_HOST, '/run')
         headers = {
             'Authorization': settings.SCRIPT_API_TOKEN
         }
         data = {
-            'script_id': script_id,
+            'lang': lang,
+            'src_code': src_code,
             'context': params
         }
         response = requests.post(url, data=json.dumps(data), headers=headers)
@@ -477,7 +503,7 @@ class FuncCore(BaseCore):
         elif 400 == response.status_code:
             raise Exception(u'script error: {}'.format(response.json()['detail_message']))
         else:
-            raise Exception(u'script error')
+            raise Exception(u'script error: {}'.format(response.content))
 
     def transformation(self, msg):
         content = msg['current']['content']
@@ -502,11 +528,11 @@ class OutputCore(BaseCore):
 
     def process(self, msg):
         '''
-        execute task, return a three-tuple (result, msg_list, log_flag)
+        execute task, return a three-tuple (result, msg_list)
         '''
-        msg_list, log_flag = self.output(msg)
+        msg_list = self.output(msg)
 
-        return (True if msg_list else False), msg_list, log_flag
+        return (True if msg_list else False), msg_list
 
     def output(self, msg):
         content = msg['current']['content']
@@ -534,7 +560,7 @@ class OutputCore(BaseCore):
                 _log(p_log)
                 if 'virtual:site' == msg['task_vars'].get('mac', ''):
                     update_virtual_device_log(msg.get('log_id'), 'triggle', 2, 'time now is not allowed')
-                return [], True
+                return []
 
         params = {}
         query_list = []
@@ -549,7 +575,7 @@ class OutputCore(BaseCore):
                     next_node = copy.deepcopy(msg['custom_vars'][alias])
                     next_node['ports'] = [0]
                     next_node['wires'] = [[msg['current']['id']]]
-                    return [dict(copy.deepcopy(msg), current=next_node)], False
+                    return [dict(copy.deepcopy(msg), current=next_node)]
             elif symbol.split('.')[0] in ['data', 'common', 'display']:
                 query_list.append(symbol)
             else:
@@ -595,7 +621,7 @@ class OutputCore(BaseCore):
                     "interval": 10
                 }
             }
-            return [dict(copy.deepcopy(msg), current=next_node)], False
+            return [dict(copy.deepcopy(msg), current=next_node)]
 
         delay = msg['current'].get('delay', 0)
         if delay > 30:
@@ -648,7 +674,7 @@ class OutputCore(BaseCore):
                 'value': _msg['action_type']
             }
 
-        return [_msg], True
+        return [_msg]
 
     def _query_extern(self, task_vars, extern_list, content):
         extern_list = list(set(extern_list))
