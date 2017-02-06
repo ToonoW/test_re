@@ -384,7 +384,7 @@ class QueryCore(BaseInnerCore):
 
     core_name = 'que'
     index = settings.INDEX['que']
-    params = ['type', 'target', 'pass', 'app_id']
+    params = ['type', 'target', 'pass']
 
     def _process(self, task_list, task_vars, custom_vars, para_task, extern_params, rule_id):
         result = False
@@ -409,7 +409,7 @@ class QueryCore(BaseInnerCore):
                         extern_list.append(target)
 
         if extern_list:
-            extern_result = self._query_extern(task_vars, extern_list, tmp_dict.get('app_id', ''))
+            extern_result = self._query_extern(task_vars, extern_list)
             extern_params.update(extern_result)
             result = True
 
@@ -428,16 +428,13 @@ class QueryCore(BaseInnerCore):
 
         return result
 
-    def _query_extern(self, task_vars, extern_list, app_id):
+    def _query_extern(self, task_vars, extern_list):
         extern_list = list(set(extern_list))
-        result = {x: getattr(self, 'extern_' + x)(task_vars, app_id) for x in extern_list}
+        result = {x: getattr(self, 'extern_' + x)(task_vars) for x in extern_list}
         return result
 
-    def extern_alias(self, task_vars, app_id):
-        if app_id:
-            url = "{0}{1}{2}{3}?appids={4}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'], app_id)
-        else:
-            url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'])
+    def extern_alias(self, task_vars):
+        url = "{0}{1}{2}{3}".format('http://', settings.HOST_GET_BINDING, '/v1/bindings/', task_vars['did'])
 
         headers = {
             'Authorization': settings.INNER_API_TOKEN
@@ -628,7 +625,7 @@ class TriggerCore(BaseCore):
             if tmp_dict['extern_params']:
                 for x in tmp_dict['extern_params']:
                     if not extern_params.has_key(x):
-                        extra_task.append(['que', 'e', list(set(tmp_dict['extern_params'])), True, json.loads(tmp_dict['action_content']).get('app_id', '')])
+                        extra_task.append(['que', 'e', list(set(tmp_dict['extern_params'])), True])
                         break
 
             for symbol in tmp_dict['params']:
