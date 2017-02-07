@@ -135,6 +135,9 @@ MYSQL_TABLE = {
     'device_status': {
         'table': 't_rulesengine_device_status'
     },
+    'limit': {
+        'table': 't_rulesengine_limit'
+    }
 }
 
 # redis

@@ -20,7 +20,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
     '''
 
     def __init__(self, mq_queue_name, product_key=None):
-        self.product_key_set = set([])
+        self.product_key_set = set()
+        self.limit_set = set()
         self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
         self.mq_initial()
@@ -28,15 +29,30 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def init_rules_cache(self):
         db = get_mysql()
-        id_max = 0
         with RedisLock('re_core_product_key_set') as lock:
             if lock:
                 cache = get_redis()
                 cache_rule = defaultdict(list)
                 pk_set = set()
+                limit_set = set()
 
+                # 获取所有限制
+                sql = 'select `product_key` from `{0}`'.format(
+                    settings.MYSQL_TABLE['limit']['table'])
+                db.execute(sql)
+                result = db.fetchall()
+                if not result:
+                    break
+
+                map(lambda x: limit_set.add(x[0]), result)
+
+                if limit_set:
+                    cache.sadd('re_core_rule_limit_set', *list(limit_set))
+
+                # 遍历所有规则
+                id_max = 0
                 while True:
-                    sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 100'.format(
+                    sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver`, `type`, `interval`, `obj_id`, `params` from `{0}` where `id`>{1} order by `id` limit 500'.format(
                         settings.MYSQL_TABLE['rule']['table'],
                         id_max)
                     db.execute(sql)
@@ -100,10 +116,19 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def begin(self):
         cache = get_redis()
+        while True:
+            try:
+                pk_set = cache.smembers('re_core_product_key_set')
+                if pk_set:
+                    self.product_key_set = pk_set
+                    break
+            except:
+                pass
+
         try:
-            pk_set = cache.smembers('re_core_product_key_set')
-            if pk_set:
-                self.product_key_set = pk_set
+            limit_set = cache.smembers('re_core_rule_limit_set')
+            if limit_set:
+                self.limit_set = limit_set
         except:
             pass
         self.mq_listen(self.mq_queue_name, self.product_key)
@@ -120,6 +145,10 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 #print pk_set
                 if pk_set:
                     self.product_key_set = pk_set
+
+                limit_set = cache.smembers('re_core_rule_limit_set')
+                if limit_set:
+                    self.limit_set = limit_set
             except:
                 pass
             finally:
