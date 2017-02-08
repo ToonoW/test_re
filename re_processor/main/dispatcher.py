@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import time, json, copy, os, uuid, shutil, math
+import time, json, copy, os, uuid, shutil, math, zlib
 
 from collections import defaultdict
 
@@ -9,10 +9,15 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules, check_rule_limit
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
+
+default_limit = {
+    'msg_limit': settings.MSG_LIMIT,
+    'triggle_limit': settings.TRIGGLE_LIMIT
+}
 
 class MainDispatcher(BaseRabbitmqConsumer):
     '''
@@ -21,33 +26,28 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def __init__(self, mq_queue_name, product_key=None):
         self.product_key_set = set()
-        self.limit_set = set()
+        self.limit_dict = {}
         self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
         self.mq_initial()
         self.processor = MainProcessor(MainSender(self.product_key))
 
     def init_rules_cache(self):
-        db = get_mysql()
         with RedisLock('re_core_product_key_set') as lock:
             if lock:
+                db = get_mysql()
                 cache = get_redis()
+                p = cache.pipeline()
                 cache_rule = defaultdict(list)
-                pk_set = set()
-                limit_set = set()
+                pk_set = []
 
                 # 获取所有限制
-                sql = 'select `product_key` from `{0}`'.format(
+                sql = 'select `product_key`, `msg_limit`, `triggle_limit` from `{0}`'.format(
                     settings.MYSQL_TABLE['limit']['table'])
                 db.execute(sql)
                 result = db.fetchall()
-                if not result:
-                    break
-
-                map(lambda x: limit_set.add(x[0]), result)
-
-                if limit_set:
-                    cache.sadd('re_core_rule_limit_set', *list(limit_set))
+                limit_dict = {x[0]: {'msg_limit': x[1], 'triggle_limit': x[2]} for x in result}
+                p.set('re_core_rule_limit_dict', zlib.compress(json.dumps(limit_dict)))
 
                 # 遍历所有规则
                 id_max = 0
@@ -61,7 +61,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                         break
 
                     for rule_id, product_key, rule_tree, custom_vars, enabled, ver, type, interval, obj_id, params in result:
-                        pk_set.add(product_key)
+                        pk_set.append(product_key)
                         self.product_key_set.add(product_key)
                         if 1 != enabled:
                             continue
@@ -81,12 +81,13 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     id_max = result[-1][0]
 
                 if pk_set:
-                    cache.sadd('re_core_product_key_set', *list(pk_set))
+                    p.sadd('re_core_product_key_set', *pk_set)
 
                 cache_rules(cache_rule)
 
-                cache.setnx('re_core_rule_cache_update', 1)
-                cache.expire('re_core_rule_cache_update', 82800)
+                p.setnx('re_core_rule_cache_update', 1)
+                p.expire('re_core_rule_cache_update', 82800)
+                p.execute()
 
         return True
 
@@ -100,7 +101,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
             #print body
             msg = json.loads(body)
             if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
-                gevent.spawn(self.dispatch, msg, log)
+                msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
+                if check_rule_limit(msg['product_key'], msg['d3_limit']['triggle_limit'], 'triggle', False):
+                    gevent.spawn(self.dispatch, msg, log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
@@ -124,31 +127,69 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     break
             except:
                 pass
+            time.sleep(1)
 
-        try:
-            limit_set = cache.smembers('re_core_rule_limit_set')
-            if limit_set:
-                self.limit_set = limit_set
-        except:
-            pass
+        while True:
+            try:
+                limit_dict = cache.get('re_core_rule_limit_dict')
+                if limit_dict:
+                    self.limit_dict = json.loads(zlib.decompress(limit_dict))
+                    break
+            except:
+                pass
+            time.sleep(1)
         self.mq_listen(self.mq_queue_name, self.product_key)
+
+    def update_rule_limit(self, update_list):
+        limit_dict = {}
+        with RedisLock('re_core_rule_limit_update_set') as lock:
+            if lock:
+                db = get_mysql()
+                cache = get_redis()
+                p = cache.pipeline()
+                p.srem('re_core_rule_limit_update_set', *update_list)
+                p.get('re_core_rule_limit_dict')
+                res = p.execute()
+                limit_dict = json.loads(zlib.decompress(res[1]))
+
+                sql = 'select `product_key`, `msg_limit`, `triggle_limit` from `{0}` where `product_key` in ({1})'.format(
+                    settings.MYSQL_TABLE['limit']['table'],
+                    ','.join(update_list))
+                db.execute(sql)
+                result = db.fetchall()
+
+                update_limit = {x[0]: {'msg_limit': x[1], 'triggle_limit': x[2]} for x in result}
+                limit_dict.update(update_limit)
+                map(lambda x: update_limit.pop(x) if x not in update_limit else None, update_list)
+
+                cache.set('re_core_rule_limit_dict', zlib.compress(json.dumps(limit_dict)))
+
+        return limit_dict
+
 
     def update_product_key_set(self):
         cache = get_redis()
+        p = cache.pipeline()
         while True:
             try:
-                full_update = cache.get('re_core_rule_cache_update')
-                if 'all' == self.mq_queue_name and not full_update:
+                p.get('re_core_rule_cache_update')
+                p.smembers('re_core_rule_limit_update_set')
+                f_res = p.execute()
+                if 'all' == self.mq_queue_name and not f_res[0]:
                     self.init_rules_cache()
+                    p.smembers('re_core_product_key_set')
+                    p.get('re_core_rule_limit_dict')
+                    res = p.execute()
+                    if res[0]:
+                        self.product_key_set = res[0]
 
-                pk_set = cache.smembers('re_core_product_key_set')
-                #print pk_set
-                if pk_set:
-                    self.product_key_set = pk_set
+                    if res[1]:
+                        self.limit_dict = json.loads(zlib.decompress(res[1]))
 
-                limit_set = cache.smembers('re_core_rule_limit_set')
-                if limit_set:
-                    self.limit_set = limit_set
+                if 'all' == self.mq_queue_name and f_res[1]:
+                    limit_dict = self.update_rule_limit(list(f_res[1]))
+                    if limit_dict:
+                        self.limit_dict = limit_dict
             except:
                 pass
             finally:

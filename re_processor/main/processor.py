@@ -6,7 +6,7 @@ import time, json
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
 from re_processor.common import debug_logger as logger, update_virtual_device_log, set_interval_lock
-from re_processor.common import _log
+from re_processor.common import check_rule_limit, _log
 
 
 log_status = {
@@ -59,7 +59,8 @@ class MainProcessor(object):
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
-                    self.sender.send(msg)
+                    if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
+                        self.sender.send(msg)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)
