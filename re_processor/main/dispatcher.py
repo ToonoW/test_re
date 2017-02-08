@@ -154,13 +154,13 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
                 sql = 'select `product_key`, `msg_limit`, `triggle_limit` from `{0}` where `product_key` in ({1})'.format(
                     settings.MYSQL_TABLE['limit']['table'],
-                    ','.join(update_list))
+                    ','.join(['"{}"'.format(x) for x in update_list]))
                 db.execute(sql)
                 result = db.fetchall()
 
                 update_limit = {x[0]: {'msg_limit': x[1], 'triggle_limit': x[2]} for x in result}
                 limit_dict.update(update_limit)
-                map(lambda x: update_limit.pop(x) if x not in update_limit else None, update_list)
+                map(lambda x: limit_dict.pop(x) if x not in update_limit and x in limit_dict else None, update_list)
 
                 cache.set('re_core_rule_limit_dict', zlib.compress(json.dumps(limit_dict)))
 
@@ -172,24 +172,26 @@ class MainDispatcher(BaseRabbitmqConsumer):
         p = cache.pipeline()
         while True:
             try:
-                p.get('re_core_rule_cache_update')
-                p.smembers('re_core_rule_limit_update_set')
-                f_res = p.execute()
-                if 'all' == self.mq_queue_name and not f_res[0]:
-                    self.init_rules_cache()
-                    p.smembers('re_core_product_key_set')
-                    p.get('re_core_rule_limit_dict')
-                    res = p.execute()
-                    if res[0]:
-                        self.product_key_set = res[0]
+                if 'all' == self.mq_queue_name:
+                    p.get('re_core_rule_cache_update')
+                    p.smembers('re_core_rule_limit_update_set')
+                    f_res = p.execute()
+                    if not f_res[0]:
+                        self.init_rules_cache()
 
-                    if res[1]:
-                        self.limit_dict = json.loads(zlib.decompress(res[1]))
+                    if f_res[1]:
+                        limit_dict = self.update_rule_limit(list(f_res[1]))
+                        if limit_dict:
+                            self.limit_dict = limit_dict
 
-                if 'all' == self.mq_queue_name and f_res[1]:
-                    limit_dict = self.update_rule_limit(list(f_res[1]))
-                    if limit_dict:
-                        self.limit_dict = limit_dict
+                p.smembers('re_core_product_key_set')
+                p.get('re_core_rule_limit_dict')
+                res = p.execute()
+                if res[0]:
+                    self.product_key_set = res[0]
+
+                if res[1]:
+                    self.limit_dict = json.loads(zlib.decompress(res[1]))
             except:
                 pass
             finally:

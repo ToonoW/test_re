@@ -76,7 +76,7 @@ class MainProcessor(object):
                     proc_t=((time.time() - ts) * 1000),
                     handling=('action' if 'tri' == task_type or 'output' == task_type else 'rule'),
                     extern_params=msg.get('extern_params', ''),
-                    task_vars=msg['task_vars'],
+                    task_vars=msg.get('task_vars'),
                     task_type=(msg['current']['type'] if 3 == msg['ver'] else task_type),
                     error_message=(error_message or msg.get('error_message', ''))
                 ))

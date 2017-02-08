@@ -195,10 +195,10 @@ def check_rule_limit(product_key, limit, type, incr=True):
     if incr:
         num = cache.incr(key)
         if 1 == num:
-            cache.expire(key, time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time())
+            cache.expire(key, int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time()))
     else:
         num = cache.get(key) or 0
-    return num <= limit
+    return int(num) <= limit
 
 
 class RedisLock(object):
