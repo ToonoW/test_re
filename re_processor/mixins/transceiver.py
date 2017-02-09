@@ -91,6 +91,7 @@ class BaseRabbitmqConsumer(object):
                 log = {
                     'module': 're_processor',
                     'action': 'pub',
+                    'product_key': product_key,
                     'ts': time.time(),
                     'topic': routing_key,
                     'msg': msg_pub
@@ -113,6 +114,7 @@ class BaseRabbitmqConsumer(object):
             log = {
                 'module': 're_processor',
                 'action': 'pub',
+                'product_key': product_key,
                 'ts': time.time(),
                 'topic': routing_key,
                 'msg': msg_pub

@@ -61,7 +61,7 @@ class MainProcessor(object):
                 if settings.MSG_TO['external'] == msg['msg_to']:
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
-                            self.sender.send(msg)
+                            self.sender.send(msg, product_key)
                         else:
                             _log(dict(p_log,
                                 result='failed',
@@ -70,7 +70,7 @@ class MainProcessor(object):
                                 error_message='quota was used up'
                             ))
                     else:
-                        self.sender.send(msg)
+                        self.sender.send(msg, product_key)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)
