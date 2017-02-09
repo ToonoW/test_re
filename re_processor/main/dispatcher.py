@@ -102,8 +102,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             msg = json.loads(body)
             if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
-                if check_rule_limit(msg['product_key'], msg['d3_limit']['triggle_limit'], 'triggle', False):
-                    gevent.spawn(self.dispatch, msg, log)
+                gevent.spawn(self.dispatch, msg, log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
