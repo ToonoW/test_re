@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import logging, json, requests, redis, copy, zlib
+import logging, json, requests, redis, copy, zlib, time
 import logging.config
 
 from re_processor import settings
@@ -185,6 +185,20 @@ def check_interval_locked(rule_id, did):
         return bool(lock)
     except redis.exceptions.RedisError:
         return False
+
+def check_rule_limit(product_key, limit, type, incr=True):
+    if not limit:
+        return True
+
+    cache = get_redis()
+    key = 're_core_{0}_{1}_limit'.format(product_key, type)
+    if incr:
+        num = cache.incr(key)
+        if 1 == num:
+            cache.expire(key, int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time()))
+    else:
+        num = cache.get(key) or 0
+    return int(num) <= limit
 
 
 class RedisLock(object):
