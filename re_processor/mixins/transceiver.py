@@ -91,6 +91,7 @@ class BaseRabbitmqConsumer(object):
                 log = {
                     'module': 're_processor',
                     'action': 'pub',
+                    'product_key': product_key,
                     'ts': time.time(),
                     'topic': routing_key,
                     'msg': msg_pub
@@ -113,6 +114,7 @@ class BaseRabbitmqConsumer(object):
             log = {
                 'module': 're_processor',
                 'action': 'pub',
+                'product_key': product_key,
                 'ts': time.time(),
                 'topic': routing_key,
                 'msg': msg_pub
@@ -464,83 +466,3 @@ class BaseRabbitmqConsumer(object):
             'task_vars': dict(msg, **{'common.rule_id': rule_id}),
             'custom_vars': custom_vars
         }] if __rule_tree_list else []
-
-
-class BaseRedismqConsumer(object):
-    '''
-    Base class for redismq consumer
-    '''
-
-    def redis_initial(self):
-        self.redis_conn = get_redis()
-
-    def redis_listen(self, mq_queue_name, product_key):
-        while True:
-            log = {
-                'ts': time.time(),
-                'module': 're_processor_status',
-                'running_status': 'beginning'
-            }
-            try:
-                msg = self.redis_conn.brpop('rules_engine.{0}.{1}'.format(mq_queue_name, product_key), settings.LISTEN_TIMEOUT)
-                if not msg:
-                    #print '{} IDLE-----'.format(mq_queue_name)
-                    continue
-                #print msg
-                lst = self.unpack(msg[1], log)
-                msg = self.process_msg(lst, log)
-                if msg:
-                    self.send(msg, log)
-            except Exception, e:
-                console_logger.exception(e)
-                log['exception'] = str(e)
-            log['proc_t'] = int((time.time() - log['ts']) * 1000)
-            logger.info(json.dumps(log))
-
-    def redis_publish(self, product_key, msg_list):
-        msg_dict = defaultdict(list)
-        for msg in msg_list:
-            msg_dict[msg['current']].append(msg)
-        for key, val in msg_dict.items():
-            self.redis_conn.lpush('rules_engine.{0}.{1}'.format(key, product_key), *map(json.dumps, val))
-
-    def redis_unpack(self, body, log=None):
-        log['running_status'] = 'unpack'
-        return json.loads(body)
-
-
-class DefaultQueueConsumer(object):
-
-    def default_initial(self):
-        pass
-
-    def default_listen(self, mq_queue_name, product_key):
-        while True:
-            log = {
-                'ts': time.time(),
-                'module': 're_processor_status',
-                'running_status': 'beginning'
-            }
-            try:
-                msg = self.default_queue[mq_queue_name].get(timeout=settings.LISTEN_TIMEOUT)
-                msg = self.process_msg(msg, log)
-                if msg:
-                    self.send(msg, log)
-            except Empty, e:
-                #print '{} IDLE-----'.format(mq_queue_name)
-                continue
-            except Exception, e:
-                console_logger.exception(e)
-                log['exception'] = str(e)
-                log['proc_t'] = int((time.time() - log['ts']) * 1000)
-                logger.info(json.dumps(log))
-
-    def default_publish(self, product_key, msg_list):
-        for msg in msg_list:
-            try:
-                self.default_queue[msg['current']].put(msg)
-            except:
-                pass
-
-    def default_unpack(self, body, log=None):
-        log['running_status'] = 'unpack'

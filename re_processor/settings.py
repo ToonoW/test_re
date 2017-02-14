@@ -135,6 +135,9 @@ MYSQL_TABLE = {
     'device_status': {
         'table': 't_rulesengine_device_status'
     },
+    'limit': {
+        'table': 't_rulesengine_limit'
+    }
 }
 
 # redis
@@ -163,6 +166,10 @@ ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
 # sequence settings
 SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
+
+# default limit settings
+MSG_LIMIT = env("MSG_LIMIT", 100)
+TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
 
 # logging
 LOGGING = {
