@@ -5,7 +5,7 @@ import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_redis, get_redis_la
-from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock
+from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger
 from re_processor.data_transform import DataTransformer
 
 from core_v1 import get_value_from_json
@@ -68,10 +68,8 @@ class InputCore(BaseCore):
                 data = json.loads(data)
                 result = data['attr']
                 task_vars[did] = result
-        except redis.exceptions.RedisError:
-            pass
-        except KeyError:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
@@ -102,10 +100,8 @@ class InputCore(BaseCore):
             if data:
                 data = json.loads(data)
                 result.update({'.'.join(['data', k]): v for k, v in data['attr'].items()})
-        except redis.exceptions.RedisError:
-            pass
-        except KeyError:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
@@ -117,8 +113,8 @@ class InputCore(BaseCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result['common.location'] = status.get('city', 'guangzhou')
-        except KeyError:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
@@ -163,8 +159,8 @@ class InputCore(BaseCore):
             response = requests.get(url, headers=headers)
             data = json.loads(response.content)
             result['common.product_name'] = data['name']
-        except:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 

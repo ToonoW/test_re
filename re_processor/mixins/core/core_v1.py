@@ -5,7 +5,7 @@ import json, operator, re, time, copy, requests, redis
 
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_mysql, redis_pool, get_redis_la
-from re_processor.common import _log
+from re_processor.common import _log, logger
 
 
 def get_value_from_json(name, json_obj):
@@ -340,8 +340,8 @@ class JsonCore(BaseInnerCore):
                     do_refresh = True
                 else:
                     do_refresh = False
-        except:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         if do_refresh:
             _content = json.dumps(content)
@@ -365,14 +365,14 @@ class JsonCore(BaseInnerCore):
 
             try:
                 cache.set(cache_key, response.content)
-            except:
-                pass
+            except Exception, e:
+                logger.exception(e)
         else:
             try:
                 result = cache.get(cache_key)
                 result = json.loads(result)
-            except:
-                pass
+            except Exception, e:
+                logger.exception(e)
 
         return result
 
@@ -449,7 +449,7 @@ class QueryCore(BaseInnerCore):
             emp = filter(lambda x: not x.get('dev_alias', ''), values)
             if emp:
                 if 'common.product_name' not in task_vars:
-                    task_vars.update(self._query(task_vars, ['common.product_name']))
+                    task_vars.update(self._query_product_name(task_vars))
 
                 for v in values:
                     if not v.get('dev_alias', ''):
@@ -484,10 +484,8 @@ class QueryCore(BaseInnerCore):
             if data:
                 data = json.loads(data)
                 result.update({'.'.join(['data', k]): v for k, v in data['attr'].items()})
-        except redis.exceptions.RedisError:
-            pass
-        except KeyError:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
@@ -499,8 +497,8 @@ class QueryCore(BaseInnerCore):
         try:
             status = ds.find_one({'did': task_vars['did']})
             result['common.location'] = status.get('city', 'guangzhou')
-        except KeyError:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
@@ -545,8 +543,8 @@ class QueryCore(BaseInnerCore):
             response = requests.get(url, headers=headers)
             data = json.loads(response.content)
             result['common.product_name'] = data['name']
-        except:
-            pass
+        except Exception, e:
+            logger.exception(e)
 
         return result
 
