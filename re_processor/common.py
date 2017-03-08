@@ -210,7 +210,7 @@ class RedisLock(object):
         self.cache = get_redis()
         self.lock = self.cache.setnx(self.cache_key, 1)
         if self.lock:
-            self.cache = self.cache.expire(self.cache_key, settings.REDIS_LOCK_EXPRIE)
+            self.cache.expire(self.cache_key, settings.REDIS_LOCK_EXPRIE)
         return self.lock
 
     def __exit__(self, type, value, traceback):
