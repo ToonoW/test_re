@@ -49,7 +49,6 @@ ROUTING_KEY = {
 }
 
 PUBLISH_ROUTING_KEY = {
-    'schedule_wait': 'rules_engine_schedule_wait',
     'schedule': 'rules_engine_schedule',
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
@@ -62,7 +61,6 @@ PUBLISH_ROUTING_KEY = {
 }
 
 DEBUG_ROUTING_KEY = {
-    'schedule_wait': 'rules_engine_debug',
     'schedule': 'rules_engine_debug',
     'notification': 'rules_engine_debug',
     'http': 'rules_engine_debug',

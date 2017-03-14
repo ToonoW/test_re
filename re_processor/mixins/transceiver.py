@@ -193,6 +193,7 @@ class BaseRabbitmqConsumer(object):
                 'interval': interval
             })
             if 3 == ver:
+                '''
                 if rule_tree.get('schedule_list', []):
                     if 'online' == event:
                         update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
@@ -210,6 +211,7 @@ class BaseRabbitmqConsumer(object):
                         } for x in rule_tree['schedule_list']])
                     else:
                         update_device_status(msg['product_key'], msg['did'], msg['mac'], 0, msg['sys.timestamp_ms'])
+                '''
 
                 if rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac']:

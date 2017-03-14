@@ -20,7 +20,7 @@ class DevCtrlConsumer(BaseRabbitmqConsumer):
         if 'delay' in value:
             try:
                 time.sleep(int(value['delay']))
-            except:
+            except ValueError:
                 pass
             res = 200, ''
 
