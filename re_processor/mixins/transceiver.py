@@ -229,6 +229,22 @@ class BaseRabbitmqConsumer(object):
 
     def generate_msg_list_schedule(self, msg, log):
         db = get_mysql()
+
+        sql = 'select `ts`, `is_online` from `{0}` where `did`="{1}" and `mac`="{2}" limit 1'.format(
+            settings.MYSQL_TABLE['device_status']['table'],
+            msg['did'],
+            msg['mac'])
+
+        db.execute(sql)
+        res = db.fetchall()
+        if not res:
+            db.close()
+            return []
+        flag, is_online = res[0]
+        if flag != msg['flag']:
+            db.close()
+            return []
+
         sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `id`={1}'.format(
             settings.MYSQL_TABLE['rule']['table'],
             msg['rule_id'])
@@ -246,6 +262,10 @@ class BaseRabbitmqConsumer(object):
         custom_vars = json.loads(custom_vars) if custom_vars else {}
 
         node = rule_tree['task_list'].get(msg['node_id'], {})
+        if not node or 'schedule' != node['content']['event']:
+            db.close()
+            return []
+
         msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
         msg['sys.timestamp'] = int(log['ts'])
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
@@ -255,33 +275,9 @@ class BaseRabbitmqConsumer(object):
         msg['product_key'] = product_key
         msg['common.product_key'] = msg['product_key']
         msg_list = []
-        log_id = ''
 
-        if msg['did'] and msg['once'] is False:
-            if not node or \
-               'schedule' != node['content']['event'] or \
-               bool(msg['did']) != node['content']['is_device']:
-                db.close()
-                return []
-
-            sql = 'select `ts`, `is_online` from `{0}` where `did`="{1}" and `mac`="{2}" limit 1'.format(
-                settings.MYSQL_TABLE['device_status']['table'],
-                msg['did'],
-                msg['mac'])
-
-            db.execute(sql)
-            res = db.fetchall()
-            if not res:
-                db.close()
-                return []
-
-            flag, is_online = res[0]
-            if flag != msg['flag']:
-                db.close()
-                return []
-
-            log_id = new_virtual_device_log(product_key, rule_id) if 'virtual:site' == msg['mac'] else ''
-
+        log_id = new_virtual_device_log(product_key, rule_id) if 'virtual:site' == msg['mac'] else ''
+        if msg['once'] is False:
             msg_list.append({
                 'action_type': 'schedule_wait',
                 'product_key': product_key,
