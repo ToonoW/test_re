@@ -34,7 +34,7 @@ def new_virtual_device_log(product_key, rule_id):
         if 201 == resp.status_code:
             log_id = json.loads(resp.content)['log_id']
     except Exception, e:
-        logger.warning(str(e))
+        logger.exception(e)
 
     return log_id
 
@@ -55,7 +55,7 @@ def update_virtual_device_log(log_id, field, value, exception=''):
     try:
         requests.put(url, data=json.dumps(data), headers=headers)
     except Exception, e:
-        logger.warning(str(e))
+        logger.exception(e)
 
     return log_id
 
@@ -68,6 +68,7 @@ def update_sequence(key, data, expire=settings.SEQUENCE_EXPIRE):
         p.ltrim(key, 0, settings.SEQUENCE_MAX_LEN-1)
         p.execute()
     except redis.exceptions.RedisError, e:
+        logger.exception(e)
         return {'error_message': 'redis error: {}'.format(str(e))}
     else:
         return True
@@ -82,6 +83,7 @@ def update_several_sequence(data, expire=settings.SEQUENCE_EXPIRE):
             p.ltrim(key, 0, settings.SEQUENCE_MAX_LEN-1)
         p.execute()
     except redis.exceptions.RedisError, e:
+        logger.exception(e)
         return {'error_message': 'redis error: {}'.format(str(e))}
     else:
         return True
@@ -98,34 +100,49 @@ def get_sequence(key, length, start=0):
             else:
                 result = result[:length]
     except redis.exceptions.RedisError, e:
+        logger.exception(e)
         result = {'error_message': 'redis error: {}'.format(str(e))}
 
     return result
 
-def update_device_status(product_key, did, mac, status, ts):
-    db = get_mysql()
-    sql = 'select 1 from `{0}` where `did`="{1}" and `mac`="{2}" limit 1'.format(
-        settings.MYSQL_TABLE['device_status']['table'],
-        did,
-        mac)
-    db.execute(sql)
-    if db.fetchall():
-        sql = 'update `{0}` set `is_online`={1}, `ts`="{2}" where `did`="{3}" and `mac`="{4}" limit 1'.format(
-            settings.MYSQL_TABLE['device_status']['table'],
-            status,
-            str(ts),
-            did,
-            mac)
-    else:
-        sql = 'insert into `{0}` set `product_key`="{1}", `did`="{2}", `mac`="{3}", `is_online`={4}, `ts`="{5}"'.format(
-            settings.MYSQL_TABLE['device_status']['table'],
-            product_key,
-            did,
-            mac,
-            status,
-            str(ts))
-    db.execute(sql)
-    db.close()
+def update_device_online(did, ts, status=False):
+    cache = get_redis()
+    key = 're_core_{}_dev_online_ts'.format(did)
+    try:
+        if status:
+            cache.set(key , ts)
+        else:
+            cache.delete(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+def check_device_online(did):
+    cache = get_redis()
+    try:
+        result = cache.get('re_core_{}_dev_online_ts'.format(did))
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        result = None
+
+    return result
+
+def set_schedule_msg(key, ts, now, msg):
+    cache = get_redis()
+    p = cache.pipeline()
+    offset = ts%86400
+    bit_key = 're_core_{}_schedule_bitmap'.format(ts-offset)
+    _key = 're_core_{}_schedule_set'.format(ts)
+    try:
+        expire_sec = int(86400 + ts - now)
+        p.sadd(_key, key)
+        p.expire(_key, expire_sec)
+        p.set(key, json.dumps(msg))
+        p.expire(key, expire_sec)
+        p.setbit(bit_key, offset, 1)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
 
 def cache_rules(rules, product_key=None):
     if rules:
@@ -141,8 +158,8 @@ def cache_rules(rules, product_key=None):
                 else:
                     p.delete('re_core_{}_cache_rules'.format(k))
             p.execute()
-        except redis.exceptions.RedisError:
-            pass
+        except redis.exceptions.RedisError, e:
+            logger.exception(e)
 
 def get_rules_from_cache(product_key, did):
     cache = get_redis()
@@ -169,8 +186,10 @@ def set_interval_lock(rule_id, did, interval):
         cache = get_redis()
         lock = cache.setnx('re_core_{0}_{1}_rule_interval'.format(did, rule_id), 1)
     except redis.exceptions.RedisError, e:
+        logger.exception(e)
         result = {'error_message': 'redis error: {}'.format(str(e))}
     except Exception, e:
+        logger.exception(e)
         result = {'error_message': 'error: {}'.format(str(e))}
     finally:
         if lock:
@@ -183,7 +202,8 @@ def check_interval_locked(rule_id, did):
         cache = get_redis()
         lock = cache.get('re_core_{0}_{1}_rule_interval'.format(did, rule_id))
         return bool(lock)
-    except redis.exceptions.RedisError:
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
         return False
 
 def check_rule_limit(product_key, limit, type, incr=True):
