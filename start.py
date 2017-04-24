@@ -32,7 +32,7 @@ from docopt import docopt
 
 from re_processor import settings
 from re_processor.consumer import HttpConsumer, TmpConsumer, GDMSHttpConsumer, DevCtrlConsumer, ESConsumer
-from re_processor.main import MainDispatcher, ScheduleBufferConsumer, DeviceScheduleScanner, ProductScheduleScanner
+from re_processor.main import MainDispatcher, DeviceScheduleScanner
 
 
 if '__main__' == __name__:
@@ -52,14 +52,10 @@ if '__main__' == __name__:
         ESConsumer(settings.PUBLISH_ROUTING_KEY['es']).start()
     elif args['--only-device-scanner']:
         DeviceScheduleScanner(product_key).begin()
-    elif args['--only-product-scanner']:
-        ProductScheduleScanner(product_key).begin()
     else:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
 
-        if 'schedule_wait' == mq_queue_name:
-            ScheduleBufferConsumer(mq_queue_name, product_key=product_key).begin()
-        elif 'all' == mq_queue_name:
+        if 'all' == mq_queue_name:
             obj = MainDispatcher(mq_queue_name, product_key=product_key)
             obj.init_rules_cache()
             gevent.joinall([

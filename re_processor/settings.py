@@ -49,7 +49,6 @@ ROUTING_KEY = {
 }
 
 PUBLISH_ROUTING_KEY = {
-    'schedule_wait': 'rules_engine_schedule_wait',
     'schedule': 'rules_engine_schedule',
     'notification': 'gw_notification_message',
     'http': 'gw_http_message',
@@ -62,7 +61,6 @@ PUBLISH_ROUTING_KEY = {
 }
 
 DEBUG_ROUTING_KEY = {
-    'schedule_wait': 'rules_engine_debug',
     'schedule': 'rules_engine_debug',
     'notification': 'rules_engine_debug',
     'http': 'rules_engine_debug',
@@ -146,6 +144,7 @@ REDIS_PORT = env("REDIS_PORT", 6379)
 REDIS_DB = env("REDIS_DB", 0)
 REDIS_PWD = env("REDIS_PWD", '')
 REDIS_EXPIRE = env("REDIS_EXPIRE", 3600)
+REDIS_LOCK_EXPRIE = env("REDIS_LOCK_EXPRIE", 60)
 LISTEN_TIMEOUT = env("LISTEN_TIMEOUT", 20)
 
 LA_REDIS_URL = env("LA_REDIS_URL", "redis://localhost:6380/0")

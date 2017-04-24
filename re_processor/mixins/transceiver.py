@@ -9,16 +9,17 @@ from pika import (
     URLParameters,
     BasicProperties)
 from pika.exceptions import AMQPConnectionError
-from gevent.queue import Empty
 
 from re_processor import settings
-from re_processor.connections import get_mysql, get_redis
+from re_processor.connections import get_mysql
 from re_processor.common import (
     debug_logger as logger,
     console_logger,
     new_virtual_device_log,
     update_several_sequence,
-    update_device_status,
+    update_device_online,
+    check_device_online,
+    set_schedule_msg,
     cache_rules,
     get_rules_from_cache,
     getset_last_data,
@@ -195,21 +196,24 @@ class BaseRabbitmqConsumer(object):
             if 3 == ver:
                 if rule_tree.get('schedule_list', []):
                     if 'online' == event:
-                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 1, msg['sys.timestamp_ms'])
-                        msg_list.extend([{
-                            'action_type': 'schedule_wait',
-                            'product_key': msg['product_key'],
-                            'did': msg['did'],
-                            'mac': msg['mac'],
-                            'rule_id': rule_id,
-                            'node_id': x['node'],
-                            'msg_to': settings.MSG_TO['external'],
-                            'ts': msg['sys.timestamp'] + 60*x['interval'],
-                            'flag': str(msg['sys.timestamp_ms']),
-                            'once': False
-                        } for x in rule_tree['schedule_list']])
+                        update_device_online(msg['did'], msg['sys.timestamp_ms'], True)
+                        map(lambda x: set_schedule_msg(
+                            're_core_{0}_{1}_{2}'.format(msg['did'], rule_id, x['node']),
+                            msg['sys.timestamp'] + 60*x['interval'],
+                            msg['sys.timestamp'],
+                            {
+                                'action_type': 'schedule',
+                                'product_key': msg['product_key'],
+                                'did': msg['did'],
+                                'mac': msg['mac'],
+                                'rule_id': rule_id,
+                                'node_id': x['node'],
+                                'msg_to': settings.MSG_TO['external'],
+                                'flag': str(msg['sys.timestamp_ms']),
+                                'once': False
+                            }), rule_tree['schedule_list'])
                     else:
-                        update_device_status(msg['product_key'], msg['did'], msg['mac'], 0, msg['sys.timestamp_ms'])
+                        update_device_online(msg['did'], msg['sys.timestamp_ms'], False)
 
                 if rule_tree['event'].get(event, []):
                     if 'virtual:site' == msg['mac']:
@@ -227,6 +231,11 @@ class BaseRabbitmqConsumer(object):
 
     def generate_msg_list_schedule(self, msg, log):
         db = get_mysql()
+
+        flag = check_device_online(msg['did'])
+        if not flag or flag != msg['flag']:
+            return []
+
         sql = 'select `id`, `product_key`, `rule_tree`, `custom_vars`, `enabled`, `ver` from `{0}` where `id`={1}'.format(
             settings.MYSQL_TABLE['rule']['table'],
             msg['rule_id'])
@@ -244,6 +253,10 @@ class BaseRabbitmqConsumer(object):
         custom_vars = json.loads(custom_vars) if custom_vars else {}
 
         node = rule_tree['task_list'].get(msg['node_id'], {})
+        if not node or 'schedule' != node['content']['event']:
+            db.close()
+            return []
+
         msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
         msg['sys.timestamp'] = int(log['ts'])
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
@@ -253,45 +266,23 @@ class BaseRabbitmqConsumer(object):
         msg['product_key'] = product_key
         msg['common.product_key'] = msg['product_key']
         msg_list = []
-        log_id = ''
 
-        if msg['did'] and msg['once'] is False:
-            if not node or \
-               'schedule' != node['content']['event'] or \
-               bool(msg['did']) != node['content']['is_device']:
-                db.close()
-                return []
-
-            sql = 'select `ts`, `is_online` from `{0}` where `did`="{1}" and `mac`="{2}" limit 1'.format(
-                settings.MYSQL_TABLE['device_status']['table'],
-                msg['did'],
-                msg['mac'])
-
-            db.execute(sql)
-            res = db.fetchall()
-            if not res:
-                db.close()
-                return []
-
-            flag, is_online = res[0]
-            if flag != msg['flag']:
-                db.close()
-                return []
-
-            log_id = new_virtual_device_log(product_key, rule_id) if 'virtual:site' == msg['mac'] else ''
-
-            msg_list.append({
-                'action_type': 'schedule_wait',
-                'product_key': product_key,
-                'did': msg['did'],
-                'mac': msg['mac'],
-                'rule_id': rule_id,
-                'node_id': node['id'],
-                'msg_to': settings.MSG_TO['external'],
-                'ts': msg['sys.timestamp'] + 60*node['content']['interval'],
-                'flag': flag,
-                'once': False
-            })
+        log_id = new_virtual_device_log(product_key, rule_id) if 'virtual:site' == msg['mac'] else ''
+        if msg['once'] is False:
+            set_schedule_msg('re_core_{0}_{1}_{2}'.format(msg['did'], rule_id, node['id']),
+                             msg['sys.timestamp'] + 60*node['content']['interval'],
+                             msg['sys.timestamp'],
+                             {
+                                 'action_type': 'schedule',
+                                 'product_key': product_key,
+                                 'did': msg['did'],
+                                 'mac': msg['mac'],
+                                 'rule_id': rule_id,
+                                 'node_id': node['id'],
+                                 'msg_to': settings.MSG_TO['external'],
+                                 'flag': flag,
+                                 'once': False
+                             })
 
         msg_list.append({
             'ver': ver,
