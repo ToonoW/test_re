@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-#import dotenv
-#dotenv.read_dotenv()
-
 from getenv import env
 
 # debug
@@ -14,7 +11,7 @@ SYS_PATH = env('SYS_PATH', '.')
 
 # M2M settings
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
-
+PREFETCH_COUNT = env('PREFETCH_COUNT', 100)
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 # reapi

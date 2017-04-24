@@ -71,13 +71,12 @@ class BaseRabbitmqConsumer(object):
         '''
         print body
 
-
     def mq_listen(self, mq_queue_name, product_key, no_ack=True):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
         while True:
             try:
                 self.mq_subcribe(mq_queue_name, product_key)
-                self.channel.basic_qos(prefetch_count=1)
+                self.channel.basic_qos(prefetch_count=settings.PREFETCH_COUNT)
                 self.channel.basic_consume(self.consume, queue=name, no_ack=no_ack)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:

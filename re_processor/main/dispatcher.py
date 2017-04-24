@@ -100,21 +100,29 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
-            if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
+            if msg['product_key'] in self.product_key_set:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
-                gevent.spawn(self.dispatch, msg, log)
+                gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
+        except Exception, e:
+            logger.exception(e)
+
+    def dispatch(self, msg, delivery_tag, log):
+        try:
+            lst = self.mq_unpack(msg, log)
+            map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+        except Exception, e:
+            logger.exception(e)
+        finally:
+            self.channel.basic_ack(delivery_tag=delivery_tag)
+
+    def process(self, msg, log):
+        try:
+            self.processor.process_msg(msg, log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
-
-        #self.channel.basic_ack(delivery_tag=method.delivery_tag)
-
-    def dispatch(self, msg, log):
-        lst = self.mq_unpack(msg, log)
-        if lst:
-            map(lambda x: gevent.spawn(self.processor.process_msg, x, copy.deepcopy(log)), lst)
 
     def begin(self):
         cache = get_redis()
@@ -137,7 +145,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             except:
                 pass
             time.sleep(1)
-        self.mq_listen(self.mq_queue_name, self.product_key)
+        self.mq_listen(self.mq_queue_name, self.product_key, False)
 
     def update_rule_limit(self, update_list):
         limit_dict = {}
