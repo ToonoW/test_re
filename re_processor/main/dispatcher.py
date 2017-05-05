@@ -218,6 +218,7 @@ class MainSender(BaseRabbitmqConsumer):
         self.mq_publish(self.product_key, msgs)
 
 
+# ToDo
 class DeviceScheduleScanner(object):
     '''
     dispatch msgs ready to be dispatched
