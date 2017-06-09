@@ -7,6 +7,7 @@ from re_processor.mixins import core as core_mixins
 from re_processor import settings
 from re_processor.common import debug_logger as logger, update_virtual_device_log, set_interval_lock
 from re_processor.common import check_rule_limit, _log
+from re_processor.celery import delay_sender
 
 
 log_status = {
@@ -61,7 +62,12 @@ class MainProcessor(object):
                 if settings.MSG_TO['external'] == msg['msg_to']:
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
-                            self.sender.send(msg, product_key)
+                            action_type = msg.get('action_type', '')
+                            if action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                                logger.info("notification")
+                                delay_sender.apply_async(args=(msg, product_key), countdown=5)
+                            else:
+                                self.sender.send(msg, product_key)
                         else:
                             _log(dict(p_log,
                                 result='failed',

@@ -170,6 +170,15 @@ SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
 
+
+# CELERY
+BROKER_URL = env("CELERY_BROKER_URL", 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND",
+                            'redis://redis:6379/0')
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['application/json']
+
 # logging
 LOGGING = {
     'version': 1,
@@ -243,4 +252,3 @@ INDEX = {
         'action_content': 5
     }
 }
-
