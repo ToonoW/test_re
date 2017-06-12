@@ -12,6 +12,7 @@ from re_processor.common import (
     get_device_offline_ts
 )
 from re_processor.celery import delay_sender
+from re_processor.connections import get_mysql
 
 
 log_status = {
@@ -19,6 +20,17 @@ log_status = {
     'failed': 2,
     'exception': 3
 }
+
+
+def get_notification_product_interval(product_key):
+    db = get_mysql()
+    sql = "select `interval` from `{0}` where `product_key`='{1}'".format(
+        settings.MYSQL_TABLE['product_delay_setting']['table'], product_key)
+    db.execute(sql)
+    result = db.fetchone()
+    if not result:
+        return False
+    return result[0]
 
 
 def notification_sender(delay_time, msg, product_key, did, ts):
@@ -77,11 +89,11 @@ class MainProcessor(object):
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
-                    delay_time = 8
+                    delay_time = get_notification_product_interval(product_key)
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             action_type = msg.get('action_type', '')
-                            if action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                            if delay_time and action_type == 'notification': # 若为消息推送，则离线数据延时推送
                                 notification_sender(delay_time, msg, product_key, did, ts)
                             else:
                                 self.sender.send(msg, product_key)
@@ -93,7 +105,7 @@ class MainProcessor(object):
                                 error_message='quota was used up'
                             ))
                     else:
-                        if action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                        if delay_time and action_type == 'notification': # 若为消息推送，则离线数据延时推送
                             notification_sender(delay_time, msg, product_key, did, ts)
                         else:
                             self.sender.send(msg, product_key)

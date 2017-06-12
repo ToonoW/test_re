@@ -135,6 +135,9 @@ MYSQL_TABLE = {
     },
     'limit': {
         'table': 't_rulesengine_limit'
+    },
+    'product_delay_setting': {
+        'table': 't_rulesengine_product_delay_setting'
     }
 }
 
