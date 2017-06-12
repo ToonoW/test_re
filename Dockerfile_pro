@@ -15,6 +15,6 @@ COPY . /gw_re_processor
 WORKDIR /gw_re_processor
 #ADD supervisord.conf.pro supervisord.conf
 
-EXPOSE 80
-
-ENTRYPOINT ["/gw_re_processor/docker-entrypoint.sh"]
+CMD ["cd /gw_re_processor;celery -A re_processor beat -l info > /data/supervisor/celery_beat.log 2>&1"]
+CMD ["cd /gw_re_processor; celery -A re_processor worker -l info > /data/supervisor/celery_worker.log 2>&1"]
+ENTRYPOINT ["/usr/bin/python"]

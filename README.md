@@ -38,6 +38,10 @@ LISTEN_TIMEOUT=20
 <pre>
 python start.py [options]
 
+# celery setting
+BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND="redis://redis:6379/0"
+
 # python start.py -h 输出如下
 Usage:
   start.py [options]
@@ -45,7 +49,7 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  --queue=<queue>                binding queue [default: all]     # 可选值:all, alert, fault, online, offline, bind, unbind, data, 其中all表示选中除data外的全部 
+  --queue=<queue>                binding queue [default: all]     # 可选值:all, alert, fault, online, offline, bind, unbind, data, 其中all表示选中除data外的全部
   --product_key=<product_key>    binding product_key [default: *]
   --only-tmp-consumer            start as a tmp consumer          # 开启此参数,则无视其他参数所有参数,只启动一个兼容旧sms与phone服务的consumer
   --only-http-consumer           start as a http consumer         # 开启此参数,则无视除--only-tmp-consumer外的其他参数所有参数,只启动一个兼容开能私有云回调服务的consumer
