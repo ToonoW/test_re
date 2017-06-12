@@ -1,0 +1,18 @@
+#!/bin/bash
+
+case "$1" in
+    python)
+        shift 1; /usr/bin/python $@;
+        ;;
+    celery_beat)
+        cd /gw_re_processor; celery -A gizwits_site beat -l info > /data/supervisor/celery_beat.log 2>&1;
+        ;;
+    celery_worker)
+        cd /gw_re_processor; celery -A gizwits_site worker -l info > /data/supervisor/celery_worker.log 2>&1;
+        ;;
+    *)
+        /usr/bin/python
+        ;;
+esac
+
+exit 0
