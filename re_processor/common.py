@@ -221,6 +221,36 @@ def check_rule_limit(product_key, limit, type, incr=True):
     return int(num) <= limit
 
 
+def set_device_offline_ts(did, ts, interval):
+    """
+    设置设备离线发送时间
+    """
+    cache = get_redis()
+    p = cache.pipeline()
+    key = 're_device_{}_offline_ts'.format(did)
+    try:
+        p.set(key, str(ts))
+        p.expire(key, interval)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+
+def get_device_offline_ts(did):
+    """
+    获取设备离线时间
+    """
+    cache = get_redis()
+    p = cache.pipeline()
+    key = 're_device_{}_offline_ts'.format(did)
+    try:
+        p.get(key)
+        result = p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        result = None
+    return result
+
 class RedisLock(object):
 
     def __init__(self, cache_key):

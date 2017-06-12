@@ -6,7 +6,11 @@ import time, json
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
 from re_processor.common import debug_logger as logger, update_virtual_device_log, set_interval_lock
-from re_processor.common import check_rule_limit, _log
+from re_processor.common import (
+    check_rule_limit, _log,
+    set_device_offline_ts,
+    get_device_offline_ts
+)
 from re_processor.celery import delay_sender
 
 
@@ -15,6 +19,19 @@ log_status = {
     'failed': 2,
     'exception': 3
 }
+
+
+def notification_sender(delay_time, msg, product_key, did, ts):
+    """
+    对notification特殊pk进行延时推送设置
+    """
+    event = msg.get('event', '')
+    if not get_device_offline_ts(did):
+        self.sender.send(msg, product_key)
+    if event == 'device_offline':
+        set_device_offline_ts(did, ts, delay_time)
+        delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
+
 
 class MainProcessor(object):
     '''
@@ -60,12 +77,12 @@ class MainProcessor(object):
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
+                    delay_time = 8
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             action_type = msg.get('action_type', '')
                             if action_type == 'notification': # 若为消息推送，则离线数据延时推送
-                                logger.info("notification")
-                                delay_sender.apply_async(args=(msg, product_key), countdown=5)
+                                notification_sender(delay_time, msg, product_key, did, ts)
                             else:
                                 self.sender.send(msg, product_key)
                         else:
@@ -76,7 +93,10 @@ class MainProcessor(object):
                                 error_message='quota was used up'
                             ))
                     else:
-                        self.sender.send(msg, product_key)
+                        if action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                            notification_sender(delay_time, msg, product_key, did, ts)
+                        else:
+                            self.sender.send(msg, product_key)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)
