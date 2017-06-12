@@ -17,4 +17,4 @@ WORKDIR /gw_re_processor
 
 EXPOSE 80
 
-ENTRYPOINT ["/usr/bin/python"]
+ENTRYPOINT ["/gw_re_processor/docker-entrypoint.sh"]
