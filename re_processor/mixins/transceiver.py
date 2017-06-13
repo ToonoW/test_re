@@ -22,6 +22,7 @@ from re_processor.common import (
     set_schedule_msg,
     cache_rules,
     get_rules_from_cache,
+    get_dev_rules_from_cache,
     getset_last_data,
     check_interval_locked,
     _log)
@@ -302,9 +303,17 @@ class BaseRabbitmqConsumer(object):
 
     def generate_msg_list_data(self, msg, log):
         event = 'data'
-        rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+        thermal_data = self.thermal_data.get(msg['product_key'])
+        if thermal_data:
+            rules_list = thermal_data + get_dev_rules_from_cache(msg['did'])
+            thermal = True
+        else:
+            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            thermal = False
+
         if not rules_list:
             return []
+        self.thermal_map[msg['product_key']] += 1
 
         data = msg.pop('data')
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
@@ -357,6 +366,8 @@ class BaseRabbitmqConsumer(object):
                     msg_list.extend(self.v3_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], log_id, log))
 
             elif 1 == rule['ver']:
+                if thermal:
+                    rule = copy.deepcopy(rule)
                 if 2 == rule['type']:
                     if last_data is None:
                         last_data = getset_last_data(data, msg['did'])

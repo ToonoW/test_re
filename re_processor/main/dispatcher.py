@@ -9,7 +9,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, check_rule_limit
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -31,6 +31,13 @@ class MainDispatcher(BaseRabbitmqConsumer):
         self.product_key = product_key or '*'
         self.mq_initial()
         self.processor = MainProcessor(MainSender(self.product_key))
+        self.thermal_map = defaultdict(int)
+        self.thermal_data = {}
+
+    def save_thermal_data(self):
+        obj_ids = filter(lambda x: self.thermal_map[x] > settings.THERMAL_THRESHOLD, self.thermal_map.keys())
+        self.thermal_data = {x: get_dev_rules_from_cache(x) for x in obj_ids}
+        self.thermal_map = defaultdict(int)
 
     def init_rules_cache(self):
         with RedisLock('re_core_product_key_set') as lock:
@@ -199,6 +206,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
                 if res[1]:
                     self.limit_dict = json.loads(zlib.decompress(res[1]))
+
+                self.save_thermal_data()
             except:
                 pass
             finally:

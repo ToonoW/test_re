@@ -167,6 +167,9 @@ SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
 
+# opt settings
+THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
+
 # logging
 LOGGING = {
     'version': 1,
