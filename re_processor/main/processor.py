@@ -23,6 +23,9 @@ log_status = {
 
 
 def get_notification_product_interval(product_key):
+    """
+    读取特殊pk延时设置信息
+    """
     db = get_mysql()
     sql = "select `interval` from `{0}` where `product_key`='{1}'".format(
         settings.MYSQL_TABLE['product_delay_setting']['table'], product_key)
@@ -38,7 +41,9 @@ def notification_sender(delay_time, msg, product_key, did, ts):
     对notification特殊pk进行延时推送设置
     """
     event = msg.get('event', '')
-    if not get_device_offline_ts(did):
+    if event not in ['device_online', 'device_offline']: # 若事件不是上线或离线，则正常推送信息
+        self.sender.send(msg, product_key)
+    if not get_device_offline_ts(did) and event in ['device_online', 'device_offline']:
         self.sender.send(msg, product_key)
     if event == 'device_offline':
         set_device_offline_ts(did, ts, delay_time)
