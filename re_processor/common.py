@@ -169,6 +169,11 @@ def get_rules_from_cache(product_key, did):
     result = p.execute()
     return reduce(lambda rules, x: rules + (json.loads(zlib.decompress(x)) if x else []), result, [])
 
+def get_dev_rules_from_cache(did):
+    cache = get_redis()
+    result = cache.get('re_core_{}_cache_rules'.format(did))
+    return json.loads(zlib.decompress(result)) if result else []
+
 def getset_last_data(data, did):
     cache = get_redis()
     p = cache.pipeline()

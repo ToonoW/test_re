@@ -14,7 +14,7 @@ SYS_PATH = env('SYS_PATH', '.')
 
 # M2M settings
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
-
+PREFETCH_COUNT = env('PREFETCH_COUNT', 100)
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 # reapi
@@ -173,7 +173,6 @@ SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
 
-
 # CELERY
 BROKER_URL = env("CELERY_BROKER_URL", 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND",
@@ -181,6 +180,9 @@ CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND",
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['application/json']
+
+# opt settings
+THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
 # logging
 LOGGING = {
