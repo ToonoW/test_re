@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-#import dotenv
-#dotenv.read_dotenv()
+# import dotenv
+# dotenv.read_dotenv()
 
 from getenv import env
 
@@ -135,6 +135,9 @@ MYSQL_TABLE = {
     },
     'limit': {
         'table': 't_rulesengine_limit'
+    },
+    'product_delay_setting': {
+        'table': 't_rulesengine_product_delay_setting'
     }
 }
 
@@ -169,6 +172,15 @@ SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 # default limit settings
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
+
+
+# CELERY
+BROKER_URL = env("CELERY_BROKER_URL", 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND",
+                            'redis://redis:6379/0')
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['application/json']
 
 # logging
 LOGGING = {
@@ -243,4 +255,3 @@ INDEX = {
         'action_content': 5
     }
 }
-

@@ -15,6 +15,4 @@ COPY . /gw_re_processor
 WORKDIR /gw_re_processor
 #ADD supervisord.conf.pro supervisord.conf
 
-EXPOSE 80
-
-ENTRYPOINT ["/usr/bin/python"]
+ENTRYPOINT ["/gw_re_processor/docker-entrypoint.sh"]
