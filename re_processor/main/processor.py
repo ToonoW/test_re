@@ -40,7 +40,7 @@ def notification_sender(delay_time, msg, product_key, did, ts):
     """
     对notification特殊pk进行延时推送设置
     """
-    event = msg.get('event', '')
+    event = msg.get('event_type', '')
     if not get_device_offline_ts(did):
         self.sender.send(msg, product_key)
     if event == 'device_offline':
@@ -96,7 +96,7 @@ class MainProcessor(object):
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             action_type = msg.get('action_type', '')
-                            event = msg.get('event', '')
+                            event = msg.get('event_type', '')
                             if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
                                 notification_sender(delay_time, msg, product_key, did, ts)
                             else:
