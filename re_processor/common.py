@@ -245,16 +245,14 @@ def get_device_offline_ts(did):
     """
     获取设备离线时间
     """
-    cache = get_redis()
-    p = cache.pipeline()
-    key = 're_device_{}_offline_ts'.format(did)
     try:
-        p.get(key)
-        result = p.execute()
+        cache = get_redis()
+        key = 're_device_{}_offline_ts'.format(did)
+        lock = cache.get(key)
+        return bool(lock)
     except redis.exceptions.RedisError, e:
         logger.exception(e)
-        result = None
-    return result
+        return False
 
 class RedisLock(object):
 
