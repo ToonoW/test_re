@@ -40,10 +40,8 @@ def notification_sender(delay_time, msg, product_key, did, ts):
     """
     对notification特殊pk进行延时推送设置
     """
-    event = msg.get('event', '')
-    if event not in ['device_online', 'device_offline']: # 若事件不是上线或离线，则正常推送信息
-        self.sender.send(msg, product_key)
-    if not get_device_offline_ts(did) and event in ['device_online', 'device_offline']:
+    event = msg.get('event_type', '')
+    if not get_device_offline_ts(did):
         self.sender.send(msg, product_key)
     if event == 'device_offline':
         set_device_offline_ts(did, ts, delay_time)
@@ -98,7 +96,8 @@ class MainProcessor(object):
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             action_type = msg.get('action_type', '')
-                            if delay_time and action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                            event = msg.get('event_type', '')
+                            if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
                                 notification_sender(delay_time, msg, product_key, did, ts)
                             else:
                                 self.sender.send(msg, product_key)
@@ -110,7 +109,7 @@ class MainProcessor(object):
                                 error_message='quota was used up'
                             ))
                     else:
-                        if delay_time and action_type == 'notification': # 若为消息推送，则离线数据延时推送
+                        if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
                             notification_sender(delay_time, msg, product_key, did, ts)
                         else:
                             self.sender.send(msg, product_key)
