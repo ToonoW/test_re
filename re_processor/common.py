@@ -235,7 +235,7 @@ def set_device_offline_ts(did, ts, interval):
     key = 're_device_{}_offline_ts'.format(did)
     try:
         p.set(key, str(ts))
-        p.expire(key, interval)
+        p.expire(key, int(interval) + 2)
         p.execute()
     except redis.exceptions.RedisError, e:
         logger.exception(e)
@@ -248,8 +248,17 @@ def get_device_offline_ts(did):
     try:
         cache = get_redis()
         key = 're_device_{}_offline_ts'.format(did)
-        lock = cache.get(key)
-        return bool(lock)
+        return cache.get(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+
+def clean_device_offline_ts(did):
+    try:
+        cache = get_redis()
+        key = 're_device_{}_offline_ts'.format(did)
+        return cache.delete(key)
     except redis.exceptions.RedisError, e:
         logger.exception(e)
         return False

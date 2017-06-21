@@ -9,7 +9,8 @@ from re_processor.common import debug_logger as logger, update_virtual_device_lo
 from re_processor.common import (
     check_rule_limit, _log,
     set_device_offline_ts,
-    get_device_offline_ts
+    get_device_offline_ts,
+    clean_device_offline_ts
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -55,7 +56,9 @@ class MainProcessor(object):
         对notification特殊pk进行延时推送设置
         """
         event = msg.get('event', '')
-        logger.exception('print:', get_device_offline_ts(did))
+        if get_device_offline_ts(did) and event == 'device_online':
+            clean_device_offline_ts(did)
+            return
         if not get_device_offline_ts(did) and event == 'device_online':
             self.sender.send(msg, product_key)
         if event == 'device_offline':
