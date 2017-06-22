@@ -22,9 +22,11 @@ def delay_sender(msg, product_key):
     延时任务执行离线消息发送
     """
     sender = MainSender()
-    ts = get_device_offline_ts(msg.get('did'))
+    did = msg.get('did')
+    rule_id = msg.get('rule_id')
+    ts = get_device_offline_ts(did, rule_id)
     if ts:
         ts = float(ts)
         if time.time() - ts >= msg.get('delay_time'):
             sender.send(msg, product_key)
-            clean_device_offline_ts(msg.get('did'))
+            clean_device_offline_ts(did, rule_id)

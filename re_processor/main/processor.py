@@ -56,12 +56,13 @@ class MainProcessor(object):
         对notification特殊pk进行延时推送设置
         """
         event = msg.get('event', '')
-        if not get_device_offline_ts(did) and event == 'device_online':
+        rule_id = msg.get('rule_id')
+        if not get_device_offline_ts(did, rule_id) and event == 'device_online':
             self.sender.send(msg, product_key)
-        if get_device_offline_ts(did) and event == 'device_online':
-            clean_device_offline_ts(did)
+        if get_device_offline_ts(did, rule_id) and event == 'device_online':
+            clean_device_offline_ts(did, rule_id)
         if event == 'device_offline':
-            set_device_offline_ts(did, ts, delay_time)
+            set_device_offline_ts(did, ts, delay_time, rule_id)
             msg['delay_time'] = delay_time
             delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
 
