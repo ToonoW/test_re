@@ -59,7 +59,7 @@ class MainProcessor(object):
         """
         event = msg.get('event', '')
         if not get_device_offline_ts(did) and event == 'device_online':
-            if get_device_status(did) == 'device_offline':
+            if not get_device_status(did) or get_device_status(did) == 'device_offline':
                 self.sender.send(msg, product_key)
         if get_device_offline_ts(did) and event == 'device_online':
             clean_device_offline_ts(did)
