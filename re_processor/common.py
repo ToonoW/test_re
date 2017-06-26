@@ -226,13 +226,13 @@ def check_rule_limit(product_key, limit, type, incr=True):
     return int(num) <= limit
 
 
-def set_device_offline_ts(did, ts, interval, rule_id):
+def set_device_offline_ts(did, ts, interval):
     """
     设置设备离线发送时间
     """
     cache = get_redis()
     p = cache.pipeline()
-    key = 're_device_{}_{}_offline_ts'.format(did, rule_id)
+    key = 're_device_{}_offline_ts'.format(did)
     try:
         p.set(key, str(ts))
         p.expire(key, int(interval) + 2)
@@ -241,23 +241,44 @@ def set_device_offline_ts(did, ts, interval, rule_id):
         logger.exception(e)
 
 
-def get_device_offline_ts(did, rule_id):
-    """
-    获取设备离线时间
-    """
+def set_device_status(did, status):
+    cache = get_redis()
+    p = cache.pipeline()
+    key = 're_device_{}_status'.format(did)
+    try:
+        p.set(key, status)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+
+def get_device_status(did):
     try:
         cache = get_redis()
-        key = 're_device_{}_{}_offline_ts'.format(did, rule_id)
+        key = 're_device_{}_status'.format(did)
         return cache.get(key)
     except redis.exceptions.RedisError, e:
         logger.exception(e)
         return False
 
 
-def clean_device_offline_ts(did, rule_id):
+def get_device_offline_ts(did):
+    """
+    获取设备离线时间
+    """
     try:
         cache = get_redis()
-        key = 're_device_{}_{}_offline_ts'.format(did, rule_id)
+        key = 're_device_{}_offline_ts'.format(did)
+        return cache.get(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+
+def clean_device_offline_ts(did):
+    try:
+        cache = get_redis()
+        key = 're_device_{}_offline_ts'.format(did)
         return cache.delete(key)
     except redis.exceptions.RedisError, e:
         logger.exception(e)

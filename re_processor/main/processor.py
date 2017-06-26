@@ -10,7 +10,9 @@ from re_processor.common import (
     check_rule_limit, _log,
     set_device_offline_ts,
     get_device_offline_ts,
-    clean_device_offline_ts
+    clean_device_offline_ts,
+    set_device_status,
+    get_device_status
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -56,15 +58,16 @@ class MainProcessor(object):
         对notification特殊pk进行延时推送设置
         """
         event = msg.get('event', '')
-        rule_id = msg.get('rule_id')
-        if not get_device_offline_ts(did, rule_id) and event == 'device_online':
-            self.sender.send(msg, product_key)
-        if get_device_offline_ts(did, rule_id) and event == 'device_online':
-            clean_device_offline_ts(did, rule_id)
+        if not get_device_offline_ts(did) and event == 'device_online':
+            if get_device_status(did) == 'device_offline':
+                self.sender.send(msg, product_key)
+        if get_device_offline_ts(did) and event == 'device_online':
+            clean_device_offline_ts(did)
         if event == 'device_offline':
-            set_device_offline_ts(did, ts, delay_time, rule_id)
+            set_device_offline_ts(did, ts, delay_time)
             msg['delay_time'] = delay_time
             delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
+        set_device_status(did, event)
 
     def process_msg(self, src_msg, log={}):
         '''
