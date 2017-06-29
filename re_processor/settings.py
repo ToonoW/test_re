@@ -181,6 +181,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['application/json']
 
+
+CELERY_DEFAULT_ROUTING_KEY = env("CELERY_DEFAULT_ROUTING_KEY", "celery_recore_routing_key")
+CELERY_DEFAULT_EXCHANGE = env("CELERY_DEFAULT_EXCHANGE", "celery_recore_exchange")
+CELERY_DEFAULT_QUEUE = env("CELERY_DEFAULT_QUEUE", "celery_recore_queue")
+
 # opt settings
 THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
