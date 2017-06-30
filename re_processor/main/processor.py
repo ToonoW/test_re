@@ -11,8 +11,9 @@ from re_processor.common import (
     set_device_offline_ts,
     get_device_offline_ts,
     clean_device_offline_ts,
-    set_device_status,
-    get_device_status
+    set_device_online_count,
+    get_device_online_count,
+    clean_device_online_count
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -59,15 +60,16 @@ class MainProcessor(object):
         """
         event = msg.get('event', '')
         if not get_device_offline_ts(did) and event == 'device_online':
-            if not get_device_status(did) or get_device_status(did) == 'device_offline':
+            if not get_device_online_count(did):
                 self.sender.send(msg, product_key)
         if get_device_offline_ts(did) and event == 'device_online':
             clean_device_offline_ts(did)
+            set_device_online_count(did)
         if event == 'device_offline':
             set_device_offline_ts(did, ts, delay_time)
             msg['delay_time'] = delay_time
             delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
-        set_device_status(did, event)
+            clean_device_online_count(did)
 
     def process_msg(self, src_msg, log={}):
         '''
