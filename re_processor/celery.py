@@ -29,4 +29,3 @@ def delay_sender(msg, product_key):
         ts = float(ts)
         if time.time() - ts >= msg.get('delay_time'):
             sender.send(msg, product_key)
-            clean_device_offline_ts(did)
