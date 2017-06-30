@@ -241,21 +241,6 @@ def set_device_offline_ts(did, ts, interval):
         logger.exception(e)
 
 
-def check_rule_limit(product_key, limit, type, incr=True):
-    if not limit:
-        return True
-
-    cache = get_redis()
-    key = 're_core_{0}_{1}_limit'.format(product_key, type)
-    if incr:
-        num = cache.incr(key)
-        if 1 == num:
-            cache.expire(key, int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time()))
-    else:
-        num = cache.get(key) or 0
-    return int(num) <= limit
-
-
 def set_device_online_count(did):
     cache = get_redis()
     key = 're_device_{}_online_count'.format(did)
