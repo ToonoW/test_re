@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-#import dotenv
-#dotenv.read_dotenv()
+# import dotenv
+# dotenv.read_dotenv()
 
 from getenv import env
 
@@ -14,7 +14,7 @@ SYS_PATH = env('SYS_PATH', '.')
 
 # M2M settings
 M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
-
+PREFETCH_COUNT = env('PREFETCH_COUNT', 100)
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
 # reapi
@@ -135,6 +135,9 @@ MYSQL_TABLE = {
     },
     'limit': {
         'table': 't_rulesengine_limit'
+    },
+    'product_delay_setting': {
+        'table': 't_rulesengine_product_delay_setting'
     }
 }
 
@@ -169,6 +172,22 @@ SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 # default limit settings
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
+
+# CELERY
+BROKER_URL = env("CELERY_BROKER_URL", 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND",
+                            'redis://redis:6379/0')
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['application/json']
+
+
+CELERY_DEFAULT_ROUTING_KEY = env("CELERY_DEFAULT_ROUTING_KEY", "celery_recore_routing_key")
+CELERY_DEFAULT_EXCHANGE = env("CELERY_DEFAULT_EXCHANGE", "celery_recore_exchange")
+CELERY_DEFAULT_QUEUE = env("CELERY_DEFAULT_QUEUE", "celery_recore_queue")
+
+# opt settings
+THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
 # logging
 LOGGING = {
@@ -243,4 +262,3 @@ INDEX = {
         'action_content': 5
     }
 }
-

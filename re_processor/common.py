@@ -169,6 +169,11 @@ def get_rules_from_cache(product_key, did):
     result = p.execute()
     return reduce(lambda rules, x: rules + (json.loads(zlib.decompress(x)) if x else []), result, [])
 
+def get_dev_rules_from_cache(did):
+    cache = get_redis()
+    result = cache.get('re_core_{}_cache_rules'.format(did))
+    return json.loads(zlib.decompress(result)) if result else []
+
 def getset_last_data(data, did):
     cache = get_redis()
     p = cache.pipeline()
@@ -220,6 +225,73 @@ def check_rule_limit(product_key, limit, type, incr=True):
         num = cache.get(key) or 0
     return int(num) <= limit
 
+
+def set_device_offline_ts(did, ts, interval):
+    """
+    设置设备离线发送时间
+    """
+    cache = get_redis()
+    p = cache.pipeline()
+    key = 're_device_{}_offline_ts'.format(did)
+    try:
+        p.set(key, str(ts))
+        p.expire(key, int(interval) + 2)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+
+def set_device_online_count(did):
+    cache = get_redis()
+    key = 're_device_{}_online_count'.format(did)
+    num = cache.incr(key)
+    try:
+        return cache.incr(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+def get_device_online_count(did):
+    try:
+        cache = get_redis()
+        key = 're_device_{}_online_count'.format(did)
+        return cache.get(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+
+def clean_device_online_count(did):
+    try:
+        cache = get_redis()
+        key = 're_device_{}_online_count'.format(did)
+        return cache.delete(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+
+def get_device_offline_ts(did):
+    """
+    获取设备离线时间
+    """
+    try:
+        cache = get_redis()
+        key = 're_device_{}_offline_ts'.format(did)
+        return cache.get(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
+
+
+def clean_device_offline_ts(did):
+    try:
+        cache = get_redis()
+        key = 're_device_{}_offline_ts'.format(did)
+        return cache.delete(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return False
 
 class RedisLock(object):
 

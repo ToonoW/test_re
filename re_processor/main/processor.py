@@ -6,7 +6,17 @@ import time, json
 from re_processor.mixins import core as core_mixins
 from re_processor import settings
 from re_processor.common import debug_logger as logger, update_virtual_device_log, set_interval_lock
-from re_processor.common import check_rule_limit, _log
+from re_processor.common import (
+    check_rule_limit, _log,
+    set_device_offline_ts,
+    get_device_offline_ts,
+    clean_device_offline_ts,
+    set_device_online_count,
+    get_device_online_count,
+    clean_device_online_count
+)
+from re_processor.celery import delay_sender
+from re_processor.connections import get_mysql
 
 
 log_status = {
@@ -14,6 +24,21 @@ log_status = {
     'failed': 2,
     'exception': 3
 }
+
+
+def get_notification_product_interval(product_key):
+    """
+    读取特殊pk延时设置信息
+    """
+    db = get_mysql()
+    sql = "select `interval` from `{0}` where `product_key`='{1}'".format(
+        settings.MYSQL_TABLE['product_delay_setting']['table'], product_key)
+    db.execute(sql)
+    result = db.fetchone()
+    if not result:
+        return False
+    return result[0]
+
 
 class MainProcessor(object):
     '''
@@ -28,6 +53,23 @@ class MainProcessor(object):
                 raise Exception(u'start processor failed: error version "{}"'.format(i))
             self.core[i] = {k: getattr(core_mixins, v)() for k, v in core_map.items()} if core_map else None
         self.sender = sender
+
+    def notification_sender(self, delay_time, msg, product_key, did, ts):
+        """
+        对notification特殊pk进行延时推送设置
+        """
+        event = msg.get('event', '')
+        if not get_device_offline_ts(did) and event == 'device_online':
+            if not get_device_online_count(did):
+                self.sender.send(msg, product_key)
+        if get_device_offline_ts(did) and event == 'device_online':
+            clean_device_offline_ts(did)
+            set_device_online_count(did)
+        if event == 'device_offline':
+            set_device_offline_ts(did, ts, delay_time)
+            msg['delay_time'] = delay_time
+            delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
+            clean_device_online_count(did)
 
     def process_msg(self, src_msg, log={}):
         '''
@@ -59,9 +101,15 @@ class MainProcessor(object):
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
+                    delay_time = get_notification_product_interval(product_key)
+                    action_type = msg.get('action_type', '')
+                    event = msg.get('event', '')
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
-                            self.sender.send(msg, product_key)
+                            if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
+                                self.notification_sender(delay_time, msg, product_key, did, ts)
+                            else:
+                                self.sender.send(msg, product_key)
                         else:
                             _log(dict(p_log,
                                 result='failed',
@@ -70,7 +118,10 @@ class MainProcessor(object):
                                 error_message='quota was used up'
                             ))
                     else:
-                        self.sender.send(msg, product_key)
+                        if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
+                            self.notification_sender(delay_time, msg, product_key, did, ts)
+                        else:
+                            self.sender.send(msg, product_key)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)

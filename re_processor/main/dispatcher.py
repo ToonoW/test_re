@@ -9,7 +9,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, check_rule_limit
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -31,6 +31,13 @@ class MainDispatcher(BaseRabbitmqConsumer):
         self.product_key = product_key or '*'
         self.mq_initial()
         self.processor = MainProcessor(MainSender(self.product_key))
+        self.thermal_map = defaultdict(int)
+        self.thermal_data = {}
+
+    def save_thermal_data(self):
+        obj_ids = filter(lambda x: self.thermal_map[x] > settings.THERMAL_THRESHOLD, self.thermal_map.keys())
+        self.thermal_data = {x: get_dev_rules_from_cache(x) for x in obj_ids}
+        self.thermal_map = defaultdict(int)
 
     def init_rules_cache(self):
         with RedisLock('re_core_product_key_set') as lock:
@@ -100,21 +107,32 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
-            if msg['product_key'] in self.product_key_set or 'device_schedule' == msg['event_type']:
+            if msg['product_key'] in self.product_key_set:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
-                gevent.spawn(self.dispatch, msg, log)
+                gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
+            else:
+                self.channel.basic_ack(delivery_tag=method.delivery_tag)
+        except Exception, e:
+            logger.exception(e)
+            self.channel.basic_ack(delivery_tag=method.delivery_tag)
+
+    def dispatch(self, msg, delivery_tag, log):
+        try:
+            lst = self.mq_unpack(msg, log)
+            map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+        except Exception, e:
+            logger.exception(e)
+        finally:
+            self.channel.basic_ack(delivery_tag=delivery_tag)
+
+    def process(self, msg, log):
+        try:
+            self.processor.process_msg(msg, log)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
             log['proc_t'] = int((time.time() - log['ts']) * 1000)
             logger.info(json.dumps(log))
-
-        #self.channel.basic_ack(delivery_tag=method.delivery_tag)
-
-    def dispatch(self, msg, log):
-        lst = self.mq_unpack(msg, log)
-        if lst:
-            map(lambda x: gevent.spawn(self.processor.process_msg, x, copy.deepcopy(log)), lst)
 
     def begin(self):
         cache = get_redis()
@@ -137,7 +155,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             except:
                 pass
             time.sleep(1)
-        self.mq_listen(self.mq_queue_name, self.product_key)
+        self.mq_listen(self.mq_queue_name, self.product_key, False)
 
     def update_rule_limit(self, update_list):
         limit_dict = {}
@@ -191,6 +209,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
                 if res[1]:
                     self.limit_dict = json.loads(zlib.decompress(res[1]))
+
+                self.save_thermal_data()
             except:
                 pass
             finally:
@@ -210,6 +230,7 @@ class MainSender(BaseRabbitmqConsumer):
         self.mq_publish(self.product_key, msgs)
 
 
+# ToDo
 class DeviceScheduleScanner(object):
     '''
     dispatch msgs ready to be dispatched
