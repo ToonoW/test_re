@@ -388,7 +388,6 @@ class BaseRabbitmqConsumer(object):
     def generate_msg_list(self, msg, log):
         event =  settings.TOPIC_MAP[msg['event_type']]
         rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
-        logger.info(rules_list)
         if not rules_list:
             return []
 
