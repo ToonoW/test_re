@@ -28,6 +28,7 @@ TOPIC_MAP = {
     'device_bind': 'bind',
     'device_unbind': 'unbind',
     'device_status_kv': 'data',
+    'device_reset': 'reset',
     'attr_fault': 'fault',
     'attr_alert': 'alert'
 }
@@ -41,6 +42,7 @@ ROUTING_KEY = {
     'offline': 'products.{}.events.device.offline',
     'bind': 'products.{}.events.device.bind',
     'unbind': 'products.{}.events.device.unbind',
+    'reset': 'products.{}.events.device.reset',
     #'raw': 'products.{}.events.device.status.raw',
     'data': 'products.{}.events.device.status.kv',
     #'changed': 'products.{}.events.datapoints.changed',

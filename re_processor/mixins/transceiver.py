@@ -404,7 +404,11 @@ class BaseRabbitmqConsumer(object):
             msg['bind.status'], msg['unbind.status'] = 0, 1
             msg['unbind.app_id'] = msg['app_id']
             msg['unbind.uid'] = msg['uid']
-
+        elif 'reset' == event:
+            msg['reset.mac'] = msg['mac']
+            msg['reset.did'] = msg['did']
+            msg['reset.product_key'] = msg['product_key']
+            msg['reset.created_at'] = msg['created_at']
         else:
             return []
 
