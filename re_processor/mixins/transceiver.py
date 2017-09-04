@@ -3,6 +3,7 @@
 
 import time, json, copy
 from collections import defaultdict
+from datetime import datetime
 
 from pika import (
     BlockingConnection,
@@ -261,6 +262,7 @@ class BaseRabbitmqConsumer(object):
         msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
         msg['sys.timestamp'] = int(log['ts'])
         msg['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
+        msg['sys.utc_now'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         msg['common.did'] = msg['did']
         msg['common.mac'] = msg['mac'].lower()
         msg['common.mac_upper'] = msg['mac'].upper()
