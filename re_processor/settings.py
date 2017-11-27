@@ -191,6 +191,8 @@ CELERY_DEFAULT_QUEUE = env("CELERY_DEFAULT_QUEUE", "celery_recore_queue")
 # opt settings
 THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
+IS_NO_ACK= env("IS_NO_ACK",  True)
+
 # logging
 LOGGING = {
     'version': 1,
