@@ -44,13 +44,20 @@ class BaseRabbitmqConsumer(object):
             exit(1)
         self.channel = self.m2m_conn.channel()
 
-    def mq_subcribe(self, mq_queue_name, product_key):
-        name = 'rules_engine_core_{}'.format(mq_queue_name)
-        self.channel.queue_declare(queue=name, durable=True)
-        self.channel.queue_bind(
-            exchange=settings.EXCHANGE,
-            queue=name,
-            routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
+    def mq_subcribe(self, mq_queue_name, product_key, routing_key):
+        if routing_key is None:
+            name = 'rules_engine_core_{}'.format(mq_queue_name)
+            self.channel.queue_declare(queue=name, durable=True)
+            self.channel.queue_bind(
+                exchange=settings.EXCHANGE,
+                queue=name,
+                routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
+        else:
+            self.channel.queue_declare(queue=mq_queue_name, durable=True)
+            self.channel.queue_bind(
+                exchange=settings.EXCHANGE,
+                queue=mq_queue_name,
+                routing_key=routing_key)
 
     def mq_reconnect(self):
         # reconnect rabbitmq
@@ -73,11 +80,13 @@ class BaseRabbitmqConsumer(object):
         '''
         print body
 
-    def mq_listen(self, mq_queue_name, product_key, no_ack=True):
+    def mq_listen(self, mq_queue_name, product_key, no_ack=True, routing_key=None):
         name = 'rules_engine_core_{}'.format(mq_queue_name)
+        if routing_key:
+            name = mq_queue_name
         while True:
             try:
-                self.mq_subcribe(mq_queue_name, product_key)
+                self.mq_subcribe(mq_queue_name, product_key, routing_key)
                 self.channel.basic_qos(prefetch_count=settings.PREFETCH_COUNT)
                 self.channel.basic_consume(self.consume, queue=name, no_ack=no_ack)
                 self.channel.start_consuming()
