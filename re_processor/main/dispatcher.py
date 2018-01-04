@@ -155,7 +155,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             except:
                 pass
             time.sleep(1)
-        self.mq_listen(self.mq_queue_name, self.product_key, False)
+        self.mq_listen(self.mq_queue_name, self.product_key, settings.IS_NO_ACK)
 
     def update_rule_limit(self, update_list):
         limit_dict = {}
