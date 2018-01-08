@@ -25,7 +25,7 @@ def delay_sender(msg, product_key):
     did = msg.get('did')
     rule_id = msg.get('rule_id')
     ts = get_device_offline_ts(did)
+    print ts
     if ts:
         ts = float(ts)
-        if time.time() - ts >= msg.get('delay_time'):
-            sender.send(msg, product_key)
+        sender.send(msg, product_key)
