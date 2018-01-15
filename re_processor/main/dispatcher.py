@@ -123,7 +123,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
         except Exception, e:
             logger.exception(e)
         finally:
-            self.channel.basic_ack(delivery_tag=delivery_tag)
+            if not settings.IS_NO_ACK:
+                self.channel.basic_ack(delivery_tag=delivery_tag)
 
     def process(self, msg, log):
         try:

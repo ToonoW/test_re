@@ -206,18 +206,19 @@ LOGGING = {
     'handlers': {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
+        "file": env("LOG_FILE", {"class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000,"formatter": "standard"})
     },
     'loggers': {
         'processor': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
         },
         'processor_gray': {
-            'handlers': ['graylog'],
+            'handlers': ['graylog', 'file'],
             'level': 'INFO'
         },
         'debug_gray': {
-            'handlers': ['graylog'],
+            'handlers': ['graylog', 'file'],
             'level': 'INFO'
         }
     }
