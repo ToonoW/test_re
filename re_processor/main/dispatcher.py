@@ -107,6 +107,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
+            if msg['product_key'] in settings.PRODUCT_WHITELIST:
+                logger.info("pk:{} in white list".format(msg['product_key']))
+                return
             if msg['product_key'] in self.product_key_set:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
                 gevent.spawn(self.dispatch, msg, method.delivery_tag, log)

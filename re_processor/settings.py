@@ -82,6 +82,8 @@ MSG_TO = {
     'external': 'rabbitmq'
 }
 
+PRODUCT_WHITELIST = env("PRODUCT_WHITELIST", ["5346327ed1784b33bf7a10773e481335"])
+
 # processor core_map
 CORE_MAP = {
     'v1': {
