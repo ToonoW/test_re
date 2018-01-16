@@ -109,15 +109,19 @@ class MainDispatcher(BaseRabbitmqConsumer):
             msg = json.loads(body)
             if msg['product_key'] in settings.PRODUCT_WHITELIST:
                 logger.info("pk:{} in white list".format(msg['product_key']))
+                if not settings.IS_NO_ACK:
+                    self.channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
             if msg['product_key'] in self.product_key_set:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
                 gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
             else:
-                self.channel.basic_ack(delivery_tag=method.delivery_tag)
+                if not settings.IS_NO_ACK:
+                    self.channel.basic_ack(delivery_tag=method.delivery_tag)
         except Exception, e:
             logger.exception(e)
-            self.channel.basic_ack(delivery_tag=method.delivery_tag)
+            if not settings.IS_NO_ACK:
+                self.channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def dispatch(self, msg, delivery_tag, log):
         try:
