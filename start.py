@@ -8,6 +8,7 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
+  --routing_key=<routing_key>    routing_key [default: None]
   --product_key=<product_key>    binding product_key [default: *]
   --only-tmp-consumer            start as a tmp consumer
   --only-http-consumer           start as a http consumer
@@ -39,7 +40,7 @@ if '__main__' == __name__:
     args = docopt(__doc__, version='D3 Processor 0.3.5')
     print args
     product_key = args['--product_key'] if args.has_key('--product_key') else '*'
-
+    routing_key = args['--routing_key'] if args.has_key('--routing_key') else None
     if args['--only-tmp-consumer']:
         TmpConsumer(settings.PUBLISH_ROUTING_KEY['tmp']).start()
     elif args['--only-http-consumer']:
@@ -54,7 +55,6 @@ if '__main__' == __name__:
         DeviceScheduleScanner(product_key).begin()
     else:
         mq_queue_name = args['--queue'] if args.has_key('--queue') else 'all'
-
         if 'all' == mq_queue_name:
             obj = MainDispatcher(mq_queue_name, product_key=product_key)
             obj.init_rules_cache()
@@ -63,7 +63,9 @@ if '__main__' == __name__:
                 gevent.spawn(obj.begin)
             ])
         else:
-            obj = MainDispatcher(mq_queue_name, product_key=product_key)
+            obj = MainDispatcher(mq_queue_name, product_key=product_key, routing_key=routing_key)
+            if routing_key == 'products.*.events.device.*':
+                obj.init_rules_cache()
             gevent.joinall([
                 gevent.spawn(obj.begin),
                 gevent.spawn(obj.update_product_key_set)
