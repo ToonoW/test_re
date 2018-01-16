@@ -82,7 +82,7 @@ MSG_TO = {
     'external': 'rabbitmq'
 }
 
-PRODUCT_WHITELIST = env("PRODUCT_WHITELIST", ["5346327ed1784b33bf7a10773e481335"])
+PRODUCT_WHITELIST = env("PRODUCT_WHITELIST", ["pk"])
 
 # processor core_map
 CORE_MAP = {
@@ -172,6 +172,9 @@ ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
 # sequence settings
 SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
+
+# product notification interval
+NOTIFICATION_INTERVAL_EXPIRE = env("NOTIFICATION_INTERVAL_EXPIRE", 10800) # 缓存 3 小时过期
 
 # default limit settings
 MSG_LIMIT = env("MSG_LIMIT", 100)
