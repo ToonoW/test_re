@@ -226,6 +226,34 @@ def check_rule_limit(product_key, limit, type, incr=True):
     return int(num) <= limit
 
 
+def set_noti_product_interval(product_key, delay_time):
+    '''
+    设备 Notification 间隔时间缓存
+    '''
+    cache = get_redis()
+    p = cache.pipeline()
+    key = 're_core_product_{}_interval'.format(product_key)
+    try:
+        p.set(key, str(delay_time))
+        p.expire(key, settings.NOTIFICATION_INTERVAL_EXPIRE)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+
+def get_noti_product_interval(product_key):
+    '''
+    获取间隔时间缓存
+    '''
+    try:
+        cache = get_redis()
+        key = 're_core_product_{}_interval'.format(product_key)
+        return cache.get(key)
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return 0
+
+
 def set_device_offline_ts(did, ts, interval):
     """
     设置设备离线发送时间

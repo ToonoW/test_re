@@ -82,6 +82,8 @@ MSG_TO = {
     'external': 'rabbitmq'
 }
 
+PRODUCT_WHITELIST = env("PRODUCT_WHITELIST", ["pk"])
+
 # processor core_map
 CORE_MAP = {
     'v1': {
@@ -171,6 +173,9 @@ ES_URL = 'https://admin:go4xpg@119.29.166.125:9200/product.air_cleaner.v1/data'
 SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 
+# product notification interval
+NOTIFICATION_INTERVAL_EXPIRE = env("NOTIFICATION_INTERVAL_EXPIRE", 10800) # 缓存 3 小时过期
+
 # default limit settings
 MSG_LIMIT = env("MSG_LIMIT", 100)
 TRIGGLE_LIMIT = env("TRIGGLE_LIMIT", 100)
@@ -206,18 +211,19 @@ LOGGING = {
     'handlers': {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
+        "file": env("LOG_FILE", {"class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000,"formatter": "standard"})
     },
     'loggers': {
         'processor': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
         },
         'processor_gray': {
-            'handlers': ['graylog'],
+            'handlers': ['graylog', 'file'],
             'level': 'INFO'
         },
         'debug_gray': {
-            'handlers': ['graylog'],
+            'handlers': ['graylog', 'file'],
             'level': 'INFO'
         }
     }

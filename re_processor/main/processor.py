@@ -13,7 +13,9 @@ from re_processor.common import (
     clean_device_offline_ts,
     set_device_online_count,
     get_device_online_count,
-    clean_device_online_count
+    clean_device_online_count,
+    get_noti_product_interval,
+    set_noti_product_interval
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -36,7 +38,7 @@ def get_notification_product_interval(product_key):
     db.execute(sql)
     result = db.fetchone()
     if not result:
-        return False
+        return 0
     return result[0]
 
 
@@ -101,7 +103,10 @@ class MainProcessor(object):
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
-                    delay_time = get_notification_product_interval(product_key)
+                    delay_time = get_noti_product_interval(product_key)
+                    if delay_time is None:
+                        delay_time = get_notification_product_interval(product_key)
+                        set_noti_product_interval(product_key, delay_time)
                     action_type = msg.get('action_type', '')
                     event = msg.get('event', '')
                     if 3 == src_msg['ver']:
