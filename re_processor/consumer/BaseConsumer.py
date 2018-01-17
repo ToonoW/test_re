@@ -69,7 +69,8 @@ class BaseRabbitmqConsumer(object):
                 self.channel.queue_declare(queue=self.queue, durable=True)
                 self.channel.queue_bind(exchange=settings.EXCHANGE, queue=self.queue, routing_key=self.queue)
                 self.channel.basic_qos(prefetch_count=1)
-                self.channel.basic_consume(self.gevent_consume, queue=self.queue, no_ack=True)
+                self.consumer = self.gevent_consume if settings.IS_USE_GEVENT else self.consume
+                self.channel.basic_consume(self.consumer, queue=self.queue, no_ack=True)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:
                 logger.exception(e)

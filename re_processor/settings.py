@@ -33,6 +33,8 @@ TOPIC_MAP = {
     'attr_alert': 'alert'
 }
 
+IS_USE_GEVENT = env("IS_USE_GEVENT", False)
+
 ROUTING_KEY = {
     'all': 'products.{}.events.device.*',
     #'enterprises': 'enterprises.{}.events',
