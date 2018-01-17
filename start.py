@@ -8,7 +8,7 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   --queue=<queue>                binding queue [default: all]
-  --routing_key=<routing_key>    routing_key [default: None]
+  --routing_key=<routing_key>    routing_key
   --product_key=<product_key>    binding product_key [default: *]
   --only-tmp-consumer            start as a tmp consumer
   --only-http-consumer           start as a http consumer
