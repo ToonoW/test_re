@@ -9,10 +9,11 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
+
 
 default_limit = {
     'msg_limit': settings.MSG_LIMIT,
@@ -108,7 +109,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
-            if msg['product_key'] in settings.PRODUCT_WHITELIST:
+            if msg['product_key'] in get_product_whitelist():
                 logger.info("pk:{} in white list".format(msg['product_key']))
                 if not settings.IS_NO_ACK:
                     self.channel.basic_ack(delivery_tag=method.delivery_tag)
