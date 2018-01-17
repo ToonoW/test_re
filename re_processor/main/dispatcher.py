@@ -24,11 +24,12 @@ class MainDispatcher(BaseRabbitmqConsumer):
     handle msgs like (device_online, device_offline, device_bind, device_unbind, device_status_kv, attr_fault, attr_alert)
     '''
 
-    def __init__(self, mq_queue_name, product_key=None):
+    def __init__(self, mq_queue_name, product_key=None, routing_key=None):
         self.product_key_set = set()
         self.limit_dict = {}
         self.mq_queue_name = mq_queue_name
         self.product_key = product_key or '*'
+        self.routing_key = routing_key or None
         self.mq_initial()
         self.processor = MainProcessor(MainSender(self.product_key))
         self.thermal_map = defaultdict(int)
@@ -163,7 +164,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             except:
                 pass
             time.sleep(1)
-        self.mq_listen(self.mq_queue_name, self.product_key, settings.IS_NO_ACK)
+        self.mq_listen(self.mq_queue_name, self.product_key, settings.IS_NO_ACK, self.routing_key)
 
     def update_rule_limit(self, update_list):
         limit_dict = {}
