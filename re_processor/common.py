@@ -7,6 +7,11 @@ import logging.config
 from re_processor import settings
 from re_processor.connections import get_redis, get_mysql
 
+try:
+    from cPickle import loads, dumps
+except ImportError:
+    from pickle import loads, dumps
+
 logging.config.dictConfig(settings.LOGGING)
 
 logger = logging.getLogger('processor_gray')
@@ -104,6 +109,19 @@ def get_sequence(key, length, start=0):
         result = {'error_message': 'redis error: {}'.format(str(e))}
 
     return result
+
+
+def get_product_whitelist():
+    try:
+        cache = get_redis()
+        value = cache.get('constance:gwreapi:PRODUCT_WHITELIST')
+        if value:
+            return loads(value)
+        return []
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return []
+
 
 def update_device_online(did, ts, status=False):
     cache = get_redis()
@@ -239,6 +257,7 @@ def set_noti_product_interval(product_key, delay_time):
         p.execute()
     except redis.exceptions.RedisError, e:
         logger.exception(e)
+
 
 
 def get_noti_product_interval(product_key):
