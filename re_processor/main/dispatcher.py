@@ -109,7 +109,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
-            if msg['product_key'] in get_product_whitelist():
+            if self.mq_queue_name == 'data' and msg['product_key'] in get_product_whitelist():
                 logger.info("pk:{} in white list".format(msg['product_key']))
                 if not settings.IS_NO_ACK:
                     self.channel.basic_ack(delivery_tag=method.delivery_tag)
