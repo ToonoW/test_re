@@ -66,11 +66,7 @@ if '__main__' == __name__:
             obj = MainDispatcher(mq_queue_name, product_key=product_key, routing_key=routing_key)
             if routing_key == 'products.*.events.device.*':
                 obj.init_rules_cache()
-            if settings.IS_USE_GEVENT:
-                gevent.joinall([
-                    gevent.spawn(obj.begin),
-                    gevent.spawn(obj.update_product_key_set)
-                ])
-            else:
-                obj.begin()
-                obj.update_product_key_set()
+            gevent.joinall([
+                gevent.spawn(obj.begin),
+                gevent.spawn(obj.update_product_key_set)
+            ])
