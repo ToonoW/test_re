@@ -116,7 +116,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 return
             if msg['product_key'] in self.product_key_set:
                 msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
-                self.dispatch(msg, method.delivery_tag, log)
                 if settings.IS_USE_GEVENT:
                     gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
                 else:
