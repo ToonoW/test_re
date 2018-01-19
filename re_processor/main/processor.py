@@ -15,7 +15,9 @@ from re_processor.common import (
     get_device_online_count,
     clean_device_online_count,
     get_noti_product_interval,
-    set_noti_product_interval
+    set_noti_product_interval,
+    get_proc_t_info,
+    debug_info_logger,
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -98,15 +100,21 @@ class MainProcessor(object):
             'current': 'log',
             'ts': ts,
         }
-
+        delay_start_ts = time.time()
+        delay_time = get_noti_product_interval(product_key)
+        if settings.USE_DEBUG:
+            resp_t = get_proc_t_info(delay_start_ts)
+            debug_info_logger.info("pk:{} get redis noti interval use:{} ms".format(product_key, resp_t))
+        if delay_time is None:
+            delay_start_ts = time.time()
+            delay_time = get_notification_product_interval(product_key)
+            set_noti_product_interval(product_key, delay_time)
+            resp_t = get_proc_t_info(delay_start_ts)
+            debug_info_logger.info("pk:{} set redis noti interval use:{} ms".format(product_key, resp_t))
         while msg_list:
             msg = msg_list.pop(0)
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
-                    delay_time = get_noti_product_interval(product_key)
-                    if delay_time is None:
-                        delay_time = get_notification_product_interval(product_key)
-                        set_noti_product_interval(product_key, delay_time)
                     action_type = msg.get('action_type', '')
                     event = msg.get('event', '')
                     if 3 == src_msg['ver']:
@@ -129,7 +137,11 @@ class MainProcessor(object):
                             self.sender.send(msg, product_key)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
+                process_ts = time.time()
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)
+                if settings.USE_DEBUG:
+                    resp_t = get_proc_t_info(process_ts)
+                    debug_info_logger.info("pk:{} ver: {} rule_id: {}, task_type:{}, core process use:{} ms".format(product_key, msg['ver'], p_log['rule_id'], task_type, resp_t))
                 msg_list.extend(_msg_list)
             except Exception, e:
                 _result = 'exception'
@@ -167,6 +179,9 @@ class MainProcessor(object):
                 p_log['error_message'] = error_message or src_msg.get('error_message', '')
 
             _log(p_log)
+            if settings.USE_DEBUG:
+                debug_info_logger.info("pk:{} ouput all msg use:{}".format(product_key, p_log.get('proc_t', 0)))
+                debug_info_logger.info('--------------------------------')
 
         if 'virtual:site' == src_msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
             update_virtual_device_log(src_msg.get('log_id'), 'triggle', log_status[result], error_message)

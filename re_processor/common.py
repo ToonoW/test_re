@@ -17,12 +17,21 @@ logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger('processor_gray')
 debug_logger = logging.getLogger('debug_gray')
 console_logger = logging.getLogger('processor')
+debug_info_logger = logging.getLogger('debug_info')
 
 def _log(log):
     logger.info(json.dumps(log))
 
+
 def debug_log(log):
     debug_logger.info(json.dumps(log))
+
+
+def get_proc_t_info(start_ts):
+    end_ts = time.time()
+    resp_t = int((end_ts - start_ts) * 1000)
+    return resp_t
+
 
 def new_virtual_device_log(product_key, rule_id):
     url = 'http://{}/log'.format(settings.REAPI_HOST)

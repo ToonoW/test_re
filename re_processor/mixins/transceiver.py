@@ -16,6 +16,8 @@ from re_processor.connections import get_mysql
 from re_processor.common import (
     debug_logger as logger,
     console_logger,
+    get_proc_t_info,
+    debug_info_logger,
     new_virtual_device_log,
     update_several_sequence,
     update_device_online,
@@ -318,10 +320,19 @@ class BaseRabbitmqConsumer(object):
         event = 'data'
         thermal_data = self.thermal_data.get(msg['product_key'])
         if thermal_data:
+            start_ts = time.time()
             rules_list = thermal_data + get_dev_rules_from_cache(msg['did'])
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("thermal_data is true, did:{}, get_rules_from_cache use:{} ms".format(msg['did'], resp_t))
             thermal = True
         else:
+            start_ts = time.time()
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("thermal_data is false, pk:{}, did:{}, get_rules_from_cache use:{} ms".format(msg['product_key'], msg['did'], resp_t))
+
             thermal = False
 
         if not rules_list:
@@ -343,6 +354,7 @@ class BaseRabbitmqConsumer(object):
 
         msg_list = []
         sequence_dict = {}
+        rule_list_start_ts = time.time()
         for rule in rules_list:
             if check_interval_locked(rule['rule_id'], msg['did']):
                 if ((3 == rule['ver'] and rule['rule_tree']['event'].get('change', [])) or (1 == rule['ver'] and 2 == rule['type'])) and last_data is None:
@@ -390,7 +402,9 @@ class BaseRabbitmqConsumer(object):
                         continue
 
                 msg_list.extend(self.v1_msg(event, rule['rule_tree'], msg, rule['custom_vars'], rule['rule_id'], rule['interval'], rule['type'], log_id, log))
-
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(rule_list_start_ts)
+                debug_info_logger.info("pk:{}, did:{}, rule list all operation use:{} ms".format(msg['product_key'], msg['did'], resp_t))
         if sequence_dict:
             result = update_several_sequence(sequence_dict)
             if result is not True:
