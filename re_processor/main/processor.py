@@ -141,7 +141,9 @@ class MainProcessor(object):
                 _result, _msg_list = self.core[msg['ver']][task_type].process(msg)
                 if settings.USE_DEBUG:
                     resp_t = get_proc_t_info(process_ts)
-                    debug_info_logger.info("pk:{} ver: {} rule_id: {}, task_type:{}, core process use:{} ms".format(product_key, msg['ver'], p_log['rule_id'], task_type, resp_t))
+                    debug_info_logger.info("pk:{} did:{} ver: {} rule_id: {}, event:{} task_type:{}, core process use:{} ms".format(
+                        product_key, did, msg['ver'], p_log['rule_id'],
+                        p_log['event'], task_type, resp_t))
                 msg_list.extend(_msg_list)
             except Exception, e:
                 _result = 'exception'
@@ -180,7 +182,7 @@ class MainProcessor(object):
 
             _log(p_log)
             if settings.USE_DEBUG:
-                debug_info_logger.info("pk:{} ouput all msg use:{}".format(product_key, p_log.get('proc_t', 0)))
+                debug_info_logger.info("pk:{} did:{} ouput all msg use:{}".format(product_key, did, p_log.get('proc_t', 0)))
                 debug_info_logger.info('--------------------------------')
 
         if 'virtual:site' == src_msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
