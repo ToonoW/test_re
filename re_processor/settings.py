@@ -33,6 +33,8 @@ TOPIC_MAP = {
     'attr_alert': 'alert'
 }
 
+IS_USE_GEVENT = env("IS_USE_GEVENT", False)
+
 ROUTING_KEY = {
     'all': 'products.{}.events.device.*',
     #'enterprises': 'enterprises.{}.events',
@@ -198,6 +200,8 @@ THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
 IS_NO_ACK= env("IS_NO_ACK",  True)
 
+USE_DEBUG = env("USE_DEBUG", True)
+
 # logging
 LOGGING = {
     'version': 1,
@@ -211,7 +215,8 @@ LOGGING = {
     'handlers': {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
-        "file": env("LOG_FILE", {"class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000,"formatter": "standard"})
+        "file": env("LOG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000000,"formatter": "standard"}),
+        "debug": env("DEBUG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "debug.log","maxBytes": 50000000,"formatter": "standard"})
     },
     'loggers': {
         'processor': {
@@ -224,6 +229,10 @@ LOGGING = {
         },
         'debug_gray': {
             'handlers': ['graylog', 'file'],
+            'level': 'INFO'
+        },
+        'debug_info': {
+            'handlers': ['debug'],
             'level': 'INFO'
         }
     }
