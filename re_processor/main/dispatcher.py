@@ -9,7 +9,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist
+from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist, set_monitor_data
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -132,6 +132,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             lst = self.mq_unpack(msg, log)
             map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+            set_monitor_data('did:{}:count'.format(msg['did']), 1, 3600)
+            proc_t = (time.time() - log['ts']) * 1000
+            set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)
         except Exception, e:
             logger.exception(e)
         finally:

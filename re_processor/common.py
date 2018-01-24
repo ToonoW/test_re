@@ -153,6 +153,18 @@ def check_device_online(did):
 
     return result
 
+
+def set_monitor_data(key, value, expired_seconds):
+    cache = get_redis()
+    p = cache.pipeline()
+    try:
+        p.set(key, value)
+        p.expire(key, expired_seconds)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
+
 def set_schedule_msg(key, ts, now, msg):
     cache = get_redis()
     p = cache.pipeline()
