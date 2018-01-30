@@ -182,7 +182,7 @@ class MainProcessor(object):
 
             _log(p_log)
             if settings.USE_DEBUG:
-                debug_info_logger.info("pk:{} did:{} ouput all msg use:{}".format(product_key, did, p_log.get('proc_t', 0)))
+                debug_info_logger.info("pk:{} did:{} output all msg use:{}".format(product_key, did, p_log.get('proc_t', 0)))
                 debug_info_logger.info('--------------------------------')
 
         if 'virtual:site' == src_msg['task_vars'].get('mac', '') and ('success' != result or 'action' == p_log['handling']):
