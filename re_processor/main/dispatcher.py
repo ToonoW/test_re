@@ -9,7 +9,7 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist, set_monitor_data
+from re_processor.common import debug_logger as logger, debug_info_logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist, set_monitor_data, get_monitor_dids, get_proc_t_info
 from re_processor.connections import get_mysql, get_redis
 
 from processor import MainProcessor
@@ -130,11 +130,19 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def dispatch(self, msg, delivery_tag, log):
         try:
+            start_ts = time.time()
             lst = self.mq_unpack(msg, log)
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("pk:{} mq_unpack func use:{} ms".format(msg['product_key'], resp_t))
+            start_ts = time.time()
             map(lambda x: self.process(x, copy.deepcopy(log)), lst)
-            set_monitor_data('did:{}:count'.format(msg['did']), 1, 3600)
-            proc_t = (time.time() - log['ts']) * 1000
-            set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
+            if msg['did'] in get_monitor_dids():
+                proc_t = (time.time() - log['ts']) * 1000
+                set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)
         except Exception, e:
             logger.exception(e)
         finally:
