@@ -132,6 +132,18 @@ def get_product_whitelist():
         return []
 
 
+def get_monitor_dids():
+    try:
+        cache = get_redis()
+        value = cache.get('constance:gwreapi:MONITOR_DIDS')
+        if value:
+            return loads(value)
+        return []
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return []
+
+
 def update_device_online(did, ts, status=False):
     cache = get_redis()
     key = 're_core_{}_dev_online_ts'.format(did)
@@ -152,6 +164,18 @@ def check_device_online(did):
         result = None
 
     return result
+
+
+def set_monitor_data(key, value, expired_seconds):
+    cache = get_redis()
+    p = cache.pipeline()
+    try:
+        p.set(key, value)
+        p.expire(key, expired_seconds)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
 
 def set_schedule_msg(key, ts, now, msg):
     cache = get_redis()
