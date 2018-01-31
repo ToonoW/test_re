@@ -391,17 +391,22 @@ class RedisLock(object):
         return False
 
 
-def generate_msg_func_list(msg):
+def generate_msg_func_list(rule):
     input_list = []
     func_list = []
     output_list = []
-    for m in msg:
-        if m['category'] == 'input':
-            input_list.append(m)
-        if m['category'] == 'function':
-            func_list.append(m)
-        if m['category'] == 'output':
-            output_list.append(m)
+    rule_tree = rule['rule_tree']
+    event_input = rule_tree['event']['data']
+    for event in event_input:
+        if event['category'] == 'input':
+            input_list.append(event)
+    task_list = rule_tree['task_list']
+    for task in task_list:
+        t = task_list[task]
+        if t['category'] == 'function':
+            func_list.append(t)
+        if t['category'] == 'output':
+            output_list.append(t)
 
     func_obj = {}
     for func in func_list:

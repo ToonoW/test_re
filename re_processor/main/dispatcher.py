@@ -135,21 +135,33 @@ class MainDispatcher(BaseRabbitmqConsumer):
     def dispatch(self, msg, delivery_tag, log):
         try:
             start_ts = time.time()
-
-            # rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
-            rules_list = [[{"category": "input", "inputs": 0, "wires": [["c9189022.e26558"]], "outputs": 1, "ports": [0], "content": {"interval": 10, "params": ["qqqqw"], "event": "data", "data_type": "data"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "device_data", "id": "46ce9566.9a23a4"}, {"category": "function", "inputs": 1, "wires": [["15eaae08.57b5fa"]], "outputs": 1, "ports": [0], "content": {"opt": ">", "cond1": "data.qqqqw", "cond2": "1"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "condition", "id": "c9189022.e26558"}, {"category": "input", "inputs": 0, "wires": [["d11bf7e5.8cf078"]], "outputs": 1, "ports": [0], "content": {"interval": 10, "params": [], "event": "data", "data_type": "data"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "device_data", "id": "da90bebb.65f98"}, {"category": "function", "inputs": 1, "wires": [["46e1e58b.25510c"]], "outputs": 1, "ports": [0], "content": {"opt": "==", "cond1": "data.test1", "cond2": "1"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "condition", "id": "d11bf7e5.8cf078"}, {"category": "output", "inputs": 1, "wires": [], "outputs": 0, "ports": [], "content": {"custom_params": {}, "title": "www", "ptype": 1, "app_id": "a6109e7d3eaf4842ac2c66016525b703", "english_template": "", "template": "aabcc${data.qqqqw}", "msg_box": False}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "notification", "id": "1aa5c38d.cf0a84"}, {"category": "input", "inputs": 0, "wires": [["99263d01.04a298"]], "outputs": 1, "ports": [0], "content": {"interval": 10, "params": [], "event": "data", "data_type": "data"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "device_data", "id": "7840f47a.edc4ac"}, {"category": "function", "inputs": 1, "wires": [["6fe68ca5.77a47c"]], "outputs": 1, "ports": [0], "content": {"opt": ">", "cond1": "data.test3", "cond2": "20"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "condition", "id": "99263d01.04a298"}, {"category": "output", "inputs": 1, "wires": [], "outputs": 0, "ports": [], "content": {"custom_params": {}, "title": "wwaa", "ptype": 1, "app_id": "a6109e7d3eaf4842ac2c66016525b703", "english_template": "", "template": "wwww${data.test2}", "msg_box": False}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "notification", "id": "6fe68ca5.77a47c"}, {"category": "input", "inputs": 0, "wires": [["578ea5d5.37a40c"]], "outputs": 1, "ports": [0], "content": {"interval": 10, "params": [], "event": "data", "data_type": "data"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "device_data", "id": "d85b054e.04ae88"}, {"category": "function", "inputs": 1, "wires": [["149e5276.7ff5ae"]], "outputs": 1, "ports": [0], "content": {"opt": ">", "cond1": "data.test5", "cond2": "5"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "condition", "id": "578ea5d5.37a40c"}, {"category": "output", "inputs": 1, "wires": [], "outputs": 0, "ports": [], "content": {"custom_params": {}, "title": "qqq", "ptype": 1, "app_id": "a6109e7d3eaf4842ac2c66016525b703", "english_template": "", "template": "${data.qqqqw}", "msg_box": False}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "notification", "id": "149e5276.7ff5ae"}, {"category": "output", "inputs": 1, "wires": [], "outputs": 0, "ports": [], "content": {"english_template": "email,${data.qqqqw}", "email": "317624588@qq.com", "email_type": "default", "template": "email,${data.qqqqw}", "title": "email"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "email", "id": "15eaae08.57b5fa"}, {"category": "function", "inputs": 1, "wires": [["1aa5c38d.cf0a84"]], "outputs": 1, "ports": [0], "content": {"opt": "==", "cond1": "data.test2", "cond2": "20"}, "forbid_time": {}, "delay": 0, "params": [], "allow_time": {}, "type": "condition", "id": "46e1e58b.25510c"}]]
+            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
-            print "pk:{} mq_unpack func use:{} ms".format(msg['product_key'], resp_t)
             from re_processor.main.function import operate_calc, send_output_msg
 
             for rule in rules_list:
+                p_log = {
+                    'module': 're_processor',
+                    'rule_id': rule['rule_id'],
+                    'event': msg.get('event_type'),
+                    'product_key': msg['product_key'],
+                    'did': msg['did'],
+                    'mac': msg['mac'],
+                    'rule_type': rule['type'],
+                    'interval': rule['interval'],
+                    'current': 'log',
+                    'ts': log['ts'],
+                }
                 msg_list = generate_msg_func_list(rule)[0]
                 dp_value = msg.get('data')
                 wires = operate_calc(msg_list, dp_value)
                 output_list = generate_msg_func_list(rule)[1]
-
                 if wires:
                     send_output_msg(output_list, wires, msg, log)
+                p_log.update({
+                    'proc_t': (time.time() - log['ts']) * 1000
+                })
+                logger.info(p_log)
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
