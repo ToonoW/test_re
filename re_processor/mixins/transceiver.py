@@ -329,6 +329,7 @@ class BaseRabbitmqConsumer(object):
         else:
             start_ts = time.time()
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            print rules_list
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("thermal_data is false, pk:{}, did:{}, get_rules_from_cache use:{} ms".format(msg['product_key'], msg['did'], resp_t))

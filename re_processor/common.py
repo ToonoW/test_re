@@ -389,3 +389,42 @@ class RedisLock(object):
         if self.lock:
             self.cache.delete(self.cache_key)
         return False
+
+
+def generate_msg_func_list(msg):
+    input_list = []
+    func_list = []
+    output_list = []
+    for m in msg:
+        if m['category'] == 'input':
+            input_list.append(m)
+        if m['category'] == 'function':
+            func_list.append(m)
+        if m['category'] == 'output':
+            output_list.append(m)
+
+    func_obj = {}
+    for func in func_list:
+        func_id = func.get('id')
+        func_wires = func['wires'][0][0]
+        content = func['content']
+        content.update({'wires': func['wires'][0][0]})
+        func_content_list = []
+        list_filter =  filter(lambda x: func_wires == x['id'], func_list)
+        func_content_list.append(content)
+        if list_filter:
+            list_filter[0]['content'].update({'wires': list_filter[0]['wires'][0][0]})
+            func_content_list.append(list_filter[0]['content'])
+        func_obj[func_id] = func_content_list
+    msg_list = []
+    for inp in input_list:
+        type = inp['type']
+        input_content = inp['content']
+        func_content = func_obj[inp['wires'][0][0]]
+        if func_content:
+            msg_list.append({
+                'type': type,
+                'input_content': input_content,
+                'func_content': func_content
+            })
+    return (msg_list, output_list)
