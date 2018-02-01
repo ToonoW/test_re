@@ -9,6 +9,9 @@ from datetime import datetime
 from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger
 
 
+srv_session = requests.Session()
+
+
 def calc_logic(func_task, dp_kv):
     result = False
     opt = {
@@ -40,11 +43,8 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_value):
                 task = task_obj.get(wire)
                 result = calc_logic(func_task, dp_value)
                 func_task = task_obj.get(wire)
-    if func_task['category'] == 'output':
+    if result and func_task['category'] == 'output':
         return func_task
-
-
-
 
 
 def query(task_vars, params_list):
@@ -78,7 +78,7 @@ def extern_alias(task_vars, content):
         'Authorization': settings.INNER_API_TOKEN
     }
     try:
-        response = requests.get(url, headers=headers)
+        response = srv_session.get(url, headers=headers)
         data = json.loads(response.content)
     except:
         data = {}
@@ -139,7 +139,7 @@ def _query_product_name(task_vars):
     }
     result = {}
     try:
-        response = requests.get(url, headers=headers)
+        response = srv_session.get(url, headers=headers)
         data = json.loads(response.content)
         result['common.product_name'] = data['name']
     except Exception, e:
