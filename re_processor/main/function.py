@@ -28,8 +28,9 @@ def calc_logic(func_task, dp_kv):
         cond1 = func['cond1'].replace("data.", "")
         cond2 = func['cond2']
         dp_value = dp_kv.get(cond1)
-        if dp_value:
+        if dp_value is not None:
             result = operation(dp_value, float(cond2))
+            # print "cond1:", cond1, "dp_value:", dp_value, "op:", operation, "cond2:", cond2, "result:", result
     return result
 
 def generate_func_list_msg(task_obj, input_wires_id, dp_value):
@@ -38,12 +39,11 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_value):
     result = calc_logic(func_task, dp_value)
     while result and func_task['category'] != 'output':
         if func_task['wires']:
-            output = []
             for wire in func_task['wires'][0]:
                 task = task_obj.get(wire)
                 result = calc_logic(func_task, dp_value)
                 func_task = task_obj.get(wire)
-    if result and func_task['category'] == 'output':
+    if result and task['category'] == 'output':
         return func_task
 
 
@@ -160,16 +160,21 @@ def send_output_msg(output, msg, log):
     task_vars['common.mac_upper'] = msg['mac'].upper()
     task_vars['product_key'] = msg['product_key']
     task_vars['common.product_key'] = msg['product_key']
+    msg_data = msg.get('data', {})
+    for k,v in enumerate(msg_data):
+        task_vars['data.{}'.format(v)] = msg_data[v]
     sender = MainSender(product_key)
     content = output.get('content')
     en_tpl = content.get("english_template")
     tpl = content.get("template")
     params_list = output.get('params')
+    # print 'params list:', params_list
+    # print 'task_vars:', task_vars
     params_result = query(task_vars, params_list)
     task_vars.update(params_result)
     params_obj = {}
     for param in params_list:
-        if task_vars.get(param):
+        if task_vars.get(param) is not None:
             params_obj.update({
                 param: task_vars.get(param)
             })
