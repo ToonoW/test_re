@@ -137,7 +137,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             start_ts = time.time()
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
-            from re_processor.main.function import operate_calc, send_output_msg
+            from re_processor.main.function import generate_func_list_msg, send_output_msg
 
             for rule in rules_list:
                 p_log = {
@@ -152,12 +152,14 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'current': 'log',
                     'ts': log['ts'],
                 }
-                msg_list = generate_msg_func_list(rule)[0]
+                task_obj = generate_msg_func_list(rule)[0]
                 dp_value = msg.get('data')
-                wires = operate_calc(msg_list, dp_value)
-                output_list = generate_msg_func_list(rule)[1]
-                if wires:
-                    send_output_msg(output_list, wires, msg, log)
+                input_list = generate_msg_func_list(rule)[1]
+                for inp in input_list:
+                    for inp_wires in inp['wires'][0]:
+                        output_result = generate_func_list_msg(task_obj, inp_wires, dp_value)
+                        if output_result:
+                            send_output_msg(output_result, msg, log)
                 p_log.update({
                     'proc_t': (time.time() - log['ts']) * 1000
                 })

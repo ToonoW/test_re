@@ -9,7 +9,8 @@ from datetime import datetime
 from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger
 
 
-def operate_calc(msg_list, dp):
+def calc_logic(func_task, dp_kv):
+    result = False
     opt = {
         '>': operator.__gt__,
         '<': operator.__lt__,
@@ -18,22 +19,32 @@ def operate_calc(msg_list, dp):
         '<=': operator.__le__,
         '!=': operator.__ne__
     }
-    wires = []
-    for msg in msg_list:
-        func_list = msg['func_content']
-        for func in func_list:
-            operation = opt.get(func['opt'])
-            if operation:
-                cond1 = func['cond1'].replace("data.", "")
-                cond2 = func['cond2']
-                dp_value = dp.get(cond1)
-                if dp_value:
-                    compare = operation(dp_value, float(cond2))
-                    if not compare:
-                        break
-                    if func.get('wires'):
-                        wires.append(func.get('wires'))
-    return wires
+    func = func_task.get('content')
+    operation = opt.get(func.get('opt'))
+    if operation:
+        cond1 = func['cond1'].replace("data.", "")
+        cond2 = func['cond2']
+        dp_value = dp_kv.get(cond1)
+        if dp_value:
+            result = operation(dp_value, float(cond2))
+    return result
+
+def generate_func_list_msg(task_obj, input_wires_id, dp_value):
+    func_arr = []
+    func_task = task_obj.get(input_wires_id)
+    result = calc_logic(func_task, dp_value)
+    while result and func_task['category'] != 'output':
+        if func_task['wires']:
+            output = []
+            for wire in func_task['wires'][0]:
+                task = task_obj.get(wire)
+                result = calc_logic(func_task, dp_value)
+                func_task = task_obj.get(wire)
+    if func_task['category'] == 'output':
+        return func_task
+
+
+
 
 
 def query(task_vars, params_list):
@@ -50,7 +61,6 @@ def query(task_vars, params_list):
             print 'exception:', str(e)
         if not display_data:
             display_data = {}
-        print 'display data:', display_data
         result.update(display_data)
     if 'common.product_name' in params_list:
         result.update(_query_product_name(task_vars))
@@ -137,53 +147,51 @@ def _query_product_name(task_vars):
 
     return result
 
-def send_output_msg(output_list, wires, msg, log):
+def send_output_msg(output, msg, log):
     product_key = msg['product_key']
-    for output in output_list:
-        if output['id'] in wires:
-            task_vars = {}
-            task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
-            task_vars['sys.timestamp'] = int(log['ts'])
-            task_vars['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
-            task_vars['sys.utc_now'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            task_vars['common.did'] = msg['did']
-            task_vars['did'] = msg['did']
-            task_vars['common.mac'] = msg['mac'].lower()
-            task_vars['common.mac_upper'] = msg['mac'].upper()
-            task_vars['product_key'] = msg['product_key']
-            task_vars['common.product_key'] = msg['product_key']
-            sender = MainSender(product_key)
-            content = output.get('content')
-            en_tpl = content.get("english_template")
-            tpl = content.get("template")
-            params_list = output.get('params')
-            params_result = query(task_vars, params_list)
-            task_vars.update(params_result)
-            params_obj = {}
-            for param in params_list:
-                if task_vars.get(param):
-                    params_obj.update({
-                        param: task_vars.get(param)
-                    })
-            extern_params = output.get('extern_params', {})
-            alias = {}
-            if 'alias' in extern_params:
-                alias.update(extern_alias(task_vars, content))
-            message = {
-                "product_key": product_key,
-                "did": msg['did'],
-                "mac": msg['mac'],
-                "params": params_obj,
-                "action_type": output['type'],
-                "extern_params": {
-                    "alias": alias
-                },
-                "content": json.dumps({
-                    "app_id": content.get('app_id'),
-                    "title": content.get('title', '通知'),
-                    "ptype": content.get('ptype'),
-                    "english_template": en_tpl,
-                    "template": tpl
-                })
-            }
-            sender.send(message, product_key)
+    task_vars = {}
+    task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
+    task_vars['sys.timestamp'] = int(log['ts'])
+    task_vars['sys.time_now'] = time.strftime('%Y-%m-%d %a %H:%M:%S')
+    task_vars['sys.utc_now'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    task_vars['common.did'] = msg['did']
+    task_vars['did'] = msg['did']
+    task_vars['common.mac'] = msg['mac'].lower()
+    task_vars['common.mac_upper'] = msg['mac'].upper()
+    task_vars['product_key'] = msg['product_key']
+    task_vars['common.product_key'] = msg['product_key']
+    sender = MainSender(product_key)
+    content = output.get('content')
+    en_tpl = content.get("english_template")
+    tpl = content.get("template")
+    params_list = output.get('params')
+    params_result = query(task_vars, params_list)
+    task_vars.update(params_result)
+    params_obj = {}
+    for param in params_list:
+        if task_vars.get(param):
+            params_obj.update({
+                param: task_vars.get(param)
+            })
+    extern_params = output.get('extern_params', {})
+    alias = {}
+    if 'alias' in extern_params:
+        alias.update(extern_alias(task_vars, content))
+    message = {
+        "product_key": product_key,
+        "did": msg['did'],
+        "mac": msg['mac'],
+        "params": params_obj,
+        "action_type": output['type'],
+        "extern_params": {
+            "alias": alias
+        },
+        "content": json.dumps({
+            "app_id": content.get('app_id'),
+            "title": content.get('title', '通知'),
+            "ptype": content.get('ptype'),
+            "english_template": en_tpl,
+            "template": tpl
+        })
+    }
+    sender.send(message, product_key)

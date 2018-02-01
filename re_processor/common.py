@@ -393,43 +393,16 @@ class RedisLock(object):
 
 def generate_msg_func_list(rule):
     input_list = []
-    func_list = []
-    output_list = []
+    task_obj = {}
     rule_tree = rule['rule_tree']
-    event_input = rule_tree['event']['data']
+    event = rule_tree['event']
+    event_input = event.get('data')
+
     for event in event_input:
         if event['category'] == 'input':
             input_list.append(event)
     task_list = rule_tree['task_list']
     for task in task_list:
         t = task_list[task]
-        if t['category'] == 'function':
-            func_list.append(t)
-        if t['category'] == 'output':
-            output_list.append(t)
-
-    func_obj = {}
-    for func in func_list:
-        func_id = func.get('id')
-        func_wires = func['wires'][0][0]
-        content = func['content']
-        content.update({'wires': func['wires'][0][0]})
-        func_content_list = []
-        list_filter =  filter(lambda x: func_wires == x['id'], func_list)
-        func_content_list.append(content)
-        if list_filter:
-            list_filter[0]['content'].update({'wires': list_filter[0]['wires'][0][0]})
-            func_content_list.append(list_filter[0]['content'])
-        func_obj[func_id] = func_content_list
-    msg_list = []
-    for inp in input_list:
-        type = inp['type']
-        input_content = inp['content']
-        func_content = func_obj[inp['wires'][0][0]]
-        if func_content:
-            msg_list.append({
-                'type': type,
-                'input_content': input_content,
-                'func_content': func_content
-            })
-    return (msg_list, output_list)
+        task_obj.update({task: t})
+    return (task_obj, input_list)
