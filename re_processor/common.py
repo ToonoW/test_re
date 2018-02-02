@@ -392,11 +392,15 @@ class RedisLock(object):
 
 
 def generate_msg_func_list(rule):
+    """
+    生成d3任务列表(包括function与ouput), 输入列表, 输出id列表
+    """
     input_list = []
     task_obj = {}
     rule_tree = rule['rule_tree']
     event = rule_tree['event']
     event_input = event.get('data')
+    output_wires = []
 
     for event in event_input:
         if event['category'] == 'input':
@@ -404,5 +408,7 @@ def generate_msg_func_list(rule):
     task_list = rule_tree['task_list']
     for task in task_list:
         t = task_list[task]
+        if t['category'] == 'output':
+			output_wires.append(task)
         task_obj.update({task: t})
-    return (task_obj, input_list)
+    return (task_obj, input_list, output_wires)
