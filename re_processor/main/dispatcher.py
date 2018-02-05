@@ -168,11 +168,11 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'proc_t': (time.time() - log['ts']) * 1000
                 })
                 logger.info(p_log)
-            if settings.USE_DEBUG:
-                resp_t = get_proc_t_info(start_ts)
-                debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
+
 
             # lst = self.mq_unpack(msg, log)
+            # import json
+            # print json.dumps(lst)
             # if settings.USE_DEBUG:
             #     resp_t = get_proc_t_info(start_ts)
             #     debug_info_logger.info("pk:{} mq_unpack func use:{} ms".format(msg['product_key'], resp_t))
@@ -181,6 +181,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
             # if settings.USE_DEBUG:
             #     resp_t = get_proc_t_info(start_ts)
             #     debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
             # if msg['did'] in get_monitor_dids():
             #     proc_t = (time.time() - log['ts']) * 1000
             #     set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)

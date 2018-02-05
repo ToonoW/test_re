@@ -55,10 +55,12 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires):
 					wires_info = func_task['wires']
 					if wires_info:
 						for wire in wires_info[0]:
-							del output_obj[wire]
+							if output_obj.get(wire):
+								del output_obj[wire]
 				if task['wires']:
 					for tw in task['wires'][0]:
-						if tw in output_wires:
+						result = calc_logic(task, dp_kv)
+						if result and tw in output_wires:
 							output_obj.update({tw: tw})
 				func_task = task_obj.get(wire)
 	return output_obj
