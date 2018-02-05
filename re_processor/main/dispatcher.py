@@ -139,7 +139,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
 
-
             for rule in rules_list:
                 p_log = {
                     'module': 're_processor',
@@ -153,21 +152,25 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'current': 'log',
                     'ts': log['ts'],
                 }
-                task_obj = generate_msg_func_list(rule)[0]
-                dp_value = msg.get('data', {})
-                input_list = generate_msg_func_list(rule)[1]
-                output_wires = generate_msg_func_list(rule)[2]
-                for inp in input_list:
-                    for inp_wires in inp['wires'][0]:
-                        data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires)
-                        if data:
-                            for d in data:
-                                if task_obj[d]['category'] == 'output':
-                                    send_output_msg(task_obj[d], msg, log)
-                p_log.update({
-                    'proc_t': (time.time() - log['ts']) * 1000
-                })
-                logger.info(p_log)
+                if rule.get('ver') == 3:
+                    task_obj = generate_msg_func_list(rule)[0]
+                    dp_value = msg.get('data', {})
+                    input_list = generate_msg_func_list(rule)[1]
+                    output_wires = generate_msg_func_list(rule)[2]
+                    for inp in input_list:
+                        for inp_wires in inp['wires'][0]:
+                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires)
+                            if data:
+                                for d in data:
+                                    if task_obj[d]['category'] == 'output':
+                                        send_output_msg(task_obj[d], msg, log)
+                    p_log.update({
+                        'proc_t': (time.time() - log['ts']) * 1000
+                    })
+                    logger.info(p_log)
+                else:
+                    lst = self.mq_unpack(msg, log)
+                    map(lambda x: self.process(x, copy.deepcopy(log)), lst)
 
 
             # lst = self.mq_unpack(msg, log)
