@@ -13,7 +13,7 @@ import re
 srv_session = requests.Session()
 
 
-def calc_logic(func_task, dp_kv):
+def calc_logic(func_task, dp_kv, task_vars):
 
     result = False
     opt = {
@@ -68,6 +68,7 @@ def calc_logic(func_task, dp_kv):
         except ZeroDivisionError:
             res = [0]
         dp_kv[alias] = res.pop()
+        task_vars[alias] = res.pop()
         result = True
 
     operation = opt.get(func.get('opt'))
@@ -82,16 +83,18 @@ def calc_logic(func_task, dp_kv):
 
 def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires):
     func_arr = []
+    task_vars = {}
     func_task = task_obj.get(input_wires_id)
-    result = calc_logic(func_task, dp_kv)
+    result = calc_logic(func_task, dp_kv, task_vars)
     output_obj = {}
+
     while result and func_task['category'] != 'output':
         if func_task['wires']:
             for wire in func_task['wires'][0]:
                 task = task_obj.get(wire)
                 if not task['wires']:
                     output_obj.update({wire: wire})
-                result = calc_logic(func_task, dp_kv)
+                result = calc_logic(func_task, dp_kv, task_vars)
                 if not result:
                     wires_info = func_task['wires']
                     if wires_info:
@@ -100,11 +103,11 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires):
                                 del output_obj[wire]
                 if task['wires']:
                     for tw in task['wires'][0]:
-                        result = calc_logic(task, dp_kv)
+                        result = calc_logic(task, dp_kv, task_vars)
                         if result and tw in output_wires:
                             output_obj.update({tw: tw})
                 func_task = task_obj.get(wire)
-    return output_obj
+    return (output_obj, task_vars)
 
 
 def query(task_vars, params_list):
@@ -207,7 +210,7 @@ def _query_product_name(task_vars):
 
     return result
 
-def send_output_msg(output, msg, log):
+def send_output_msg(output, msg, log, vars_info):
     product_key = msg['product_key']
     task_vars = {}
     task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
@@ -223,6 +226,8 @@ def send_output_msg(output, msg, log):
     msg_data = msg.get('data', {})
     for k,v in enumerate(msg_data):
         task_vars['data.{}'.format(v)] = msg_data[v]
+    for _,value in enumerate(vars_info):
+        task_vars[value] = msg_data[value]
     sender = MainSender(product_key)
     content = output.get('content')
     en_tpl = content.get("english_template")
@@ -249,12 +254,6 @@ def send_output_msg(output, msg, log):
         "extern_params": {
             "alias": alias
         },
-        "content": json.dumps({
-            "app_id": content.get('app_id'),
-            "title": content.get('title', '通知'),
-            "ptype": content.get('ptype'),
-            "english_template": en_tpl,
-            "template": tpl
-        })
+        "content": json.dumps(content)
     }
     sender.send(message, product_key)

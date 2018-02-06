@@ -160,11 +160,10 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     for inp in input_list:
                         for inp_wires in inp['wires'][0]:
                             data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires)
-                            if data:
-                                for d in data:
+                            if data[0]:
+                                for d in data[0]:
                                     if task_obj[d]['category'] == 'output':
-                                        print 'task:', task_obj[d]
-                                        send_output_msg(task_obj[d], msg, log)
+                                        send_output_msg(task_obj[d], msg, log, data[1])
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })
@@ -172,19 +171,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 else:
                     lst = self.mq_unpack(msg, log)
                     map(lambda x: self.process(x, copy.deepcopy(log)), lst)
-
-
-            # lst = self.mq_unpack(msg, log)
-            # import json
-            # print json.dumps(lst)
-            # if settings.USE_DEBUG:
-            #     resp_t = get_proc_t_info(start_ts)
-            #     debug_info_logger.info("pk:{} mq_unpack func use:{} ms".format(msg['product_key'], resp_t))
-            # start_ts = time.time()
-            # map(lambda x: self.process(x, copy.deepcopy(log)), lst)
-            # if settings.USE_DEBUG:
-            #     resp_t = get_proc_t_info(start_ts)
-            #     debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
