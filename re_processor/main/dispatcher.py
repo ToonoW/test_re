@@ -13,9 +13,9 @@ from re_processor.common import (
     debug_logger as logger, debug_info_logger, RedisLock,
     cache_rules, get_dev_rules_from_cache, get_product_whitelist,
     set_monitor_data, get_monitor_dids, get_proc_t_info,
-    get_rules_from_cache, generate_msg_func_list)
+    get_rules_from_cache)
 from re_processor.connections import get_mysql, get_redis
-from re_processor.main.function import generate_func_list_msg, send_output_msg
+from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
 
 from processor import MainProcessor
 
@@ -158,12 +158,16 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     input_list = generate_msg_func_list(rule)[1]
                     output_wires = generate_msg_func_list(rule)[2]
                     for inp in input_list:
+                        task_vars = {}
+                        if inp.get('type') == 'custom_json':
+                            custom_info = custom_json(inp)
+                            task_vars.update(custom_info)
                         for inp_wires in inp['wires'][0]:
-                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires)
-                            if data[0]:
-                                for d in data[0]:
+                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars)
+                            if data:
+                                for d in data:
                                     if task_obj[d]['category'] == 'output':
-                                        send_output_msg(task_obj[d], msg, log, data[1])
+                                        send_output_msg(task_obj[d], msg, log, task_vars)
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })

@@ -104,12 +104,124 @@ def calc_logic(func_task, dp_kv, task_vars):
             # print "cond1:", cond1, "dp_value:", dp_value, "op:", operation, "cond2:", cond2, "result:", result
     return result
 
-def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires):
+
+def custom_json(msg):
+    content = msg['content']
+    # try:
+    #     if content['event'] in ['alert', 'fault'] and msg['task_vars'].get(content['attr'], '') != int(content['attr_type']):
+    #         return []
+    # except ValueError:
+    #     return []
+    msg['task_vars'] = {}
+    msg['task_vars']['sys.timestamp_ms'] = time.time()
+    msg['task_vars'][content['alias']] = get_json(content['content'], {}, int(content['refresh']), content['alias'], msg['rule_id'], msg['task_vars']['sys.timestamp_ms'])
+    return msg['task_vars']
+
+def get_json(content, params, refresh, name, rule_id, now_ts):
+    cache_key = 're_core_{0}_{1}_custom_json'.format(rule_id, name)
+    cache = get_redis()
+    result = {}
+
+    while True:
+        try:
+            result = cache.get(cache_key)
+            if result:
+                result = json.loads(result)
+                break
+            else:
+                with RedisLock(cache_key) as lock:
+                    if lock:
+                        _content = json.dumps(content)
+                        for key, val in params.items():
+                            _content = _content.replace('"${'+key+'}"', json.dumps(val))
+                        content = json.loads(_content)
+                        url = content['url']
+                        headers = content.get('headers', {})
+                        data = content.get('data', {})
+                        method = content.get('method', 'get')
+                        if 'get' == method:
+                            response = requests.get(url, headers=headers, params=data)
+                        elif 'post' == method:
+                            response = requests.post(url, data=json.dumps(data), headers=headers)
+                        else:
+                            raise Exception(u'invalid http method: {}'.format(method))
+
+                        if response.status_code > 199 and response.status_code < 300:
+                            try:
+                                result = json.loads(response.content)
+                            except ValueError:
+                                raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                        else:
+                            raise Exception(u'error response: status_code - {0}, content: {1}'.format(response.status_code, response.content[:100]))
+                        p = cache.pipeline()
+                        p.set(cache_key, response.content)
+                        p.expire(cache_key, refresh + 5)
+                        p.execute()
+                        break
+            time.sleep(1)
+        except redis.exceptions.RedisError, e:
+            result = {'error_message': 'redis error: {}'.format(str(e))}
+
+    return result
+
+
+def get_value_from_json(name, json_obj):
+    fields = name.split('.')
+    _obj = json_obj
+    for field in fields[1:]:
+        if type(_obj) is dict:
+            if field not in _obj:
+                break
+        elif type(_obj) is list:
+            try:
+                field = int(field)
+            except ValueError:
+                break
+            if field >= len(_obj):
+                break
+        else:
+            break
+
+        _obj = _obj[field]
+    else:
+        return _obj
+    return ''
+
+
+def generate_msg_func_list(rule):
+    """
+    生成d3任务列表(包括function与ouput), 输入列表, 输出id列表
+    """
+    input_list = []
+    task_obj = {}
+    rule_tree = rule.get('rule_tree', {})
+    event = rule_tree.get('event', {})
+    event_input = event.get('data', [])
+    output_wires = []
+    custom_vars = rule.get('custom_vars', {})
+    if custom_vars:
+        custom_vars['custom_test']['rule_id'] = rule.get('rule_id')
+        input_list.append(custom_vars['custom_test'])
+
+    for event in event_input:
+        if event['category'] == 'input':
+            input_list.append(event)
+    task_list = rule_tree['task_list']
+    for task in task_list:
+        t = task_list[task]
+        if t['category'] == 'output':
+			output_wires.append(task)
+        task_obj.update({task: t})
+    return (task_obj, input_list, output_wires)
+
+
+def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_vars):
     func_arr = []
-    task_vars = {}
     func_task = task_obj.get(input_wires_id)
-    result = calc_logic(func_task, dp_kv, task_vars)
     output_obj = {}
+    if func_task['category'] == 'output':
+        output_obj.update({func_task['id']: func_task['id']})
+    result = calc_logic(func_task, dp_kv, task_vars)
 
     while result and func_task['category'] != 'output':
         if func_task['wires']:
@@ -130,7 +242,7 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires):
                         if result and tw in output_wires:
                             output_obj.update({tw: tw})
                 func_task = task_obj.get(wire)
-    return (output_obj, task_vars)
+    return output_obj
 
 
 def query(task_vars, params_list):
@@ -250,7 +362,7 @@ def send_output_msg(output, msg, log, vars_info):
     for k,v in enumerate(msg_data):
         task_vars['data.{}'.format(v)] = msg_data[v]
     for _,value in enumerate(vars_info):
-        task_vars[value] = msg_data[value]
+        task_vars[value] = vars_info[value]
     sender = MainSender(product_key)
     content = output.get('content')
     en_tpl = content.get("english_template")
