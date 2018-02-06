@@ -396,7 +396,7 @@ class FuncCore(BaseCore):
                 query_list.append(symbol)
             else:
                 return []
-
+            print 'exp:', exp
         if query_list:
             next_node = {
                 "id": "uuid",

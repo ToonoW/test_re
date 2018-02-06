@@ -321,25 +321,32 @@ class BaseRabbitmqConsumer(object):
         thermal_data = self.thermal_data.get(msg['product_key'])
         if thermal_data:
             start_ts = time.time()
-            rules_list = thermal_data + get_dev_rules_from_cache(msg['did'])
+            rule_msg_list = thermal_data + get_dev_rules_from_cache(msg['did'])
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("thermal_data is true, did:{}, get_rules_from_cache use:{} ms".format(msg['did'], resp_t))
             thermal = True
         else:
             start_ts = time.time()
-            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            rule_msg_list = get_rules_from_cache(msg['product_key'], msg['did'])
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("thermal_data is false, pk:{}, did:{}, get_rules_from_cache use:{} ms".format(msg['product_key'], msg['did'], resp_t))
 
             thermal = False
 
-        if not rules_list:
+        if not rule_msg_list:
             return []
-        self.thermal_map[msg['product_key']] += 1
 
-        data = msg.pop('data')
+        rules_list = []
+        for rule in rule_msg_list:
+            if rule['ver'] == 1:
+                rules_list.append(rule)
+        product_key = msg.get('product_key')
+        if product_key:
+            self.thermal_map[product_key] += 1
+        if msg.get('data'):
+            data = msg.pop('data')
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
         last_data = None
 
