@@ -75,9 +75,32 @@ def calc_logic(func_task, dp_kv, task_vars):
     if operation:
         cond1 = func['cond1'].replace("data.", "")
         cond2 = func['cond2']
+        if 'data' in cond2:
+            cond2 = func['cond2'].replace("data.", "")
+            cond2 = dp_kv.get(cond2)
         dp_value = dp_kv.get(cond1)
+        if dp_value is None:
+            return result
+        if isinstance(dp_value, basestring):
+            dp_value = '0x{}'.format(dp_value)
+
+        hex_flag = False
+        tmp_list = []
+        for tmp in [dp_value, cond2]:
+            if pattern['number'].search(str(tmp)):
+                tmp_list.append(tmp)
+            elif pattern['string'].search(tmp):
+                tmp_list.append(tmp[1:-1])
+            elif pattern['hex'].search(tmp):
+                hex_flag = True
+                tmp_list.append(tmp)
+        if hex_flag:
+            tmp_list[0] = int(tmp_list[0], 16)
+            tmp_list[1] = int(tmp_list[1], 16)
+
         if dp_value is not None:
-            result = operation(dp_value, float(cond2))
+            result = operation(float(tmp_list[0]), float(tmp_list[1]))
+            # print 'result:', result
             # print "cond1:", cond1, "dp_value:", dp_value, "op:", operation, "cond2:", cond2, "result:", result
     return result
 
