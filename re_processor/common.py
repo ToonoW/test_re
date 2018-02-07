@@ -291,7 +291,19 @@ def check_rule_limit(product_key, limit, type, incr=True):
             cache.expire(key, int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time()))
     else:
         num = cache.get(key) or 0
+    # print 'num:', num
+    # print 'limit:', limit
     return int(num) <= limit
+
+
+def get_pks_limit_cache():
+    cache = get_redis()
+    limit_dict = cache.get('re_core_rule_limit_dict')
+    if limit_dict:
+        limit_dict = json.loads(zlib.decompress(limit_dict))
+    else:
+        limit_dict = {}
+    return limit_dict
 
 
 def set_noti_product_interval(product_key, delay_time):
@@ -307,8 +319,6 @@ def set_noti_product_interval(product_key, delay_time):
         p.execute()
     except redis.exceptions.RedisError, e:
         logger.exception(e)
-
-
 
 def get_noti_product_interval(product_key):
     '''

@@ -6,7 +6,7 @@ import json, operator, time, copy, requests, redis
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_redis, get_redis_la
 from datetime import datetime
-from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger, get_dev_last_data, set_dev_last_data
+from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger, get_dev_last_data, set_dev_last_data, get_pks_limit_cache, check_rule_limit
 import re
 
 
@@ -198,9 +198,7 @@ def run(lang, src_code, params):
         'src_code': src_code,
         'context': params
     }
-    print 'data', data
     response = requests.post(url, data=json.dumps(data), headers=headers)
-    print 'res:', response.json()
     if response.status_code > 199 and response.status_code < 300:
         return response.json()['result']
     elif 400 == response.status_code:
@@ -444,4 +442,10 @@ def send_output_msg(output, msg, log, vars_info):
         },
         "content": json.dumps(content)
     }
-    sender.send(message, product_key)
+    limit_dict = get_pks_limit_cache()
+    limit_info = limit_dict.get(product_key, {})
+    triggle_limit = limit_info.get('triggle_limit')
+    if check_rule_limit(product_key, triggle_limit, 'triggle'):
+        sender.send(message, product_key)
+    else:
+        log['error_message'] = 'quota was used up'

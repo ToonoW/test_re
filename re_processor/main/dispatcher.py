@@ -178,7 +178,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                             if data:
                                 for d in data:
                                     if task_obj[d]['category'] == 'output':
-                                        send_output_msg(task_obj[d], msg, log, task_vars)
+                                        send_output_msg(task_obj[d], msg, p_log, task_vars)
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })
