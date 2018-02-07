@@ -138,7 +138,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
             start_ts = time.time()
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
-
             for rule in rules_list:
                 p_log = {
                     'module': 're_processor',
@@ -153,10 +152,11 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
-                    task_obj = generate_msg_func_list(rule)[0]
+                    task_info = generate_msg_func_list(rule, msg)
+                    task_obj = task_info[0]
                     dp_value = msg.get('data', {})
-                    input_list = generate_msg_func_list(rule)[1]
-                    output_wires = generate_msg_func_list(rule)[2]
+                    input_list = task_info[1]
+                    output_wires = task_info[2]
                     for inp in input_list:
                         task_vars = {}
                         if inp.get('type') == 'custom_json':

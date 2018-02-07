@@ -6,7 +6,7 @@ import json, operator, time, copy, requests, redis
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_redis, get_redis_la
 from datetime import datetime
-from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger
+from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger, get_dev_last_data, set_dev_last_data
 import re
 
 
@@ -188,7 +188,7 @@ def get_value_from_json(name, json_obj):
     return ''
 
 
-def generate_msg_func_list(rule):
+def generate_msg_func_list(rule, msg):
     """
     生成d3任务列表(包括function与ouput), 输入列表, 输出id列表
     """
@@ -197,15 +197,46 @@ def generate_msg_func_list(rule):
     rule_tree = rule.get('rule_tree', {})
     event = rule_tree.get('event', {})
     event_input = event.get('data', [])
+    changed_input = event.get('change', [])
     output_wires = []
     custom_vars = rule.get('custom_vars', {})
     if custom_vars:
         custom_vars['custom_test']['rule_id'] = rule.get('rule_id')
         input_list.append(custom_vars['custom_test'])
 
-    for event in event_input:
-        if event['category'] == 'input':
-            input_list.append(event)
+    if changed_input:
+        for inp in changed_input:
+            if inp['category'] == 'input':
+                last_data = {}
+                data = msg.get('data')
+                event_msg = msg
+                data = event_msg.get('data', {})
+                params = inp['content']['params']
+                did = msg['did']
+                concern_params = {}
+                for param in params:
+                    value = data.get(param)
+                    if value is not None:
+                        concern_params.update({param: value})
+                last_data = get_dev_last_data(did)
+                # print 'last_data', last_data
+                flag = True
+                for param in params:
+                    # print 'msg:', data.get(param)
+                    # print 'last data:', last_data.get(param)
+                    if data.get(param) != last_data.get(param):
+                        flag &= True
+                    else:
+                        # print 'aaaa'
+                        flag &= False
+                # print 'flag:', flag
+                set_dev_last_data(concern_params, did)
+                if flag:
+                    input_list.append(inp)
+    if event_input:
+        for inp in event_input:
+            if inp['category'] == 'input':
+                input_list.append(inp)
     task_list = rule_tree['task_list']
     for task in task_list:
         t = task_list[task]
