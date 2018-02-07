@@ -188,6 +188,27 @@ def get_value_from_json(name, json_obj):
     return ''
 
 
+def run(lang, src_code, params):
+    url = "{0}{1}{2}".format('http://', settings.SCRIPT_HOST, '/run')
+    headers = {
+        'Authorization': settings.SCRIPT_API_TOKEN
+    }
+    data = {
+        'lang': lang,
+        'src_code': src_code,
+        'context': params
+    }
+    print 'data', data
+    response = requests.post(url, data=json.dumps(data), headers=headers)
+    print 'res:', response.json()
+    if response.status_code > 199 and response.status_code < 300:
+        return response.json()['result']
+    elif 400 == response.status_code:
+        raise Exception(u'script error: {}'.format(response.json()['detail_message']))
+    else:
+        raise Exception(u'script error: {}'.format(response.content))
+
+
 def generate_msg_func_list(rule, msg):
     """
     生成d3任务列表(包括function与ouput), 输入列表, 输出id列表
@@ -201,8 +222,9 @@ def generate_msg_func_list(rule, msg):
     output_wires = []
     custom_vars = rule.get('custom_vars', {})
     if custom_vars:
-        custom_vars['custom_test']['rule_id'] = rule.get('rule_id')
-        input_list.append(custom_vars['custom_test'])
+        for _, custom in enumerate(custom_vars):
+            custom_vars[custom]['rule_id'] = rule.get('rule_id')
+            input_list.append(custom_vars[custom])
 
     if changed_input:
         for inp in changed_input:
