@@ -345,7 +345,7 @@ class BaseRabbitmqConsumer(object):
         product_key = msg.get('product_key')
         if product_key:
             self.thermal_map[product_key] += 1
-        data = msg.pop('data')
+        data = msg.get('data', {})
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
         last_data = None
 

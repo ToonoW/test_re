@@ -185,9 +185,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
                         'proc_t': (time.time() - log['ts']) * 1000
                     })
                     logger.info(p_log)
-                else:
-                    lst = self.mq_unpack(msg, log)
-                    map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+            lst = self.mq_unpack(msg, log)
+            map(lambda x: self.process(x, copy.deepcopy(log)), lst)
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
