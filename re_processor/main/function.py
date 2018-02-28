@@ -6,7 +6,12 @@ import json, operator, time, copy, requests, redis
 from re_processor import settings
 from re_processor.connections import get_mongodb, get_redis, get_redis_la
 from datetime import datetime
-from re_processor.common import _log, update_virtual_device_log, get_sequence, RedisLock, logger, get_dev_last_data, set_dev_last_data, get_pks_limit_cache, check_rule_limit
+from re_processor.common import (
+    _log, update_virtual_device_log,
+    get_sequence, RedisLock, logger, get_dev_last_data,
+    set_dev_last_data, get_pks_limit_cache, check_rule_limit,
+    new_virtual_device_log,
+    update_virtual_device_log)
 import re
 
 
@@ -256,6 +261,8 @@ def generate_msg_func_list(rule, msg):
     if event_input:
         for inp in event_input:
             if inp['category'] == 'input':
+                # if 'virtual:site' == msg['mac']:
+                #     log_id = new_virtual_device_log(msg['product_key'], rule.get('rule_id'))
                 input_list.append(inp)
     task_list = rule_tree['task_list']
     for task in task_list:
@@ -266,13 +273,15 @@ def generate_msg_func_list(rule, msg):
     return (task_obj, input_list, output_wires)
 
 
-def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_vars):
+def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_vars, log_id, msg):
     func_arr = []
     func_task = task_obj.get(input_wires_id)
     output_obj = {}
     if func_task['category'] == 'output':
         output_obj.update({func_task['id']: func_task['id']})
     result = calc_logic(func_task, dp_kv, task_vars)
+    if not result and msg['mac'] == 'virtual:site':
+        update_virtual_device_log(log_id, 'triggle', 2, '')
 
     while result and func_task['category'] != 'output':
         if func_task['wires']:
@@ -283,6 +292,8 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
                 result = calc_logic(func_task, dp_kv, task_vars)
                 if not result:
                     wires_info = func_task['wires']
+                    if not result and msg['mac'] == 'virtual:site':
+                        update_virtual_device_log(log_id, 'triggle', 2, '')
                     if wires_info:
                         for wire in wires_info[0]:
                             if output_obj.get(wire):
@@ -290,6 +301,8 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
                 if task['wires']:
                     for tw in task['wires'][0]:
                         result = calc_logic(task, dp_kv, task_vars)
+                        if not result and msg['mac'] == 'virtual:site':
+                            update_virtual_device_log(log_id, 'triggle', 2, '')
                         if result and tw in output_wires:
                             output_obj.update({tw: tw})
                 func_task = task_obj.get(wire)
@@ -396,7 +409,7 @@ def _query_product_name(task_vars):
 
     return result
 
-def send_output_msg(output, msg, log, vars_info):
+def send_output_msg(output, msg, log, vars_info, log_id):
     product_key = msg['product_key']
     task_vars = {}
     task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
@@ -429,6 +442,8 @@ def send_output_msg(output, msg, log, vars_info):
             })
     extern_params = output.get('extern_params', {})
     alias = {}
+    if msg['mac'] == 'virtual:site':
+        update_virtual_device_log(log_id, 'triggle', 1, '')
     if 'alias' in extern_params:
         alias.update(extern_alias(task_vars, content))
     message = {
@@ -439,6 +454,11 @@ def send_output_msg(output, msg, log, vars_info):
         "action_type": output['type'],
         "extern_params": {
             "alias": alias
+        },
+        "log_data": {
+            "log_id": log_id,
+            "field": "action",
+            "value": output['type']
         },
         "content": json.dumps(content)
     }

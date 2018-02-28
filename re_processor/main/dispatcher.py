@@ -13,7 +13,8 @@ from re_processor.common import (
     debug_logger as logger, debug_info_logger, RedisLock,
     cache_rules, get_dev_rules_from_cache, get_product_whitelist,
     set_monitor_data, get_monitor_dids, get_proc_t_info,
-    get_rules_from_cache)
+    get_rules_from_cache,
+    new_virtual_device_log)
 from re_processor.connections import get_mysql, get_redis
 from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json, run
 
@@ -158,6 +159,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     input_list = task_info[1]
                     output_wires = task_info[2]
                     for inp in input_list:
+                        log_id = new_virtual_device_log(msg['product_key'], rule['rule_id']) if 'virtual:site' == msg['mac'] else ''
                         task_vars = {}
                         if inp.get('type') == 'custom_json':
                             custom_info = custom_json(inp)
@@ -174,11 +176,11 @@ class MainDispatcher(BaseRabbitmqConsumer):
                             script_info = run(content['lang'],  content['src_code'], content_vars)
                             task_vars.update({alias: script_info})
                         for inp_wires in inp['wires'][0]:
-                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars)
+                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars, log_id, msg)
                             if data:
                                 for d in data:
                                     if task_obj[d]['category'] == 'output':
-                                        send_output_msg(task_obj[d], msg, p_log, task_vars)
+                                        send_output_msg(task_obj[d], msg, p_log, task_vars, log_id)
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })
