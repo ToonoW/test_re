@@ -409,7 +409,7 @@ def _query_product_name(task_vars):
 
     return result
 
-def send_output_msg(output, msg, log, vars_info, log_id):
+def send_output_msg(output, msg, log, vars_info, log_id, rule_id):
     product_key = msg['product_key']
     task_vars = {}
     task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
@@ -420,6 +420,7 @@ def send_output_msg(output, msg, log, vars_info, log_id):
     task_vars['did'] = msg['did']
     task_vars['common.mac'] = msg['mac'].lower()
     task_vars['common.mac_upper'] = msg['mac'].upper()
+    task_vars['common.rule_id'] = rule_id
     task_vars['product_key'] = msg['product_key']
     task_vars['common.product_key'] = msg['product_key']
     msg_data = msg.get('data', {})
@@ -446,6 +447,14 @@ def send_output_msg(output, msg, log, vars_info, log_id):
         update_virtual_device_log(log_id, 'triggle', 1, '')
     if 'alias' in extern_params:
         alias.update(extern_alias(task_vars, content))
+        print alias
+        for values in alias.values():
+            emp = filter(lambda x: not x.get('dev_alias', ''), values)
+            if emp:
+                for v in values:
+                    if not v.get('dev_alias', ''):
+                        v['dev_alias'] = result.get('common.product_name')
+
     message = {
         "product_key": product_key,
         "did": msg['did'],
