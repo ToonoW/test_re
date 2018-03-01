@@ -19,7 +19,6 @@ srv_session = requests.Session()
 
 
 def calc_logic(func_task, dp_kv, task_vars):
-
     result = False
     opt = {
         '>': operator.__gt__,
@@ -86,8 +85,10 @@ def calc_logic(func_task, dp_kv, task_vars):
         dp_value = dp_kv.get(cond1)
         if dp_value is None:
             return result
-        if isinstance(dp_value, basestring):
+        if pattern['hex'].search(cond2):
             dp_value = '0x{}'.format(dp_value)
+        if pattern['string'].search(cond2):
+            dp_value = "'{}'".format(dp_value)
 
         hex_flag = False
         tmp_list = []
@@ -95,6 +96,7 @@ def calc_logic(func_task, dp_kv, task_vars):
             if pattern['number'].search(str(tmp)):
                 tmp_list.append(tmp)
             elif pattern['string'].search(tmp):
+                print 'tmp:', tmp
                 tmp_list.append(tmp[1:-1])
             elif pattern['hex'].search(tmp):
                 hex_flag = True
@@ -102,9 +104,11 @@ def calc_logic(func_task, dp_kv, task_vars):
         if hex_flag:
             tmp_list[0] = int(tmp_list[0], 16)
             tmp_list[1] = int(tmp_list[1], 16)
-
         if dp_value is not None:
-            result = operation(float(tmp_list[0]), float(tmp_list[1]))
+            if isinstance(tmp_list[0], basestring) and isinstance(tmp_list[1], basestring):
+                result = operation(tmp_list[0], tmp_list[1])
+            else:
+                result = operation(float(tmp_list[0]), float(tmp_list[1]))
             # print 'result:', result
             # print "cond1:", cond1, "dp_value:", dp_value, "op:", operation, "cond2:", cond2, "result:", result
     return result
@@ -447,13 +451,13 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id):
         update_virtual_device_log(log_id, 'triggle', 1, '')
     if 'alias' in extern_params:
         alias.update(extern_alias(task_vars, content))
-        print alias
+        product_info  = _query_product_name(task_vars)
         for values in alias.values():
             emp = filter(lambda x: not x.get('dev_alias', ''), values)
             if emp:
                 for v in values:
                     if not v.get('dev_alias', ''):
-                        v['dev_alias'] = result.get('common.product_name')
+                        v['dev_alias'] = product_info.get('common.product_name')
 
     message = {
         "product_key": product_key,
