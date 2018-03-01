@@ -14,6 +14,9 @@ from re_processor.common import (
     update_virtual_device_log)
 import re
 
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 srv_session = requests.Session()
 
@@ -88,7 +91,8 @@ def calc_logic(func_task, dp_kv, task_vars):
         if pattern['hex'].search(cond2):
             dp_value = '0x{}'.format(dp_value)
         if pattern['string'].search(cond2):
-            dp_value = "'{}'".format(dp_value)
+            dp_value = "'{}'".format(unicode(dp_value))
+            cond2 = unicode(cond2)
 
         hex_flag = False
         tmp_list = []
@@ -96,7 +100,6 @@ def calc_logic(func_task, dp_kv, task_vars):
             if pattern['number'].search(str(tmp)):
                 tmp_list.append(tmp)
             elif pattern['string'].search(tmp):
-                print 'tmp:', tmp
                 tmp_list.append(tmp[1:-1])
             elif pattern['hex'].search(tmp):
                 hex_flag = True
