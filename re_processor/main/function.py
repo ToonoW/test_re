@@ -18,6 +18,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
+
 srv_session = requests.Session()
 
 
@@ -74,8 +75,8 @@ def calc_logic(func_task, dp_kv, task_vars):
             res = reduce(_calculate, exp, [0])
         except ZeroDivisionError:
             res = [0]
-        dp_kv[alias] = res.pop()
-        task_vars[alias] = res.pop()
+        dp_kv[alias] = res[1]
+        task_vars[alias] = res[1]
         result = True
 
     operation = opt.get(func.get('opt'))

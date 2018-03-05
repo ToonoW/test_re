@@ -159,6 +159,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     input_list = task_info[1]
                     output_wires = task_info[2]
                     for inp in input_list:
+                        if inp['category'] != 'input':
+                            continue
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id']) if 'virtual:site' == msg['mac'] else ''
                         task_vars = {}
                         if inp.get('type') == 'custom_json':
