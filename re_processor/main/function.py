@@ -95,6 +95,7 @@ def calc_logic(func_task, dp_kv, task_vars, msg):
     if func_task.get('type') == 'custom_json':
         custom_info = custom_json(inp)
         task_vars.update(custom_info)
+        result = True
 
     operation = opt.get(func.get('opt'))
     if operation:
