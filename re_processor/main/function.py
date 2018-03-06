@@ -22,7 +22,7 @@ sys.setdefaultencoding('utf-8')
 srv_session = requests.Session()
 
 
-def calc_logic(func_task, dp_kv, task_vars):
+def calc_logic(func_task, dp_kv, task_vars, msg):
     result = False
     opt = {
         '>': operator.__gt__,
@@ -78,6 +78,23 @@ def calc_logic(func_task, dp_kv, task_vars):
         dp_kv[alias] = res[1]
         task_vars[alias] = res[1]
         result = True
+
+    if func_task.get('type') == 'script':
+        content = func_task.get('content')
+        alias = content.get('alias')
+        params = func_task.get('params')
+        content_vars = {}
+        for param in params:
+            data = msg.get('data', {})
+            value = param.replace("data.", "")
+            content_vars.update({param: data.get(value)})
+        script_info = run(content['lang'],  content['src_code'], content_vars)
+        task_vars.update({alias: script_info})
+        result = True
+
+    if func_task.get('type') == 'custom_json':
+        custom_info = custom_json(inp)
+        task_vars.update(custom_info)
 
     operation = opt.get(func.get('opt'))
     if operation:
@@ -287,7 +304,7 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
     output_obj = {}
     if func_task['category'] == 'output':
         output_obj.update({func_task['id']: func_task['id']})
-    result = calc_logic(func_task, dp_kv, task_vars)
+    result = calc_logic(func_task, dp_kv, task_vars, msg)
     if not result and msg['mac'] == 'virtual:site':
         update_virtual_device_log(log_id, 'triggle', 2, '')
 
@@ -297,7 +314,7 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
                 task = task_obj.get(wire)
                 if not task['wires']:
                     output_obj.update({wire: wire})
-                result = calc_logic(func_task, dp_kv, task_vars)
+                result = calc_logic(func_task, dp_kv, task_vars, msg)
                 if not result:
                     wires_info = func_task['wires']
                     if not result and msg['mac'] == 'virtual:site':
@@ -308,7 +325,7 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
                                 del output_obj[wire]
                 if task['wires']:
                     for tw in task['wires'][0]:
-                        result = calc_logic(task, dp_kv, task_vars)
+                        result = calc_logic(task, dp_kv, task_vars, msg)
                         if not result and msg['mac'] == 'virtual:site':
                             update_virtual_device_log(log_id, 'triggle', 2, '')
                         if result and tw in output_wires:

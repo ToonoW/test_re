@@ -16,7 +16,7 @@ from re_processor.common import (
     get_rules_from_cache,
     new_virtual_device_log)
 from re_processor.connections import get_mysql, get_redis
-from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json, run
+from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg
 
 from processor import MainProcessor
 
@@ -163,20 +163,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
                             continue
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id']) if 'virtual:site' == msg['mac'] else ''
                         task_vars = {}
-                        if inp.get('type') == 'custom_json':
-                            custom_info = custom_json(inp)
-                            task_vars.update(custom_info)
-                        if inp.get('type') == 'script':
-                            content = inp.get('content')
-                            alias = content.get('alias')
-                            params = inp.get('params')
-                            content_vars = {}
-                            for param in params:
-                                data = msg.get('data', {})
-                                value = param.replace("data.", "")
-                                content_vars.update({param: data.get(value)})
-                            script_info = run(content['lang'],  content['src_code'], content_vars)
-                            task_vars.update({alias: script_info})
                         for inp_wires in inp['wires'][0]:
                             data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars, log_id, msg)
                             if data:
