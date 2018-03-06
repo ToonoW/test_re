@@ -91,7 +91,6 @@ def calc_logic(func_task, dp_kv, task_vars, msg):
         script_info = run(content['lang'],  content['src_code'], content_vars)
         task_vars.update({alias: script_info})
         result = True
-
     if func_task.get('type') == 'custom_json':
         custom_info = custom_json(inp)
         task_vars.update(custom_info)
