@@ -269,31 +269,6 @@ def generate_msg_func_list(rule, msg):
                     rule['rule_tree']['event'].get('change', []))
                 if change_events:
                     input_list.append(inp)
-                # last_data = {}
-                # data = msg.get('data')
-                # event_msg = msg
-                # data = event_msg.get('data', {})
-                # params = inp['content']['params']
-                # did = msg['did']
-                # concern_params = {}
-                # for param in params:
-                #     value = data.get(param)
-                #     if value is not None:
-                #         concern_params.update({param: value})
-                # last_data = get_dev_last_data(did)
-                # # print 'last_data', last_data
-                # flag = True
-                # for param in params:
-                #     # print 'msg:', data.get(param)
-                #     # print 'last data:', last_data.get(param)
-                #     if data.get(param) != last_data.get(param):
-                #         flag &= True
-                #     else:
-                #         # print 'aaaa'
-                #         flag &= False
-                # print 'flag:', flag
-                # set_dev_last_data(concern_params, did)
-                # if flag:
 
     if event_input:
         for inp in event_input:
@@ -319,7 +294,6 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
     result = calc_logic(func_task, dp_kv, task_vars, msg)
     if not result and msg['mac'] == 'virtual:site':
         update_virtual_device_log(log_id, 'triggle', 2, '')
-
     while result and func_task['category'] != 'output':
         if func_task['wires']:
             for wire in func_task['wires'][0]:
@@ -335,14 +309,13 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
                         for wire in wires_info[0]:
                             if output_obj.get(wire):
                                 del output_obj[wire]
-                if task['wires']:
+                func_task = task_obj.get(wire)
+                while result and task.get('wires'):
                     for tw in task['wires'][0]:
                         result = calc_logic(task, dp_kv, task_vars, msg)
-                        if not result and msg['mac'] == 'virtual:site':
-                            update_virtual_device_log(log_id, 'triggle', 2, '')
+                        task = task_obj.get(tw)
                         if result and tw in output_wires:
                             output_obj.update({tw: tw})
-                func_task = task_obj.get(wire)
     return output_obj
 
 
