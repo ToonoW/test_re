@@ -11,7 +11,8 @@ from re_processor.common import (
     get_sequence, RedisLock, logger, get_dev_last_data,
     set_dev_last_data, get_pks_limit_cache, check_rule_limit,
     new_virtual_device_log,
-    update_virtual_device_log)
+    update_virtual_device_log,
+    getset_last_data)
 import re
 
 import sys
@@ -257,32 +258,43 @@ def generate_msg_func_list(rule, msg):
     if changed_input:
         for inp in changed_input:
             if inp['category'] == 'input':
-                last_data = {}
-                data = msg.get('data')
-                event_msg = msg
-                data = event_msg.get('data', {})
-                params = inp['content']['params']
-                did = msg['did']
-                concern_params = {}
-                for param in params:
-                    value = data.get(param)
-                    if value is not None:
-                        concern_params.update({param: value})
-                last_data = get_dev_last_data(did)
-                # print 'last_data', last_data
-                flag = True
-                for param in params:
-                    # print 'msg:', data.get(param)
-                    # print 'last data:', last_data.get(param)
-                    if data.get(param) != last_data.get(param):
-                        flag &= True
-                    else:
-                        # print 'aaaa'
-                        flag &= False
-                # print 'flag:', flag
-                set_dev_last_data(concern_params, did)
-                if flag:
+                data = msg.get('data', {})
+                last_data = getset_last_data(data, msg['did'])
+                change_events = filter(
+                    lambda _node: reduce(lambda res, y: res or \
+                                         (data.get(y, None) is not None and \
+                                          last_data.get(y, None) != data.get(y, None)),
+                                         _node['content'].get('params', []),
+                                         False),
+                    rule['rule_tree']['event'].get('change', []))
+                if change_events:
                     input_list.append(inp)
+                # last_data = {}
+                # data = msg.get('data')
+                # event_msg = msg
+                # data = event_msg.get('data', {})
+                # params = inp['content']['params']
+                # did = msg['did']
+                # concern_params = {}
+                # for param in params:
+                #     value = data.get(param)
+                #     if value is not None:
+                #         concern_params.update({param: value})
+                # last_data = get_dev_last_data(did)
+                # # print 'last_data', last_data
+                # flag = True
+                # for param in params:
+                #     # print 'msg:', data.get(param)
+                #     # print 'last data:', last_data.get(param)
+                #     if data.get(param) != last_data.get(param):
+                #         flag &= True
+                #     else:
+                #         # print 'aaaa'
+                #         flag &= False
+                # print 'flag:', flag
+                # set_dev_last_data(concern_params, did)
+                # if flag:
+
     if event_input:
         for inp in event_input:
             if inp['category'] == 'input':
