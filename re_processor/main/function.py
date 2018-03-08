@@ -285,6 +285,16 @@ def generate_msg_func_list(rule, msg):
     return (task_obj, input_list, output_wires)
 
 
+def next(task_obj, func_task):
+    data_list = []
+    if func_task['wires']:
+        data = map(lambda y: y,func_task['wires'][0])
+        for d in data:
+            info = task_obj.get(d)
+            data_list.append(info)
+    return data_list
+
+
 def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_vars, log_id, msg):
     func_arr = []
     func_task = task_obj.get(input_wires_id)
@@ -294,28 +304,41 @@ def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_v
     result = calc_logic(func_task, dp_kv, task_vars, msg)
     if not result and msg['mac'] == 'virtual:site':
         update_virtual_device_log(log_id, 'triggle', 2, '')
-    while result and func_task['category'] != 'output':
-        if func_task['wires']:
-            for wire in func_task['wires'][0]:
-                task = task_obj.get(wire)
-                if not task['wires']:
-                    output_obj.update({wire: wire})
+    func_data = [func_task]
+    wires_list = []
+    while result:
+        while len(func_data) > 1:
+            tasks = []
+            for func_task in func_data:
                 result = calc_logic(func_task, dp_kv, task_vars, msg)
-                if not result:
-                    wires_info = func_task['wires']
-                    if not result and msg['mac'] == 'virtual:site':
-                        update_virtual_device_log(log_id, 'triggle', 2, '')
-                    if wires_info:
-                        for wire in wires_info[0]:
-                            if output_obj.get(wire):
-                                del output_obj[wire]
-                func_task = task_obj.get(wire)
-                while result and task.get('wires'):
-                    for tw in task['wires'][0]:
-                        result = calc_logic(task, dp_kv, task_vars, msg)
-                        task = task_obj.get(tw)
-                        if result and tw in output_wires:
-                            output_obj.update({tw: tw})
+                # print 'func task', func_task
+                # print 'result:', result
+                if result:
+                    func_data =  next(task_obj, func_task)
+                    tasks.extend(func_data)
+                    for wire in func_task['wires'][0]:
+                        wires_list.append(wire)
+            func_data = tasks
+        else:
+            for func_task in func_data:
+                result = calc_logic(func_task, dp_kv, task_vars, msg)
+                if result:
+                    func_data =  next(task_obj, func_task)
+                if result:
+                    for wire in func_task['wires'][0]:
+                        wires_list.append(wire)
+                if func_task['category'] == 'output':
+                    func_data = []
+            # print 'func task', func_task
+            # print 'result:', result
+            # print 'func data:', func_data
+    #             print 'func data:', func_data
+    # print 'wires list:', wires_list
+    # print 'output wires:', output_wires
+    for wires in wires_list:
+        if wires in output_wires:
+            output_obj.update({wires: wires})
+    # print 'output:', output_obj
     return output_obj
 
 
