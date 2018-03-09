@@ -261,7 +261,6 @@ def generate_msg_func_list(rule, msg, last_data):
         for inp in changed_input:
             if inp['category'] == 'input':
                 last_data = getset_rule_last_data(data, rule['rule_id'], msg['did'])
-                print 'last data:', last_data
                 change_events = filter(
                     lambda _node: reduce(lambda res, y: res or \
                                          (data.get(y, None) is not None and \

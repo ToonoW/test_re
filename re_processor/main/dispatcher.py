@@ -165,7 +165,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     task_obj = task_info[0]
                     dp_value = msg.get('data', {})
                     input_list = task_info[1]
-                    print 'input list:', input_list
                     output_wires = task_info[2]
                     for inp in input_list:
                         if inp['category'] != 'input':
