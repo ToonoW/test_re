@@ -14,6 +14,7 @@ from re_processor.common import (
     cache_rules, get_dev_rules_from_cache,
     set_monitor_data, get_monitor_dids, get_proc_t_info,
     get_rules_from_cache,
+    getset_last_data,
     new_virtual_device_log)
 from re_processor.connections import get_mysql, get_redis
 from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
@@ -139,6 +140,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
             start_ts = time.time()
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
+            data = msg.get('data', {})
+            last_data = getset_last_data(data, msg['did'])
             for rule in rules_list:
                 p_log = {
                     'module': 're_processor',
@@ -153,7 +156,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
-                    task_info = generate_msg_func_list(rule, msg)
+                    task_info = generate_msg_func_list(rule, msg, last_data)
                     task_obj = task_info[0]
                     dp_value = msg.get('data', {})
                     input_list = task_info[1]

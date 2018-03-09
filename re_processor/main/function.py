@@ -11,8 +11,7 @@ from re_processor.common import (
     get_sequence, RedisLock, logger, get_dev_last_data,
     set_dev_last_data, get_pks_limit_cache, check_rule_limit,
     new_virtual_device_log,
-    update_virtual_device_log,
-    getset_last_data)
+    update_virtual_device_log)
 import re
 
 import sys
@@ -238,7 +237,7 @@ def run(lang, src_code, params):
         raise Exception(u'script error: {}'.format(response.content))
 
 
-def generate_msg_func_list(rule, msg):
+def generate_msg_func_list(rule, msg, last_data):
     """
     生成d3任务列表(包括function与ouput), 输入列表, 输出id列表
     """
@@ -256,10 +255,9 @@ def generate_msg_func_list(rule, msg):
             input_list.append(custom_vars[custom])
 
     if changed_input:
+        data = msg.get('data', {})
         for inp in changed_input:
             if inp['category'] == 'input':
-                data = msg.get('data', {})
-                last_data = getset_last_data(data, msg['did'])
                 change_events = filter(
                     lambda _node: reduce(lambda res, y: res or \
                                          (data.get(y, None) is not None and \
