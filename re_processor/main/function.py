@@ -444,6 +444,7 @@ def _query_product_name(task_vars):
     return result
 
 def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
+    log_id = str(log_id) if log_id else ''
     product_key = msg['product_key']
     task_vars = {}
     task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)
@@ -498,13 +499,15 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
         "extern_params": {
             "alias": alias
         },
-        "log_data": {
+        "log_data": {},
+        "content": json.dumps(content)
+    }
+    if log_id:
+        message["log_data"] = {
             "log_id": log_id,
             "field": "action",
             "value": output['type']
-        },
-        "content": json.dumps(content)
-    }
+        }
     limit_dict = get_pks_limit_cache()
     limit_info = limit_dict.get(product_key, {})
     triggle_limit = limit_info.get('triggle_limit')
