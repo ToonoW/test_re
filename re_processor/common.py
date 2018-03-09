@@ -234,21 +234,14 @@ def getset_last_data(data, did):
     return json.loads(zlib.decompress(result[0])) if result[0] else {}
 
 
-def get_dev_last_data(did):
-    cache = get_redis()
-    result = cache.get('re_core_new_{}_dev_latest'.format(did))
-    if not result:
-        result = "{}"
-    return json.loads(result)
-
-
-def set_dev_last_data(data, did):
+def getset_rule_last_data(data, rule_id, did):
     cache = get_redis()
     p = cache.pipeline()
-    p.set('re_core_new_{}_dev_latest'.format(did), json.dumps(data))
-    p.expire('re_core_new_{}_dev_latest'.format(did), 86400)
+    p.getset('re_core_new_{}_{}_dev_latest'.format(rule_id, did), zlib.compress(json.dumps(data)))
+    p.expire('re_core_new_{}_{}_dev_latest'.format(rule_id, did), 86400)
     result = p.execute()
-    return result
+    return json.loads(zlib.decompress(result[0])) if result[0] else {}
+
 
 def set_interval_lock(rule_id, did, interval):
     if not rule_id or not interval:

@@ -15,6 +15,7 @@ from re_processor.common import (
     set_monitor_data, get_monitor_dids, get_proc_t_info,
     get_rules_from_cache,
     getset_last_data,
+    check_interval_locked,
     new_virtual_device_log)
 from re_processor.connections import get_mysql, get_redis
 from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
@@ -141,7 +142,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
             resp_t = get_proc_t_info(start_ts)
             data = msg.get('data', {})
-            last_data = getset_last_data(data, msg['did'])
+            last_data = None
             for rule in rules_list:
                 p_log = {
                     'module': 're_processor',
@@ -156,10 +157,15 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
+                    if check_interval_locked(rule['rule_id'], msg['did']):
+                        if ((3 == rule['ver'] and rule['rule_tree']['event'].get('change', []))) and last_data is None:
+                            last_data = getset_last_data(data, msg['did'])
+                        continue
                     task_info = generate_msg_func_list(rule, msg, last_data)
                     task_obj = task_info[0]
                     dp_value = msg.get('data', {})
                     input_list = task_info[1]
+                    print 'input list:', input_list
                     output_wires = task_info[2]
                     for inp in input_list:
                         if inp['category'] != 'input':
@@ -175,7 +181,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                             if data:
                                 for d in data:
                                     if task_obj[d]['category'] == 'output':
-                                        send_output_msg(task_obj[d], msg, p_log, task_vars, log_id, rule.get('rule_id'))
+                                        send_output_msg(task_obj[d], msg, p_log, task_vars, log_id, rule.get('rule_id'), p_log)
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })

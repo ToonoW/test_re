@@ -8,9 +8,11 @@ from re_processor.connections import get_mongodb, get_redis, get_redis_la
 from datetime import datetime
 from re_processor.common import (
     _log, update_virtual_device_log,
-    get_sequence, RedisLock, logger, get_dev_last_data,
-    set_dev_last_data, get_pks_limit_cache, check_rule_limit,
+    get_sequence, RedisLock, logger,
+    get_pks_limit_cache, check_rule_limit,
     new_virtual_device_log,
+    getset_rule_last_data,
+    set_interval_lock,
     update_virtual_device_log)
 import re
 
@@ -258,6 +260,8 @@ def generate_msg_func_list(rule, msg, last_data):
         data = msg.get('data', {})
         for inp in changed_input:
             if inp['category'] == 'input':
+                last_data = getset_rule_last_data(data, rule['rule_id'], msg['did'])
+                print 'last data:', last_data
                 change_events = filter(
                     lambda _node: reduce(lambda res, y: res or \
                                          (data.get(y, None) is not None and \
@@ -440,7 +444,7 @@ def _query_product_name(task_vars):
 
     return result
 
-def send_output_msg(output, msg, log, vars_info, log_id, rule_id):
+def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
     product_key = msg['product_key']
     task_vars = {}
     task_vars['sys.timestamp_ms'] = int(log['ts'] * 1000)

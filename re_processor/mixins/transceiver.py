@@ -347,7 +347,6 @@ class BaseRabbitmqConsumer(object):
             self.thermal_map[product_key] += 1
         data = msg.get('data', {})
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
-        last_data = None
 
         msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
         msg['sys.timestamp'] = int(log['ts'])
@@ -362,10 +361,6 @@ class BaseRabbitmqConsumer(object):
         sequence_dict = {}
         rule_list_start_ts = time.time()
         for rule in rules_list:
-            if check_interval_locked(rule['rule_id'], msg['did']):
-                if ((3 == rule['ver'] and rule['rule_tree']['event'].get('change', [])) or (1 == rule['ver'] and 2 == rule['type'])) and last_data is None:
-                    last_data = getset_last_data(data, msg['did'])
-                continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']
             log_id = ''
