@@ -258,16 +258,16 @@ def generate_msg_func_list(rule, msg, last_data):
 
     if changed_input:
         data = msg.get('data', {})
+        last_data = getset_rule_last_data(data, rule['rule_id'], msg['did'])
+        change_events = filter(
+            lambda _node: reduce(lambda res, y: res or \
+                                 (data.get(y, None) is not None and \
+                                  last_data.get(y, None) != data.get(y, None)),
+                                 _node['content'].get('params', []),
+                                 False),
+            rule['rule_tree']['event'].get('change', []))
         for inp in changed_input:
             if inp['category'] == 'input':
-                last_data = getset_rule_last_data(data, rule['rule_id'], msg['did'])
-                change_events = filter(
-                    lambda _node: reduce(lambda res, y: res or \
-                                         (data.get(y, None) is not None and \
-                                          last_data.get(y, None) != data.get(y, None)),
-                                         _node['content'].get('params', []),
-                                         False),
-                    rule['rule_tree']['event'].get('change', []))
                 if change_events:
                     input_list.append(inp)
 

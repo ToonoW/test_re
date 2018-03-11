@@ -157,10 +157,6 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
-                    if check_interval_locked(rule['rule_id'], msg['did']):
-                        if ((3 == rule['ver'] and rule['rule_tree']['event'].get('change', []))) and last_data is None:
-                            last_data = getset_last_data(data, msg['did'])
-                        continue
                     task_info = generate_msg_func_list(rule, msg, last_data)
                     task_obj = task_info[0]
                     dp_value = msg.get('data', {})
