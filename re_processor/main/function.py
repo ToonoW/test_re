@@ -472,9 +472,15 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
     task_vars.update(params_result)
     params_obj = {}
     for param in params_list:
-        if task_vars.get(param) is not None:
+
+        if task_vars.has_key(param) and task_vars.get(param) is not None:
             params_obj.update({
                 param: task_vars.get(param)
+            })
+        else:
+            value = get_value_from_json(param, task_vars.get(param.split('.')[0], {}))
+            params_obj.update({
+                param: value
             })
     extern_params = output.get('extern_params', {})
     alias = {}
