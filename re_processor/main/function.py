@@ -100,7 +100,10 @@ def calc_logic(func_task, dp_kv, task_vars, msg):
 
     operation = opt.get(func.get('opt'))
     if operation:
-        cond1 = func['cond1'].replace("data.", "")
+        cond1 = func['cond1']
+        data = cond1.split(".")
+        if len(data) > 1:
+            cond1 = data[1]
         cond2 = func['cond2']
         if 'data' in cond2:
             cond2 = func['cond2'].replace("data.", "")
