@@ -132,6 +132,18 @@ def get_product_whitelist():
         return []
 
 
+def get_monitor_dids():
+    try:
+        cache = get_redis()
+        value = cache.get('constance:gwreapi:MONITOR_DIDS')
+        if value:
+            return loads(value)
+        return []
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+        return []
+
+
 def update_device_online(did, ts, status=False):
     cache = get_redis()
     key = 're_core_{}_dev_online_ts'.format(did)
@@ -152,6 +164,18 @@ def check_device_online(did):
         result = None
 
     return result
+
+
+def set_monitor_data(key, value, expired_seconds):
+    cache = get_redis()
+    p = cache.pipeline()
+    try:
+        p.set(key, value)
+        p.expire(key, expired_seconds)
+        p.execute()
+    except redis.exceptions.RedisError, e:
+        logger.exception(e)
+
 
 def set_schedule_msg(key, ts, now, msg):
     cache = get_redis()
@@ -209,6 +233,16 @@ def getset_last_data(data, did):
     result = p.execute()
     return json.loads(zlib.decompress(result[0])) if result[0] else {}
 
+
+def getset_rule_last_data(data, rule_id, did):
+    cache = get_redis()
+    p = cache.pipeline()
+    p.getset('re_core_new_{}_{}_dev_latest'.format(rule_id, did), zlib.compress(json.dumps(data)))
+    p.expire('re_core_new_{}_{}_dev_latest'.format(rule_id, did), 86400)
+    result = p.execute()
+    return json.loads(zlib.decompress(result[0])) if result[0] else {}
+
+
 def set_interval_lock(rule_id, did, interval):
     if not rule_id or not interval:
         return {}
@@ -250,7 +284,19 @@ def check_rule_limit(product_key, limit, type, incr=True):
             cache.expire(key, int(time.mktime(time.strptime(time.strftime('%Y-%m-%d'), '%Y-%m-%d')) + 86400 - time.time()))
     else:
         num = cache.get(key) or 0
+    # print 'num:', num
+    # print 'limit:', limit
     return int(num) <= limit
+
+
+def get_pks_limit_cache():
+    cache = get_redis()
+    limit_dict = cache.get('re_core_rule_limit_dict')
+    if limit_dict:
+        limit_dict = json.loads(zlib.decompress(limit_dict))
+    else:
+        limit_dict = {}
+    return limit_dict
 
 
 def set_noti_product_interval(product_key, delay_time):
@@ -266,8 +312,6 @@ def set_noti_product_interval(product_key, delay_time):
         p.execute()
     except redis.exceptions.RedisError, e:
         logger.exception(e)
-
-
 
 def get_noti_product_interval(product_key):
     '''

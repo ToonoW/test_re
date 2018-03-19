@@ -321,25 +321,31 @@ class BaseRabbitmqConsumer(object):
         thermal_data = self.thermal_data.get(msg['product_key'])
         if thermal_data:
             start_ts = time.time()
-            rules_list = thermal_data + get_dev_rules_from_cache(msg['did'])
+            rule_msg_list = thermal_data + get_dev_rules_from_cache(msg['did'])
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("thermal_data is true, did:{}, get_rules_from_cache use:{} ms".format(msg['did'], resp_t))
             thermal = True
         else:
             start_ts = time.time()
-            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            rule_msg_list = get_rules_from_cache(msg['product_key'], msg['did'])
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("thermal_data is false, pk:{}, did:{}, get_rules_from_cache use:{} ms".format(msg['product_key'], msg['did'], resp_t))
 
             thermal = False
 
-        if not rules_list:
+        if not rule_msg_list:
             return []
-        self.thermal_map[msg['product_key']] += 1
 
-        data = msg.pop('data')
+        rules_list = []
+        for rule in rule_msg_list:
+            if rule['ver'] == 1:
+                rules_list.append(rule)
+        product_key = msg.get('product_key')
+        if product_key:
+            self.thermal_map[product_key] += 1
+        data = msg.get('data', {})
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
         last_data = None
 
@@ -356,10 +362,6 @@ class BaseRabbitmqConsumer(object):
         sequence_dict = {}
         rule_list_start_ts = time.time()
         for rule in rules_list:
-            if check_interval_locked(rule['rule_id'], msg['did']):
-                if ((3 == rule['ver'] and rule['rule_tree']['event'].get('change', [])) or (1 == rule['ver'] and 2 == rule['type'])) and last_data is None:
-                    last_data = getset_last_data(data, msg['did'])
-                continue
             tmp_msg = copy.copy(msg)
             tmp_msg['common.rule_id'] = rule['rule_id']
             log_id = ''

@@ -9,8 +9,16 @@ import gevent
 
 from re_processor.mixins.transceiver import BaseRabbitmqConsumer
 from re_processor import settings
-from re_processor.common import debug_logger as logger, RedisLock, cache_rules, get_dev_rules_from_cache, get_product_whitelist
+from re_processor.common import (
+    debug_logger as logger, debug_info_logger, RedisLock,
+    cache_rules, get_dev_rules_from_cache,
+    set_monitor_data, get_monitor_dids, get_proc_t_info,
+    get_rules_from_cache,
+    getset_last_data,
+    check_interval_locked,
+    new_virtual_device_log)
 from re_processor.connections import get_mysql, get_redis
+from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
 
 from processor import MainProcessor
 
@@ -109,7 +117,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             #print body
             msg = json.loads(body)
-            if self.mq_queue_name == 'data' and msg['product_key'] in get_product_whitelist():
+            if self.mq_queue_name == 'data' and msg['product_key'] in settings.PRODUCT_WHITELIST:
                 logger.info("pk:{} in white list".format(msg['product_key']))
                 if not settings.IS_NO_ACK:
                     self.channel.basic_ack(delivery_tag=method.delivery_tag)
@@ -130,8 +138,57 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def dispatch(self, msg, delivery_tag, log):
         try:
+            start_ts = time.time()
+            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            resp_t = get_proc_t_info(start_ts)
+            data = msg.get('data', {})
+            last_data = None
+            for rule in rules_list:
+                p_log = {
+                    'module': 're_processor',
+                    'rule_id': rule['rule_id'],
+                    'event': msg.get('event_type'),
+                    'product_key': msg['product_key'],
+                    'did': msg['did'],
+                    'mac': msg['mac'],
+                    'rule_type': rule['type'],
+                    'interval': rule['interval'],
+                    'current': 'log',
+                    'ts': log['ts'],
+                }
+                if rule.get('ver') == 3:
+                    task_info = generate_msg_func_list(rule, msg, last_data)
+                    task_obj = task_info[0]
+                    dp_value = msg.get('data', {})
+                    input_list = task_info[1]
+                    output_wires = task_info[2]
+                    for inp in input_list:
+                        if inp['category'] != 'input':
+                            continue
+                        content = inp.get('content', {})
+                        log_id = new_virtual_device_log(msg['product_key'], rule['rule_id']) if 'virtual:site' == msg['mac'] else ''
+                        task_vars = {}
+                        if content.get('data_type') == 'custom':
+                            custom_info = custom_json(inp)
+                            task_vars.update(custom_info)
+                        for inp_wires in inp['wires'][0]:
+                            data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars, log_id, msg)
+                            if data:
+                                for d in data:
+                                    if task_obj[d]['category'] == 'output':
+                                        send_output_msg(task_obj[d], msg, p_log, task_vars, log_id, rule.get('rule_id'), p_log)
+                    p_log.update({
+                        'proc_t': (time.time() - log['ts']) * 1000
+                    })
+                    logger.info(p_log)
             lst = self.mq_unpack(msg, log)
             map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+            if settings.USE_DEBUG:
+                resp_t = get_proc_t_info(start_ts)
+                debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
+            # if msg['did'] in get_monitor_dids():
+            #     proc_t = (time.time() - log['ts']) * 1000
+            #     set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)
         except Exception, e:
             logger.exception(e)
         finally:
