@@ -347,6 +347,7 @@ class BaseRabbitmqConsumer(object):
             self.thermal_map[product_key] += 1
         data = msg.get('data', {})
         msg.update({'.'.join(['data', k]): v for k, v in data.items()})
+        last_data = None
 
         msg['sys.timestamp_ms'] = int(log['ts'] * 1000)
         msg['sys.timestamp'] = int(log['ts'])
