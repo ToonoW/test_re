@@ -269,10 +269,9 @@ def generate_msg_func_list(rule, msg, last_data):
                                  _node['content'].get('params', []),
                                  False),
             rule['rule_tree']['event'].get('change', []))
-        for inp in changed_input:
+        for inp in change_events:
             if inp['category'] == 'input':
-                if change_events:
-                    input_list.append(inp)
+                input_list.append(inp)
 
     if event_input:
         for inp in event_input:
