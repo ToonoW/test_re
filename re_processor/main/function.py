@@ -423,7 +423,11 @@ def _query_data(task_vars):
         data = cache_la.get('dev_latest:{}'.format(task_vars['did']))
         if data:
             data = json.loads(data)
-            result.update({'.'.join(['data', k]): v for k, v in data['attr'].items()})
+            for k,v in data['attr'].items():
+                if task_vars.get('data.{}'.format(k)) is None:
+                    # print 'k:', k, 'v:', v
+                    result.update({'.'.join(['data', k]): v})
+            # result.update({'.'.join(['data', k]): v for k, v in data['attr'].items()})
     except Exception, e:
         logger.exception(e)
 
@@ -474,7 +478,6 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
     task_vars.update(params_result)
     params_obj = {}
     for param in params_list:
-
         if task_vars.has_key(param) and task_vars.get(param) is not None:
             params_obj.update({
                 param: task_vars.get(param)
