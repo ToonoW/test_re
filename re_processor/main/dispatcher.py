@@ -43,6 +43,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         self.processor = MainProcessor(MainSender(self.product_key))
         self.thermal_map = defaultdict(int)
         self.thermal_data = {}
+        self.cache = get_redis()
 
     def save_thermal_data(self):
         obj_ids = filter(lambda x: self.thermal_map[x] > settings.THERMAL_THRESHOLD, self.thermal_map.keys())
@@ -122,15 +123,11 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 if not settings.IS_NO_ACK:
                     self.channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
-            if msg['product_key'] in self.product_key_set:
-                msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
-                if settings.IS_USE_GEVENT:
-                    gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
-                else:
-                    self.dispatch(msg, method.delivery_tag, log)
+            msg['d3_limit'] = self.limit_dict.get(msg['product_key'], default_limit)
+            if settings.IS_USE_GEVENT:
+                gevent.spawn(self.dispatch, msg, method.delivery_tag, log)
             else:
-                if not settings.IS_NO_ACK:
-                    self.channel.basic_ack(delivery_tag=method.delivery_tag)
+                self.dispatch(msg, method.delivery_tag, log)
         except Exception, e:
             logger.exception(e)
             if not settings.IS_NO_ACK:
@@ -139,7 +136,16 @@ class MainDispatcher(BaseRabbitmqConsumer):
     def dispatch(self, msg, delivery_tag, log):
         try:
             start_ts = time.time()
-            rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+            thermal_data = self.thermal_data.get(msg['product_key'])
+            pk_set = self.cache.smembers('re_core_product_key_set')
+            if msg['product_key'] not in pk_set:
+                return
+            if thermal_data:
+                rules_list = thermal_data + get_dev_rules_from_cache(msg['did'])
+                is_thermal_data = 1
+            else:
+                rules_list = get_rules_from_cache(msg['product_key'], msg['did'])
+                is_thermal_data = 0
             resp_t = get_proc_t_info(start_ts)
             data = msg.get('data', {})
             last_data = None
@@ -154,6 +160,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'rule_type': rule['type'],
                     'interval': rule['interval'],
                     'current': 'log',
+                    'is_thermal_data': is_thermal_data,
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
