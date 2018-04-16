@@ -138,7 +138,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             start_ts = time.time()
             thermal_data = self.thermal_data.get(msg['product_key'])
             pk_set = self.cache.smembers('re_core_product_key_set')
-            if msg['product_key'] not in self.product_key_set:
+            if msg['product_key'] not in pk_set:
                 if not settings.IS_NO_ACK:
                     self.channel.basic_ack(delivery_tag=delivery_tag)
                 return
