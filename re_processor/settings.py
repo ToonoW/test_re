@@ -35,6 +35,8 @@ TOPIC_MAP = {
 
 IS_USE_GEVENT = env("IS_USE_GEVENT", False)
 
+KV_ROUTING_KEY = env("KV_ROUTING_KEY", "products.{}.events.device.#.status.kv")
+
 ROUTING_KEY = {
     'all': 'products.{}.events.device.*',
     #'enterprises': 'enterprises.{}.events',
@@ -46,7 +48,7 @@ ROUTING_KEY = {
     'unbind': 'products.{}.events.device.unbind',
     'reset': 'products.{}.events.device.reset',
     #'raw': 'products.{}.events.device.status.raw',
-    'data': 'products.{}.events.device.status.kv',
+    'data': KV_ROUTING_KEY,
     #'changed': 'products.{}.events.datapoints.changed',
     'schedule': 'rules_engine_schedule',
     'schedule_wait': 'rules_engine_schedule_wait'
