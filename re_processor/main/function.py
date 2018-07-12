@@ -109,6 +109,8 @@ def calc_logic(func_task, dp_kv, task_vars, msg):
             cond2 = func['cond2'].replace("data.", "")
             cond2 = dp_kv.get(cond2)
         dp_value = dp_kv.get(cond1)
+        if dp_value in [True, False]:
+            dp_value = 1 if dp_value else 0
         if dp_value is None:
             return result
         if pattern['hex'].search(cond2):
@@ -299,7 +301,6 @@ def next(task_obj, func_task):
 
 
 def generate_func_list_msg(task_obj, input_wires_id, dp_kv, output_wires, task_vars, log_id, msg):
-    func_arr = []
     func_task = task_obj.get(input_wires_id)
     output_obj = {}
     if func_task['category'] == 'output':
