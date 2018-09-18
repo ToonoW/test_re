@@ -3,7 +3,7 @@ FROM daocloud.io/gizwits2015/python:latest
 MAINTAINER Jam Huang <jamhuang@gizwits.com>
 
 RUN apt-get update
-RUN apt-get install -y python-numpy python-scipy
+RUN apt-get install -y python-numpy python-scipy git
 RUN mkdir -p /schedule
 RUN mkdir -p /gw_re_processor
 COPY deploy/requirement.txt.docker requirements.txt
