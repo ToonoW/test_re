@@ -4,12 +4,11 @@ MAINTAINER Jam Huang <jamhuang@gizwits.com>
 
 RUN apt-get update
 RUN apt-get install -y python-numpy python-scipy
-RUN python -m pip install --upgrade pip
 RUN mkdir -p /schedule
 RUN mkdir -p /gw_re_processor
 COPY deploy/requirement.txt.docker requirements.txt
-RUN python -m pip install -i http://pypi.douban.com/simple/ --trusted-host pypi.douban.com -r requirements.txt
-RUN python -m pip install -e git+https://gitlab.gizwits.com/jwwu/python-logstash.git#egg=logstash
+RUN /usr/bin/pip install -i http://pypi.douban.com/simple/ -r requirements.txt
+RUN /usr/bin/pip install -e git+https://gitlab.gizwits.com/jwwu/python-logstash.git#egg=logstash
 
 VOLUME /data/supervisor
 
