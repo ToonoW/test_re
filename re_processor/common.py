@@ -18,6 +18,7 @@ logger = logging.getLogger('processor_gray')
 debug_logger = logging.getLogger('debug_gray')
 console_logger = logging.getLogger('processor')
 debug_info_logger = logging.getLogger('debug_info')
+logstash_logger = logging.getLogger('logstash')
 
 def _log(log):
     logger.info(json.dumps(log))

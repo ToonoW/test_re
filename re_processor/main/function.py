@@ -13,7 +13,9 @@ from re_processor.common import (
     new_virtual_device_log,
     getset_rule_last_data,
     set_interval_lock,
-    update_virtual_device_log)
+    update_virtual_device_log,
+    logstash_logger,
+)
 import re
 
 import sys
@@ -524,6 +526,35 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
     limit_info = limit_dict.get(product_key, {})
     triggle_limit = limit_info.get('triggle_limit')
     if check_rule_limit(product_key, triggle_limit, 'triggle'):
+        logstash_logger.info('action ready to send', extra={
+            'event_name': 'action_ready_to_send',
+            'product_key': msg['product_key'],
+            'did': msg['did'],
+            'mac': msg['mac'],
+            'source': 'gw_re_processor',
+            'node': '',
+            'action_type': output['type'],
+        })
         sender.send(message, product_key)
+        logstash_logger.info('action have sent', extra={
+            'event_name': 'action_sent',
+            'product_key': msg['product_key'],
+            'did': msg['did'],
+            'mac': msg['mac'],
+            'source': 'gw_re_processor',
+            'node': '',
+            'action_type': output['type'],
+        })
     else:
+        logstash_logger.error('action failed to send', extra={
+            'event_name': 'action_failed_to_send',
+            'product_key': msg['product_key'],
+            'did': msg['did'],
+            'mac': msg['mac'],
+            'source': 'gw_re_processor',
+            'node': '',
+            'action_type': output['type'],
+            'function': 'send_output_msg',
+            'error_msg': 'quota was used up',
+        })
         log['error_message'] = 'quota was used up'

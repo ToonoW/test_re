@@ -18,6 +18,7 @@ from re_processor.common import (
     set_noti_product_interval,
     get_proc_t_info,
     debug_info_logger,
+    logstash_logger,
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -122,7 +123,25 @@ class MainProcessor(object):
                             if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
                                 self.notification_sender(delay_time, msg, product_key, did, ts)
                             else:
+                                logstash_logger.info('action ready to send', extra={
+                                    'event_name': 'action_ready_to_send',
+                                    'product_key': msg['product_key'],
+                                    'did': msg['did'],
+                                    'mac': msg['mac'],
+                                    'source': 'gw_re_processor',
+                                    'node': '',
+                                    'action_type': msg.get('action_type', ''),
+                                })
                                 self.sender.send(msg, product_key)
+                                logstash_logger.info('action have sent', extra={
+                                    'event_name': 'action_sent',
+                                    'product_key': msg['product_key'],
+                                    'did': msg['did'],
+                                    'mac': msg['mac'],
+                                    'source': 'gw_re_processor',
+                                    'node': '',
+                                    'action_type': msg.get('action_type', ''),
+                                })
                         else:
                             _log(dict(p_log,
                                 result='failed',
@@ -134,7 +153,25 @@ class MainProcessor(object):
                         if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
                             self.notification_sender(delay_time, msg, product_key, did, ts)
                         else:
+                            logstash_logger.info('action ready to send', extra={
+                                'event_name': 'action_ready_to_send',
+                                'product_key': msg['product_key'],
+                                'did': msg['did'],
+                                'mac': msg['mac'],
+                                'source': 'gw_re_processor',
+                                'node': '',
+                                'action_type': msg.get('action_type', ''),
+                            })
                             self.sender.send(msg, product_key)
+                            logstash_logger.info('action have sent', extra={
+                                'event_name': 'action_sent',
+                                'product_key': msg['product_key'],
+                                'did': msg['did'],
+                                'mac': msg['mac'],
+                                'source': 'gw_re_processor',
+                                'node': '',
+                                'action_type': msg.get('action_type', ''),
+                            })
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 process_ts = time.time()
@@ -146,6 +183,17 @@ class MainProcessor(object):
                         p_log['event'], task_type, resp_t))
                 msg_list.extend(_msg_list)
             except Exception, e:
+                logstash_logger.error('action failed to send', extra={
+                    'event_name': 'action_failed_to_send',
+                    'product_key': msg['product_key'],
+                    'did': msg['did'],
+                    'mac': msg['mac'],
+                    'source': 'gw_re_processor',
+                    'node': '',
+                    'action_type': msg.get('action_type', ''),
+                    'function': 'process_msg',
+                    'error_msg': str(e),
+                })
                 _result = 'exception'
                 error_message = str(e)
                 logger.exception(e)

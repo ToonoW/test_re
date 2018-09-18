@@ -16,7 +16,7 @@ from re_processor.common import (
     get_rules_from_cache,
     getset_last_data,
     check_interval_locked,
-    new_virtual_device_log)
+    new_virtual_device_log, logstash_logger)
 from re_processor.connections import get_mysql, get_redis
 from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
 
@@ -135,6 +135,14 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def dispatch(self, msg, delivery_tag, log):
         try:
+            logstash_logger.info('msg enter', extra={
+                'event_name': 'msg_enter_re_processor',
+                'product_key': msg['product_key'],
+                'did': msg['did'],
+                'mac': msg['mac'],
+                'source': 'gw_re_processor',
+                'node': '',
+            })
             start_ts = time.time()
             thermal_data = self.thermal_data.get(msg['product_key'])
             pk_set = self.cache.smembers('re_core_product_key_set')
@@ -150,6 +158,14 @@ class MainDispatcher(BaseRabbitmqConsumer):
             data = msg.get('data', {})
             last_data = None
             for rule in rules_list:
+                logstash_logger.info('rule ready to process', extra={
+                    'event_name': 'rule_ready_to_process',
+                    'product_key': msg['product_key'],
+                    'did': msg['did'],
+                    'mac': msg['mac'],
+                    'source': 'gw_re_processor',
+                    'node': '',
+                })
                 p_log = {
                     'module': 're_processor',
                     'rule_id': rule['rule_id'],

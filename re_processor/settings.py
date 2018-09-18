@@ -5,6 +5,7 @@
 # dotenv.read_dotenv()
 
 from getenv import env
+from logstash.formatter import LogstashFormatterVersion1
 
 # debug
 DEBUG = env('DEBUG', False)
@@ -218,7 +219,23 @@ LOGGING = {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
         "file": env("LOG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000000,"formatter": "standard"}),
-        "debug": env("DEBUG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "debug.log","maxBytes": 50000000,"formatter": "standard"})
+        "debug": env("DEBUG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "debug.log","maxBytes": 50000000,"formatter": "standard"}),
+        'logstash': {
+            'level': 'INFO',
+            'class': 'logstash.LogstashHandler',
+            'host': env('LOGSTASH_IP', '193.112.141.15'),
+            'port': env('LOGSTASH_PORT', 12213),
+            'version': 1,
+        },
+        'logstash_file': {
+            'level': 'INFO',
+            'backupCount': 1,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'logstash_file.log',
+            'maxBytes': 50000000,
+            'formatter': 'standard',
+            'encoding': 'utf-8',
+        },
     },
     'loggers': {
         'processor': {
@@ -236,6 +253,10 @@ LOGGING = {
         'debug_info': {
             'handlers': ['debug'],
             'level': 'INFO'
+        },
+        'logstash': {
+            'handlers': ['logstash', 'logstash_file'],
+            'level': 'INFO',
         }
     }
 }
