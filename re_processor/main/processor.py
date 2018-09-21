@@ -131,6 +131,7 @@ class MainProcessor(object):
                                     'source': 'gw_re_processor',
                                     'node': '',
                                     'action_type': msg.get('action_type', ''),
+                                    'spend_time': time.time() - log['ts'],
                                 })
                                 self.sender.send(msg, product_key)
                                 logstash_logger.info('action have sent', extra={
@@ -141,6 +142,7 @@ class MainProcessor(object):
                                     'source': 'gw_re_processor',
                                     'node': '',
                                     'action_type': msg.get('action_type', ''),
+                                    'spend_time': time.time() - log['ts'],
                                 })
                         else:
                             _log(dict(p_log,
@@ -161,6 +163,7 @@ class MainProcessor(object):
                                 'source': 'gw_re_processor',
                                 'node': '',
                                 'action_type': msg.get('action_type', ''),
+                                'spend_time': time.time() - log['ts'],
                             })
                             self.sender.send(msg, product_key)
                             logstash_logger.info('action have sent', extra={
@@ -171,6 +174,7 @@ class MainProcessor(object):
                                 'source': 'gw_re_processor',
                                 'node': '',
                                 'action_type': msg.get('action_type', ''),
+                                'spend_time': time.time() - log['ts'],
                             })
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
@@ -193,6 +197,7 @@ class MainProcessor(object):
                     'action_type': msg.get('action_type', ''),
                     'function': 'process_msg',
                     'error_msg': str(e),
+                    'spend_time': time.time() - log['ts'],
                 })
                 _result = 'exception'
                 error_message = str(e)
