@@ -534,7 +534,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'source': 'gw_re_processor',
             'node': '',
             'action_type': output['type'],
-            'spend_time': time.time() - log['ts'],
+            'time_spent': time.time() - log['ts'],
         })
         sender.send(message, product_key)
         logstash_logger.info('action have sent', extra={
@@ -545,7 +545,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'source': 'gw_re_processor',
             'node': '',
             'action_type': output['type'],
-            'spend_time': time.time() - log['ts'],
+            'time_spent': time.time() - log['ts'],
         })
     else:
         logstash_logger.error('action failed to send', extra={
@@ -558,6 +558,6 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'action_type': output['type'],
             'function': 'send_output_msg',
             'error_msg': 'quota was used up',
-            'spend_time': time.time() - log['ts'],
+            'time_spent': time.time() - log['ts'],
         })
         log['error_message'] = 'quota was used up'
