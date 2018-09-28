@@ -532,7 +532,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
+            'node': settings.LOGSTASH_NODE,
             'action_type': output['type'],
             'time_spent': time.time() - log['ts'],
         })
@@ -543,7 +543,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
+            'node': settings.LOGSTASH_NODE,
             'action_type': output['type'],
             'time_spent': time.time() - log['ts'],
         })
@@ -554,7 +554,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
+            'node': settings.LOGSTASH_NODE,
             'action_type': output['type'],
             'function': 'send_output_msg',
             'error_msg': 'quota was used up',

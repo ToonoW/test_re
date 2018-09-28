@@ -129,7 +129,7 @@ class MainProcessor(object):
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
-                                    'node': '',
+                                    'node': settings.LOGSTASH_NODE,
                                     'action_type': msg.get('action_type', ''),
                                     'time_spent': time.time() - log['ts'],
                                 })
@@ -140,7 +140,7 @@ class MainProcessor(object):
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
-                                    'node': '',
+                                    'node': settings.LOGSTASH_NODE,
                                     'action_type': msg.get('action_type', ''),
                                     'time_spent': time.time() - log['ts'],
                                 })
@@ -161,7 +161,7 @@ class MainProcessor(object):
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
-                                'node': '',
+                                'node': settings.LOGSTASH_NODE,
                                 'action_type': msg.get('action_type', ''),
                                 'time_spent': time.time() - log['ts'],
                             })
@@ -172,7 +172,7 @@ class MainProcessor(object):
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
-                                'node': '',
+                                'node': settings.LOGSTASH_NODE,
                                 'action_type': msg.get('action_type', ''),
                                 'time_spent': time.time() - log['ts'],
                             })
@@ -193,7 +193,7 @@ class MainProcessor(object):
                     'did': msg['did'],
                     'mac': msg['mac'],
                     'source': 'gw_re_processor',
-                    'node': '',
+                    'node': settings.LOGSTASH_NODE,
                     'action_type': msg.get('action_type', ''),
                     'function': 'process_msg',
                     'error_msg': str(e),

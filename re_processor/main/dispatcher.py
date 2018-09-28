@@ -141,7 +141,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 'did': msg['did'],
                 'mac': msg['mac'],
                 'source': 'gw_re_processor',
-                'node': '',
+                'node': settings.LOGSTASH_NODE,
                 'time_spent': time.time() - log['ts'],
             })
             start_ts = time.time()
@@ -165,7 +165,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'did': msg['did'],
                     'mac': msg['mac'],
                     'source': 'gw_re_processor',
-                    'node': '',
+                    'node': settings.LOGSTASH_NODE,
                     'time_spent': time.time() - log['ts'],
                 })
                 p_log = {
