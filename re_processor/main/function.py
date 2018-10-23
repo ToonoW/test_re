@@ -503,7 +503,16 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
                 for v in values:
                     if not v.get('dev_alias', ''):
                         v['dev_alias'] = product_info.get('common.product_name')
-
+    logstash_logger.info('action ready to create', extra={
+            'event_name': 'action_ready_to_create',
+            'product_key': msg['product_key'],
+            'did': msg['did'],
+            'mac': msg['mac'],
+            'source': 'gw_re_processor',
+            'node': settings.LOGSTASH_NODE,
+            'action_type': output['type'],
+            'time_spent': time.time() - log['ts'],
+        })
     message = {
         "product_key": product_key,
         "did": msg['did'],
