@@ -132,9 +132,7 @@ class MainProcessor(object):
                                                          'source': 'gw_re_processor',
                                                          'node': settings.LOGSTASH_NODE,
                                                          'action_type': action_type_for_logstash,
-                                                         'time_spent': time.time() -
-                                                                       log[
-                                                                           'ts'],
+                                                         'time_spent': time.time() - log['ts'],
                                                      })
                                 self.notification_sender(delay_time, msg, product_key, did, ts)
                                 logstash_logger.info('action have sent', extra={
