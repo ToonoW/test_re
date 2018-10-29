@@ -125,8 +125,7 @@ class MainProcessor(object):
                                 logstash_logger.info('action ready to send',
                                                      extra={
                                                          'event_name': 'action_ready_to_send',
-                                                         'product_key': msg[
-                                                             'product_key'],
+                                                         'product_key': msg['product_key'],
                                                          'did': msg['did'],
                                                          'mac': msg['mac'],
                                                          'source': 'gw_re_processor',

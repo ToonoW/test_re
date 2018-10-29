@@ -510,7 +510,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'mac': msg['mac'],
             'source': 'gw_re_processor',
             'node': settings.LOGSTASH_NODE,
-            'action_type': output['type'],
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
             'time_spent': time.time() - log['ts'],
         })
     message = {
@@ -542,7 +542,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'mac': msg['mac'],
             'source': 'gw_re_processor',
             'node': settings.LOGSTASH_NODE,
-            'action_type': output['type'],
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
             'time_spent': time.time() - log['ts'],
         })
         sender.send(message, product_key)
@@ -553,7 +553,7 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'mac': msg['mac'],
             'source': 'gw_re_processor',
             'node': settings.LOGSTASH_NODE,
-            'action_type': output['type'],
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
             'time_spent': time.time() - log['ts'],
         })
     else:
