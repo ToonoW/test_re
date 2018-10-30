@@ -141,8 +141,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
                 'did': msg['did'],
                 'mac': msg['mac'],
                 'source': 'gw_re_processor',
-                'node': '',
-                'spend_time': time.time() - log['ts'],
+                'node': settings.LOGSTASH_NODE,
+                'time_spent': time.time() - log['ts'],
             })
             start_ts = time.time()
             thermal_data = self.thermal_data.get(msg['product_key'])
@@ -165,8 +165,8 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'did': msg['did'],
                     'mac': msg['mac'],
                     'source': 'gw_re_processor',
-                    'node': '',
-                    'spend_time': time.time() - log['ts'],
+                    'node': settings.LOGSTASH_NODE,
+                    'time_spent': time.time() - log['ts'],
                 })
                 p_log = {
                     'module': 're_processor',

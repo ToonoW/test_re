@@ -117,11 +117,33 @@ class MainProcessor(object):
             try:
                 if settings.MSG_TO['external'] == msg['msg_to']:
                     action_type = msg.get('action_type', '')
+                    action_type_for_logstash = 'push' if action_type == 'notification' else action_type
                     event = msg.get('event', '')
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
+                                logstash_logger.info('action ready to send',
+                                                     extra={
+                                                         'event_name': 'action_ready_to_send',
+                                                         'product_key': msg['product_key'],
+                                                         'did': msg['did'],
+                                                         'mac': msg['mac'],
+                                                         'source': 'gw_re_processor',
+                                                         'node': settings.LOGSTASH_NODE,
+                                                         'action_type': action_type_for_logstash,
+                                                         'time_spent': time.time() - log['ts'],
+                                                     })
                                 self.notification_sender(delay_time, msg, product_key, did, ts)
+                                logstash_logger.info('action have sent', extra={
+                                    'event_name': 'action_sent',
+                                    'product_key': msg['product_key'],
+                                    'did': msg['did'],
+                                    'mac': msg['mac'],
+                                    'source': 'gw_re_processor',
+                                    'node': settings.LOGSTASH_NODE,
+                                    'action_type': action_type_for_logstash,
+                                    'time_spent': time.time() - log['ts'],
+                                })
                             else:
                                 logstash_logger.info('action ready to send', extra={
                                     'event_name': 'action_ready_to_send',
@@ -129,9 +151,9 @@ class MainProcessor(object):
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
-                                    'node': '',
-                                    'action_type': msg.get('action_type', ''),
-                                    'spend_time': time.time() - log['ts'],
+                                    'node': settings.LOGSTASH_NODE,
+                                    'action_type': action_type_for_logstash,
+                                    'time_spent': time.time() - log['ts'],
                                 })
                                 self.sender.send(msg, product_key)
                                 logstash_logger.info('action have sent', extra={
@@ -140,9 +162,9 @@ class MainProcessor(object):
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
-                                    'node': '',
-                                    'action_type': msg.get('action_type', ''),
-                                    'spend_time': time.time() - log['ts'],
+                                    'node': settings.LOGSTASH_NODE,
+                                    'action_type': action_type_for_logstash,
+                                    'time_spent': time.time() - log['ts'],
                                 })
                         else:
                             _log(dict(p_log,
@@ -153,7 +175,27 @@ class MainProcessor(object):
                             ))
                     else:
                         if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
+                            logstash_logger.info('action ready to send', extra={
+                                'event_name': 'action_ready_to_send',
+                                'product_key': msg['product_key'],
+                                'did': msg['did'],
+                                'mac': msg['mac'],
+                                'source': 'gw_re_processor',
+                                'node': settings.LOGSTASH_NODE,
+                                'action_type': action_type_for_logstash,
+                                'time_spent': time.time() - log['ts'],
+                            })
                             self.notification_sender(delay_time, msg, product_key, did, ts)
+                            logstash_logger.info('action have sent', extra={
+                                'event_name': 'action_sent',
+                                'product_key': msg['product_key'],
+                                'did': msg['did'],
+                                'mac': msg['mac'],
+                                'source': 'gw_re_processor',
+                                'node': settings.LOGSTASH_NODE,
+                                'action_type': action_type_for_logstash,
+                                'time_spent': time.time() - log['ts'],
+                            })
                         else:
                             logstash_logger.info('action ready to send', extra={
                                 'event_name': 'action_ready_to_send',
@@ -161,9 +203,9 @@ class MainProcessor(object):
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
-                                'node': '',
-                                'action_type': msg.get('action_type', ''),
-                                'spend_time': time.time() - log['ts'],
+                                'node': settings.LOGSTASH_NODE,
+                                'action_type': action_type_for_logstash,
+                                'time_spent': time.time() - log['ts'],
                             })
                             self.sender.send(msg, product_key)
                             logstash_logger.info('action have sent', extra={
@@ -172,9 +214,9 @@ class MainProcessor(object):
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
-                                'node': '',
-                                'action_type': msg.get('action_type', ''),
-                                'spend_time': time.time() - log['ts'],
+                                'node': settings.LOGSTASH_NODE,
+                                'action_type': action_type_for_logstash,
+                                'time_spent': time.time() - log['ts'],
                             })
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
@@ -193,11 +235,11 @@ class MainProcessor(object):
                     'did': msg['did'],
                     'mac': msg['mac'],
                     'source': 'gw_re_processor',
-                    'node': '',
-                    'action_type': msg.get('action_type', ''),
+                    'node': settings.LOGSTASH_NODE,
+                    'action_type': action_type_for_logstash,
                     'function': 'process_msg',
                     'error_msg': str(e),
-                    'spend_time': time.time() - log['ts'],
+                    'time_spent': time.time() - log['ts'],
                 })
                 _result = 'exception'
                 error_message = str(e)

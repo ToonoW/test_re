@@ -503,7 +503,16 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
                 for v in values:
                     if not v.get('dev_alias', ''):
                         v['dev_alias'] = product_info.get('common.product_name')
-
+    logstash_logger.info('action ready to create', extra={
+            'event_name': 'action_ready_to_create',
+            'product_key': msg['product_key'],
+            'did': msg['did'],
+            'mac': msg['mac'],
+            'source': 'gw_re_processor',
+            'node': settings.LOGSTASH_NODE,
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
+            'time_spent': time.time() - log['ts'],
+        })
     message = {
         "product_key": product_key,
         "did": msg['did'],
@@ -532,9 +541,9 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
-            'action_type': output['type'],
-            'spend_time': time.time() - log['ts'],
+            'node': settings.LOGSTASH_NODE,
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
+            'time_spent': time.time() - log['ts'],
         })
         sender.send(message, product_key)
         logstash_logger.info('action have sent', extra={
@@ -543,9 +552,9 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
-            'action_type': output['type'],
-            'spend_time': time.time() - log['ts'],
+            'node': settings.LOGSTASH_NODE,
+            'action_type': 'push' if output['type'] == 'notification' else output['type'],
+            'time_spent': time.time() - log['ts'],
         })
     else:
         logstash_logger.error('action failed to send', extra={
@@ -554,10 +563,10 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             'did': msg['did'],
             'mac': msg['mac'],
             'source': 'gw_re_processor',
-            'node': '',
+            'node': settings.LOGSTASH_NODE,
             'action_type': output['type'],
             'function': 'send_output_msg',
             'error_msg': 'quota was used up',
-            'spend_time': time.time() - log['ts'],
+            'time_spent': time.time() - log['ts'],
         })
         log['error_message'] = 'quota was used up'

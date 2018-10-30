@@ -304,3 +304,7 @@ INDEX = {
         'action_content': 5
     }
 }
+
+
+# logstash日志相关
+LOGSTASH_NODE = env('LOGSTASH_NODE', 'default')
