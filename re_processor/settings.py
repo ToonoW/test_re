@@ -14,7 +14,8 @@ DEBUG = env('DEBUG', False)
 SYS_PATH = env('SYS_PATH', '.')
 
 # M2M settings
-M2M_MQ_URL = env('M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
+M2M_MQ_URL = env(
+    'M2M_MQ_URL', 'amqp://guest:guest@m2mprod.gwdev.com:5672/mqtt')
 PREFETCH_COUNT = env('PREFETCH_COUNT', 100)
 EXCHANGE = env('EXCHANGE', 'amq.topic')
 
@@ -40,7 +41,7 @@ KV_ROUTING_KEY = env("KV_ROUTING_KEY", "products.{}.events.device.#.status.kv")
 
 ROUTING_KEY = {
     'all': 'products.{}.events.device.*',
-    #'enterprises': 'enterprises.{}.events',
+    # 'enterprises': 'enterprises.{}.events',
     'alert': 'products.{}.events.device.attr_fault',
     'fault': 'products.{}.events.device.attr_alert',
     'online': 'products.{}.events.device.online',
@@ -48,9 +49,9 @@ ROUTING_KEY = {
     'bind': 'products.{}.events.device.bind',
     'unbind': 'products.{}.events.device.unbind',
     'reset': 'products.{}.events.device.reset',
-    #'raw': 'products.{}.events.device.status.raw',
+    # 'raw': 'products.{}.events.device.status.raw',
     'data': KV_ROUTING_KEY,
-    #'changed': 'products.{}.events.datapoints.changed',
+    # 'changed': 'products.{}.events.datapoints.changed',
     'schedule': 'rules_engine_schedule',
     'schedule_wait': 'rules_engine_schedule_wait'
 }
@@ -82,7 +83,7 @@ DEBUG_ROUTING_KEY = {
 
 # where to send msg
 MSG_TO = {
-    #'internal': 'redis',
+    # 'internal': 'redis',
     'internal': 'default',
     'external': 'rabbitmq'
 }
@@ -120,8 +121,10 @@ DEVICE_HASH_GROUP = env('DEVICE_HASH_GROUP', 100)
 
 ###########databases settings################
 # mongo
-MONGO_GIZWITS_DATA= env("MONGO_GIZWITS_DATA", "mongodb://localhost:27017/gizwits_data")
-MONGO_GIZWITS_CORE= env("MONGO_GIZWITS_CORE", "mongodb://localhost:27017/gizwits_core")
+MONGO_GIZWITS_DATA = env("MONGO_GIZWITS_DATA",
+                         "mongodb://localhost:27017/gizwits_data")
+MONGO_GIZWITS_CORE = env("MONGO_GIZWITS_CORE",
+                         "mongodb://localhost:27017/gizwits_core")
 
 # mysql
 MYSQL_HOST = env("MYSQL_HOST", "localhost")
@@ -179,7 +182,8 @@ SEQUENCE_EXPIRE = env("SEQUENCE_EXPIRE", 86400)
 SEQUENCE_MAX_LEN = env("SEQUENCE_MAX_LEN", 50)
 
 # product notification interval
-NOTIFICATION_INTERVAL_EXPIRE = env("NOTIFICATION_INTERVAL_EXPIRE", 10800) # 缓存 3 小时过期
+NOTIFICATION_INTERVAL_EXPIRE = env(
+    "NOTIFICATION_INTERVAL_EXPIRE", 10800)  # 缓存 3 小时过期
 
 # default limit settings
 MSG_LIMIT = env("MSG_LIMIT", 100)
@@ -194,14 +198,16 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['application/json']
 
 
-CELERY_DEFAULT_ROUTING_KEY = env("CELERY_DEFAULT_ROUTING_KEY", "celery_recore_routing_key")
-CELERY_DEFAULT_EXCHANGE = env("CELERY_DEFAULT_EXCHANGE", "celery_recore_exchange")
+CELERY_DEFAULT_ROUTING_KEY = env(
+    "CELERY_DEFAULT_ROUTING_KEY", "celery_recore_routing_key")
+CELERY_DEFAULT_EXCHANGE = env(
+    "CELERY_DEFAULT_EXCHANGE", "celery_recore_exchange")
 CELERY_DEFAULT_QUEUE = env("CELERY_DEFAULT_QUEUE", "celery_recore_queue")
 
 # opt settings
 THERMAL_THRESHOLD = env('THERMAL_THRESHOLD', 100)
 
-IS_NO_ACK= env("IS_NO_ACK",  True)
+IS_NO_ACK = env("IS_NO_ACK",  True)
 
 USE_DEBUG = env("USE_DEBUG", True)
 
@@ -218,8 +224,8 @@ LOGGING = {
     'handlers': {
         "console": env("LOG_CONSOLE", {"level": "INFO", "class": "logging.StreamHandler", "formatter": "standard"}),
         "graylog": env("LOG_GRAYLOG", {"level": "INFO", "class": "graypy.GELFHandler", "url": "amqp://guest:guest@localhost:5672/%2f"}),
-        "file": env("LOG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "processor.log","maxBytes": 50000000,"formatter": "standard"}),
-        "debug": env("DEBUG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler","filename": "debug.log","maxBytes": 50000000,"formatter": "standard"}),
+        "file": env("LOG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler", "filename": "processor.log", "maxBytes": 50000000, "formatter": "standard"}),
+        "debug": env("DEBUG_FILE", {"level": "INFO", "backupCount": 1, "class": "logging.handlers.RotatingFileHandler", "filename": "debug.log", "maxBytes": 50000000, "formatter": "standard"}),
         'logstash': {
             'level': 'INFO',
             'class': 'logstash.LogstashHandler',
@@ -230,7 +236,7 @@ LOGGING = {
         'logstash_file': {
             'level': 'INFO',
             'backupCount': 1,
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logstash.FileLogstashHandler',
             'filename': 'logstash_file.log',
             'maxBytes': 50000000,
             'formatter': 'standard',
