@@ -239,7 +239,6 @@ LOGGING = {
             'class': 'logstash.FileLogstashHandler',
             'filename': 'logstash_file.log',
             'maxBytes': 50000000,
-            'formatter': 'standard',
             'encoding': 'utf-8',
         },
     },
