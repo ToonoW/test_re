@@ -240,7 +240,6 @@ class MainProcessor(object):
                         p_log['event'], task_type, resp_t))
                 msg_list.extend(_msg_list)
             except Exception, e:
-                self.sender.send(msg, product_key)
                 logstash_loginfo['event_list'].append('action_failed_to_send')
                 logstash_loginfo.update({
                     'action_failed_to_send.time_spent': time.time() - log['ts'],
