@@ -14,7 +14,8 @@ from re_processor.common import (
     getset_rule_last_data,
     set_interval_lock,
     update_virtual_device_log,
-    logstash_logger,
+    logstash_log,
+    LogstashLogNode,
 )
 import re
 
@@ -453,6 +454,9 @@ def _query_product_name(task_vars):
     return result
 
 def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
+    logstash_loginfo = {
+        'logstash_msgid': msg['logstash_msgid'],
+    }
     log_id = str(log_id) if log_id else ''
     product_key = msg['product_key']
     task_vars = {}
@@ -503,16 +507,16 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
                 for v in values:
                     if not v.get('dev_alias', ''):
                         v['dev_alias'] = product_info.get('common.product_name')
-    logstash_logger.info('action ready to create', extra={
-            'event_name': 'action_ready_to_create',
-            'product_key': msg['product_key'],
-            'did': msg['did'],
-            'mac': msg['mac'],
-            'source': 'gw_re_processor',
-            'node': settings.LOGSTASH_NODE,
-            'action_type': 'push' if output['type'] == 'notification' else output['type'],
-            'time_spent': time.time() - log['ts'],
-        })
+    logstash_loginfo.update({
+        'event_list': ['action_ready_to_create',],
+        'product_key': msg['product_key'],
+        'did': msg['did'],
+        'mac': msg['mac'],
+        'source': 'gw_re_processor',
+        'node': settings.LOGSTASH_NODE,
+        'action_type': 'push' if output['type'] == 'notification' else output['type'],
+        'action_ready_to_create.time_spent': time.time() - log['ts'],
+    })
     message = {
         "product_key": product_key,
         "did": msg['did'],
@@ -535,38 +539,22 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
     limit_info = limit_dict.get(product_key, {})
     triggle_limit = limit_info.get('triggle_limit')
     if check_rule_limit(product_key, triggle_limit, 'triggle'):
-        logstash_logger.info('action ready to send', extra={
-            'event_name': 'action_ready_to_send',
-            'product_key': msg['product_key'],
-            'did': msg['did'],
-            'mac': msg['mac'],
-            'source': 'gw_re_processor',
-            'node': settings.LOGSTASH_NODE,
-            'action_type': 'push' if output['type'] == 'notification' else output['type'],
-            'time_spent': time.time() - log['ts'],
+        logstash_loginfo['event_list'].append('action_ready_to_send')
+        logstash_loginfo.update({
+            'action_ready_to_send.time_spent': time.time() - log['ts'],
         })
         sender.send(message, product_key)
-        logstash_logger.info('action have sent', extra={
-            'event_name': 'action_sent',
-            'product_key': msg['product_key'],
-            'did': msg['did'],
-            'mac': msg['mac'],
-            'source': 'gw_re_processor',
-            'node': settings.LOGSTASH_NODE,
-            'action_type': 'push' if output['type'] == 'notification' else output['type'],
-            'time_spent': time.time() - log['ts'],
+        logstash_loginfo['event_list'].append('action_sent')
+        logstash_loginfo.update({
+            'action_sent.time_spent': time.time() - log['ts'],
         })
+        logstash_log(LogstashLogNode.MAKE_ACTION, '', extra=logstash_loginfo)
     else:
-        logstash_logger.error('action failed to send', extra={
-            'event_name': 'action_failed_to_send',
-            'product_key': msg['product_key'],
-            'did': msg['did'],
-            'mac': msg['mac'],
-            'source': 'gw_re_processor',
-            'node': settings.LOGSTASH_NODE,
-            'action_type': output['type'],
-            'function': 'send_output_msg',
-            'error_msg': 'quota was used up',
-            'time_spent': time.time() - log['ts'],
+        logstash_loginfo['event_list'].append('action_failed_to_send')
+        logstash_loginfo.update({
+            'action_failed_to_send.function': 'send_output_msg',
+            'action_failed_to_send.error_msg': 'quota was used up',
+            'action_failed_to_send.time_spent': time.time() - log['ts'],
         })
+        logstash_log(LogstashLogNode.MAKE_ACTION, '', extra=logstash_loginfo)
         log['error_message'] = 'quota was used up'

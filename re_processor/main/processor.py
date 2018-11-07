@@ -18,7 +18,8 @@ from re_processor.common import (
     set_noti_product_interval,
     get_proc_t_info,
     debug_info_logger,
-    logstash_logger,
+    logstash_log,
+    LogstashLogNode,
 )
 from re_processor.celery import delay_sender
 from re_processor.connections import get_mysql
@@ -76,10 +77,13 @@ class MainProcessor(object):
             delay_sender.apply_async(args=(msg, product_key), countdown=delay_time)
             clean_device_online_count(did)
 
-    def process_msg(self, src_msg, log={}):
+    def process_msg(self, src_msg, log={}, logstash_msgid=''):
         '''
         return a list of msg
         '''
+        logstash_loginfo = {
+            'logstash_msgid': logstash_msgid,
+        }
         log['running_status'] = 'process'
         product_key = src_msg['task_vars'].get('product_key', '')
         did = src_msg['task_vars'].get('did', '')
@@ -122,50 +126,52 @@ class MainProcessor(object):
                     if 3 == src_msg['ver']:
                         if check_rule_limit(product_key, src_msg['task_vars']['d3_limit']['triggle_limit'], 'triggle'):
                             if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
-                                logstash_logger.info('action ready to send',
-                                                     extra={
-                                                         'event_name': 'action_ready_to_send',
-                                                         'product_key': msg['product_key'],
-                                                         'did': msg['did'],
-                                                         'mac': msg['mac'],
-                                                         'source': 'gw_re_processor',
-                                                         'node': settings.LOGSTASH_NODE,
-                                                         'action_type': action_type_for_logstash,
-                                                         'time_spent': time.time() - log['ts'],
-                                                     })
-                                self.notification_sender(delay_time, msg, product_key, did, ts)
-                                logstash_logger.info('action have sent', extra={
-                                    'event_name': 'action_sent',
+                                logstash_loginfo.update({
+                                    'event_list': ['action_ready_to_create', ],
                                     'product_key': msg['product_key'],
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
                                     'node': settings.LOGSTASH_NODE,
                                     'action_type': action_type_for_logstash,
-                                    'time_spent': time.time() - log['ts'],
+                                    'action_ready_to_create.time_spent': time.time() - log['ts'],
                                 })
+                                logstash_loginfo['event_list'].append(
+                                    'action_ready_to_send')
+                                logstash_loginfo.update({
+                                    'action_ready_to_send.time_spent': time.time() -
+                                                                       log['ts'],
+                                })
+                                self.notification_sender(delay_time, msg, product_key, did, ts)
+                                logstash_loginfo['event_list'].append('action_sent')
+                                logstash_loginfo.update({
+                                    'action_sent.time_spent': time.time() - log['ts'],
+                                })
+                                logstash_log(LogstashLogNode.MAKE_ACTION, '', extra=logstash_loginfo)
                             else:
-                                logstash_logger.info('action ready to send', extra={
-                                    'event_name': 'action_ready_to_send',
+                                logstash_loginfo.update({
+                                    'event_list': ['action_ready_to_create', ],
                                     'product_key': msg['product_key'],
                                     'did': msg['did'],
                                     'mac': msg['mac'],
                                     'source': 'gw_re_processor',
                                     'node': settings.LOGSTASH_NODE,
                                     'action_type': action_type_for_logstash,
-                                    'time_spent': time.time() - log['ts'],
+                                    'action_ready_to_create.time_spent': time.time() - log['ts'],
+                                })
+                                logstash_loginfo['event_list'].append(
+                                    'action_ready_to_send')
+                                logstash_loginfo.update({
+                                    'action_ready_to_send.time_spent': time.time() -
+                                                                       log['ts'],
                                 })
                                 self.sender.send(msg, product_key)
-                                logstash_logger.info('action have sent', extra={
-                                    'event_name': 'action_sent',
-                                    'product_key': msg['product_key'],
-                                    'did': msg['did'],
-                                    'mac': msg['mac'],
-                                    'source': 'gw_re_processor',
-                                    'node': settings.LOGSTASH_NODE,
-                                    'action_type': action_type_for_logstash,
-                                    'time_spent': time.time() - log['ts'],
+                                logstash_loginfo['event_list'].append('action_sent')
+                                logstash_loginfo.update({
+                                    'action_sent.time_spent': time.time() - log['ts'],
                                 })
+                                logstash_log(LogstashLogNode.MAKE_ACTION, '',
+                                             extra=logstash_loginfo)
                         else:
                             _log(dict(p_log,
                                 result='failed',
@@ -175,49 +181,54 @@ class MainProcessor(object):
                             ))
                     else:
                         if delay_time and action_type == 'notification' and event in ['device_online', 'device_offline']: # 若为消息推送，则离线数据延时推送
-                            logstash_logger.info('action ready to send', extra={
-                                'event_name': 'action_ready_to_send',
+                            logstash_loginfo.update({
+                                'event_list': ['action_ready_to_create', ],
                                 'product_key': msg['product_key'],
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
                                 'node': settings.LOGSTASH_NODE,
                                 'action_type': action_type_for_logstash,
-                                'time_spent': time.time() - log['ts'],
+                                'action_ready_to_create.time_spent': time.time() - log[
+                                    'ts'],
+                            })
+                            logstash_loginfo['event_list'].append(
+                                'action_ready_to_send')
+                            logstash_loginfo.update({
+                                'action_ready_to_send.time_spent': time.time() - log[
+                                    'ts'],
                             })
                             self.notification_sender(delay_time, msg, product_key, did, ts)
-                            logstash_logger.info('action have sent', extra={
-                                'event_name': 'action_sent',
-                                'product_key': msg['product_key'],
-                                'did': msg['did'],
-                                'mac': msg['mac'],
-                                'source': 'gw_re_processor',
-                                'node': settings.LOGSTASH_NODE,
-                                'action_type': action_type_for_logstash,
-                                'time_spent': time.time() - log['ts'],
+                            logstash_loginfo['event_list'].append('action_sent')
+                            logstash_loginfo.update({
+                                'action_sent.time_spent': time.time() - log['ts'],
                             })
+                            logstash_log(LogstashLogNode.MAKE_ACTION, '', extra=logstash_loginfo)
                         else:
-                            logstash_logger.info('action ready to send', extra={
-                                'event_name': 'action_ready_to_send',
+                            logstash_loginfo.update({
+                                'event_list': ['action_ready_to_create', ],
                                 'product_key': msg['product_key'],
                                 'did': msg['did'],
                                 'mac': msg['mac'],
                                 'source': 'gw_re_processor',
                                 'node': settings.LOGSTASH_NODE,
                                 'action_type': action_type_for_logstash,
-                                'time_spent': time.time() - log['ts'],
+                                'action_ready_to_create.time_spent': time.time() - log[
+                                    'ts'],
+                            })
+                            logstash_loginfo['event_list'].append(
+                                'action_ready_to_send')
+                            logstash_loginfo.update({
+                                'action_ready_to_send.time_spent': time.time() - log[
+                                    'ts'],
                             })
                             self.sender.send(msg, product_key)
-                            logstash_logger.info('action have sent', extra={
-                                'event_name': 'action_sent',
-                                'product_key': msg['product_key'],
-                                'did': msg['did'],
-                                'mac': msg['mac'],
-                                'source': 'gw_re_processor',
-                                'node': settings.LOGSTASH_NODE,
-                                'action_type': action_type_for_logstash,
-                                'time_spent': time.time() - log['ts'],
+                            logstash_loginfo['event_list'].append('action_sent')
+                            logstash_loginfo.update({
+                                'action_sent.time_spent': time.time() - log['ts'],
                             })
+                            logstash_log(LogstashLogNode.MAKE_ACTION, '',
+                                         extra=logstash_loginfo)
                     continue
                 task_type = msg['current']['category'] if 3 == msg['ver'] else msg['current']
                 process_ts = time.time()
@@ -229,18 +240,15 @@ class MainProcessor(object):
                         p_log['event'], task_type, resp_t))
                 msg_list.extend(_msg_list)
             except Exception, e:
-                logstash_logger.error('action failed to send', extra={
-                    'event_name': 'action_failed_to_send',
-                    'product_key': msg['product_key'],
-                    'did': msg['did'],
-                    'mac': msg['mac'],
-                    'source': 'gw_re_processor',
-                    'node': settings.LOGSTASH_NODE,
-                    'action_type': action_type_for_logstash,
-                    'function': 'process_msg',
-                    'error_msg': str(e),
-                    'time_spent': time.time() - log['ts'],
+                self.sender.send(msg, product_key)
+                logstash_loginfo['event_list'].append('action_failed_to_send')
+                logstash_loginfo.update({
+                    'action_failed_to_send.time_spent': time.time() - log['ts'],
+                    'action_failed_to_send.function': 'process_msg',
+                    'action_failed_to_send.error_msg': str(e),
                 })
+                logstash_log(LogstashLogNode.MAKE_ACTION, '',
+                             extra=logstash_loginfo)
                 _result = 'exception'
                 error_message = str(e)
                 logger.exception(e)
