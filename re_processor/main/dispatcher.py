@@ -137,7 +137,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
         try:
             msg['logstash_msgid'] = uuid.uuid4().hex
             logstash_log(LogstashLogNode.ENTER_RE, 'msg enter', extra={
-                'event_name': 'msg_enter_re_processor',
+                'event_list': ['msg_enter_re_processor',],
                 'product_key': msg['product_key'],
                 'did': msg['did'],
                 'mac': msg['mac'],
@@ -162,7 +162,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             last_data = None
             for rule in rules_list:
                 logstash_log(LogstashLogNode.RULE_READY, 'rule ready to process', extra={
-                    'event_name': 'rule_ready_to_process',
+                    'event_list': ['rule_ready_to_process',],
                     'product_key': msg['product_key'],
                     'did': msg['did'],
                     'mac': msg['mac'],
