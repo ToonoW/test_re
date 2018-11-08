@@ -527,7 +527,8 @@ def send_output_msg(output, msg, log, vars_info, log_id, rule_id, p_log):
             "alias": alias
         },
         "log_data": {},
-        "content": json.dumps(content)
+        "content": json.dumps(content),
+        "logstash_msgid": msg['logstash_msgid'],
     }
     if log_id:
         message["log_data"] = {

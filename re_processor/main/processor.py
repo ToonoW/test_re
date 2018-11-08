@@ -142,6 +142,7 @@ class MainProcessor(object):
                                     'action_ready_to_send.time_spent': time.time() -
                                                                        log['ts'],
                                 })
+                                msg['logstash_msgid'] = logstash_msgid
                                 self.notification_sender(delay_time, msg, product_key, did, ts)
                                 logstash_loginfo['event_list'].append('action_sent')
                                 logstash_loginfo.update({
@@ -165,6 +166,7 @@ class MainProcessor(object):
                                     'action_ready_to_send.time_spent': time.time() -
                                                                        log['ts'],
                                 })
+                                msg['logstash_msgid'] = logstash_msgid
                                 self.sender.send(msg, product_key)
                                 logstash_loginfo['event_list'].append('action_sent')
                                 logstash_loginfo.update({
@@ -198,6 +200,7 @@ class MainProcessor(object):
                                 'action_ready_to_send.time_spent': time.time() - log[
                                     'ts'],
                             })
+                            msg['logstash_msgid'] = logstash_msgid
                             self.notification_sender(delay_time, msg, product_key, did, ts)
                             logstash_loginfo['event_list'].append('action_sent')
                             logstash_loginfo.update({
@@ -222,6 +225,7 @@ class MainProcessor(object):
                                 'action_ready_to_send.time_spent': time.time() - log[
                                     'ts'],
                             })
+                            msg['logstash_msgid'] = logstash_msgid
                             self.sender.send(msg, product_key)
                             logstash_loginfo['event_list'].append('action_sent')
                             logstash_loginfo.update({
