@@ -319,3 +319,6 @@ LOGSTASH_SWITCH = env('LOGSTASH_SWITCH', {
     'make_action': True,
     'process_action': True,
 })
+if not isinstance(LOGSTASH_SWITCH, dict):
+    import json
+    LOGSTASH_SWITCH = json.loads(LOGSTASH_SWITCH)
