@@ -3,8 +3,10 @@
 
 import logging, json, requests, redis, copy, zlib, time
 import logging.config
+from enum import Enum, unique
 
 from re_processor import settings
+from re_processor.settings import LOGSTASH_SWITCH
 from re_processor.connections import get_redis, get_mysql
 
 try:
@@ -19,6 +21,30 @@ debug_logger = logging.getLogger('debug_gray')
 console_logger = logging.getLogger('processor')
 debug_info_logger = logging.getLogger('debug_info')
 logstash_logger = logging.getLogger('logstash')
+
+
+@unique
+class LogstashLogNode(Enum):
+    ENTER_RE = 'enter_re'
+    RULE_READY = 'rule_ready'
+    MAKE_ACTION = 'make_action'
+    PROCESS_ACTION = 'process_action'
+
+
+def logstash_log(log_node, msg='', extra=None):
+    """
+    记录日志，并发送到 Logstash
+    :param log_node:
+    :param msg:
+    :param extra:
+    :return:
+    """
+    if not isinstance(log_node, LogstashLogNode):
+        return
+    switch_status = LOGSTASH_SWITCH.get(log_node.value, False)
+    if switch_status:
+        logstash_logger.info(msg, extra=extra)
+
 
 def _log(log):
     logger.info(json.dumps(log))

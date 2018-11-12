@@ -313,3 +313,12 @@ INDEX = {
 
 # logstash日志相关
 LOGSTASH_NODE = env('LOGSTASH_NODE', 'default')
+LOGSTASH_SWITCH = env('LOGSTASH_SWITCH', {
+    'enter_re': False,
+    'rule_ready': True,
+    'make_action': True,
+    'process_action': True,
+})
+if not isinstance(LOGSTASH_SWITCH, dict):
+    import json
+    LOGSTASH_SWITCH = json.loads(LOGSTASH_SWITCH)

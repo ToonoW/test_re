@@ -16,7 +16,7 @@ from re_processor.common import (
     get_rules_from_cache,
     getset_last_data,
     check_interval_locked,
-    new_virtual_device_log, logstash_logger)
+    new_virtual_device_log, logstash_log, LogstashLogNode)
 from re_processor.connections import get_mysql, get_redis
 from re_processor.main.function import generate_msg_func_list, generate_func_list_msg, send_output_msg, custom_json
 
@@ -135,14 +135,16 @@ class MainDispatcher(BaseRabbitmqConsumer):
 
     def dispatch(self, msg, delivery_tag, log):
         try:
-            logstash_logger.info('msg enter', extra={
-                'event_name': 'msg_enter_re_processor',
+            msg['logstash_msgid'] = uuid.uuid4().hex
+            logstash_log(LogstashLogNode.ENTER_RE, 'msg enter', extra={
+                'event_list': ['msg_enter_re_processor',],
                 'product_key': msg['product_key'],
                 'did': msg['did'],
                 'mac': msg['mac'],
                 'source': 'gw_re_processor',
                 'node': settings.LOGSTASH_NODE,
-                'time_spent': time.time() - log['ts'],
+                'msg_enter_re_processor.time_spent': time.time() - log['ts'],
+                'logstash_msgid': msg['logstash_msgid'],
             })
             start_ts = time.time()
             thermal_data = self.thermal_data.get(msg['product_key'])
@@ -159,14 +161,16 @@ class MainDispatcher(BaseRabbitmqConsumer):
             data = msg.get('data', {})
             last_data = None
             for rule in rules_list:
-                logstash_logger.info('rule ready to process', extra={
-                    'event_name': 'rule_ready_to_process',
+                logstash_log(LogstashLogNode.RULE_READY, 'rule ready to process', extra={
+                    'event_list': ['rule_ready_to_process',],
                     'product_key': msg['product_key'],
                     'did': msg['did'],
                     'mac': msg['mac'],
                     'source': 'gw_re_processor',
                     'node': settings.LOGSTASH_NODE,
-                    'time_spent': time.time() - log['ts'],
+                    'rule_ready_to_process.time_spent': time.time() - log['ts'],
+                    'rule_id': rule['rule_id'],
+                    'logstash_msgid': msg['logstash_msgid'],
                 })
                 p_log = {
                     'module': 're_processor',
@@ -207,7 +211,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     })
                     logger.info(p_log)
             lst = self.mq_unpack(msg, log)
-            map(lambda x: self.process(x, copy.deepcopy(log)), lst)
+            map(lambda x: self.process(x, copy.deepcopy(log), logstash_msgid=msg['logstash_msgid']), lst)
             if settings.USE_DEBUG:
                 resp_t = get_proc_t_info(start_ts)
                 debug_info_logger.info("pk:{} process func use:{} ms".format(msg['product_key'], resp_t))
@@ -220,9 +224,9 @@ class MainDispatcher(BaseRabbitmqConsumer):
             if not settings.IS_NO_ACK:
                 self.channel.basic_ack(delivery_tag=delivery_tag)
 
-    def process(self, msg, log):
+    def process(self, msg, log, logstash_msgid=''):
         try:
-            self.processor.process_msg(msg, log)
+            self.processor.process_msg(msg, log, logstash_msgid)
         except Exception, e:
             logger.exception(e)
             log['exception'] = str(e)
