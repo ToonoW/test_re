@@ -10,6 +10,7 @@ from pika import (
     URLParameters,
     BasicProperties)
 from pika.exceptions import AMQPConnectionError
+from pika.exceptions import ConnectionClosed
 
 from re_processor import settings
 from re_processor.connections import get_mysql
@@ -71,6 +72,9 @@ class BaseRabbitmqConsumer(object):
             except AMQPConnectionError, e:
                 console_logger.exception(e)
                 continue
+            except ConnectionClosed as e:
+                logger.exception(e)
+                continue
             else:
                 self.channel = self.m2m_conn.channel()
                 self.connecting = False
@@ -93,6 +97,9 @@ class BaseRabbitmqConsumer(object):
                 self.channel.basic_consume(self.consume, queue=name, no_ack=no_ack)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:
+                console_logger.exception(e)
+                self.mq_reconnect()
+            except ConnectionClosed as e:
                 console_logger.exception(e)
                 self.mq_reconnect()
 
