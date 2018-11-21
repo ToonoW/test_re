@@ -9,6 +9,7 @@ from pika import (
     BlockingConnection,
     URLParameters)
 from pika.exceptions import AMQPConnectionError
+from pika.exceptions import ConnectionClosed
 
 from re_processor import settings
 from re_processor.common import logger
@@ -33,6 +34,9 @@ class BaseRabbitmqConsumer(object):
                 time.sleep(1)
                 self.m2m_conn = BlockingConnection(URLParameters(settings.M2M_MQ_URL))
             except AMQPConnectionError, e:
+                logger.exception(e)
+                continue
+            except ConnectionClosed as e:
                 logger.exception(e)
                 continue
             else:
@@ -73,6 +77,9 @@ class BaseRabbitmqConsumer(object):
                 self.channel.basic_consume(self.consumer, queue=self.queue, no_ack=True)
                 self.channel.start_consuming()
             except AMQPConnectionError, e:
+                logger.exception(e)
+                self.mq_reconnect()
+            except ConnectionClosed as e:
                 logger.exception(e)
                 self.mq_reconnect()
 

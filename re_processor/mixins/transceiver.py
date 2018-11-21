@@ -73,7 +73,7 @@ class BaseRabbitmqConsumer(object):
                 console_logger.exception(e)
                 continue
             except ConnectionClosed as e:
-                logger.exception(e)
+                console_logger.exception(e)
                 continue
             else:
                 self.channel = self.m2m_conn.channel()
