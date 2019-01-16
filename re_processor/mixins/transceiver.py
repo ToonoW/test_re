@@ -53,8 +53,8 @@ class BaseRabbitmqConsumer(object):
             self.channel.queue_declare(queue=name, durable=True)
             self.channel.queue_bind(
                 exchange=settings.EXCHANGE,
-                queue=name,
-                routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
+                queue=name,)
+                # routing_key=settings.ROUTING_KEY[mq_queue_name].format(product_key))
         else:
             self.channel.queue_declare(queue=mq_queue_name, durable=True)
             self.channel.queue_bind(
