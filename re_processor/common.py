@@ -436,3 +436,9 @@ class RedisLock(object):
         if self.lock:
             self.cache.delete(self.cache_key)
         return False
+
+
+def log_debug_log(logstash_msgid, message):
+    logstash_logger.info(message, extra={
+        'logstash_msgid': logstash_msgid,
+    })

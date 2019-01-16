@@ -22,6 +22,7 @@ from re_processor.main.function import generate_msg_func_list, generate_func_lis
 
 from processor import MainProcessor
 
+from re_processor.common import log_debug_log
 
 default_limit = {
     'msg_limit': settings.MSG_LIMIT,
@@ -186,30 +187,45 @@ class MainDispatcher(BaseRabbitmqConsumer):
                     'ts': log['ts'],
                 }
                 if rule.get('ver') == 3:
+                    log_debug_log(msg['logstash_msgid'], 'processing v3 rule. Before generate_msg_func_list')
                     task_info = generate_msg_func_list(rule, msg, last_data)
+                    log_debug_log(msg['logstash_msgid'], 'After generate_msg_func_list')
                     task_obj = task_info[0]
                     dp_value = msg.get('data', {})
                     input_list = task_info[1]
                     output_wires = task_info[2]
-                    for inp in input_list:
+                    log_debug_log(msg['logstash_msgid'], 'input_list len: {}'.format(len(input_list)))
+                    for inp_index, inp in enumerate(input_list):
+                        log_debug_log(msg['logstash_msgid'], 'processing input list. index: {}'.format(inp_index))
                         if inp['category'] != 'input':
                             continue
                         content = inp.get('content', {})
+                        log_debug_log(msg['logstash_msgid'], 'Before new_virtual_device_log')
                         log_id = new_virtual_device_log(msg['product_key'], rule['rule_id']) if 'virtual:site' == msg['mac'] else ''
+                        log_debug_log(msg['logstash_msgid'], 'After new_virtual_device_log')
                         task_vars = {}
                         if content.get('data_type') == 'custom':
+                            log_debug_log(msg['logstash_msgid'], 'custom json data')
                             custom_info = custom_json(inp)
                             task_vars.update(custom_info)
-                        for inp_wires in inp['wires'][0]:
+                        log_debug_log(msg['logstash_msgid'], 'processing inp[wires][0]. len: {}'.format())
+                        for inp_wires_index, inp_wires in enumerate(inp['wires'][0]):
+                            log_debug_log(msg['logstash_msgid'], 'process wires. index: {}'.format(inp_wires_index))
+                            log_debug_log(msg['logstash_msgid'], 'Before generate_func_list_msg')
                             data = generate_func_list_msg(task_obj, inp_wires, dp_value, output_wires, task_vars, log_id, msg)
+                            log_debug_log(msg['logstash_msgid'], 'After generate_func_list_msg')
                             if data:
+                                log_debug_log(msg['logstash_msgid'], 'After generate_func_list_msg processing data')
                                 for d in data:
                                     if task_obj[d]['category'] == 'output':
+                                        log_debug_log(msg['logstash_msgid'], 'Before send_output_msg')
                                         send_output_msg(task_obj[d], msg, p_log, task_vars, log_id, rule.get('rule_id'), p_log)
+                                        log_debug_log(msg['logstash_msgid'], 'After send_output_msg')
                     p_log.update({
                         'proc_t': (time.time() - log['ts']) * 1000
                     })
                     logger.info(p_log)
+            log_debug_log(msg['logstash_msgid'], 'Before mq_unpack')
             lst = self.mq_unpack(msg, log)
             map(lambda x: self.process(x, copy.deepcopy(log), logstash_msgid=msg['logstash_msgid']), lst)
             if settings.USE_DEBUG:
@@ -220,6 +236,7 @@ class MainDispatcher(BaseRabbitmqConsumer):
             #     set_monitor_data('did:{}:resp_t'.format(msg['did']), proc_t, 3600)
         except Exception, e:
             logger.exception(e)
+            log_debug_log(msg['logstash_msgid'], 'Here is dispatch exception. detail: {}'.format(str(e)))
         finally:
             if not settings.IS_NO_ACK:
                 self.channel.basic_ack(delivery_tag=delivery_tag)
